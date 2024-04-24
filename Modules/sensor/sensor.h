@@ -16,7 +16,7 @@ extern "C" {
 void sensor_init();
 void sensor_tick();
 bool sensor_available();
-uint32_t get_sensor_value();
+int16_t get_sensor_value();
 
 
 #ifdef __cplusplus

@@ -98,21 +98,43 @@ void UI::showHeader()
 		DISPLAY_HEADER_HEIGHT / 2,
 		&Font24,
 		DISPLAY_ALIGN_CENTER,
-		"header",
-		strlen("header")
+		"statusbar",
+		strlen("statusbar")
 	);
 }
 
 void UI::showFooter()
 {
+	uint16_t halfSection = display_width() / 3 / 2;
+
 	display_set_color(DISPLAY_COLOR_WHITE);
 	display_text_show(
-		display_width() / 2,
+		halfSection,
 		DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + (DISPLAY_FOOTER_HEIGHT / 2),
 		&Font24,
 		DISPLAY_ALIGN_CENTER,
-		"footer",
-		strlen("footer")
+		"F1",
+		strlen("F1")
+	);
+
+	display_set_color(DISPLAY_COLOR_WHITE);
+	display_text_show(
+		display_width() / 3  + halfSection,
+		DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + (DISPLAY_FOOTER_HEIGHT / 2),
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		"F2",
+		strlen("F2")
+	);
+
+	display_set_color(DISPLAY_COLOR_WHITE);
+	display_text_show(
+		2 * display_width() / 3  + halfSection,
+		DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + (DISPLAY_FOOTER_HEIGHT / 2),
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		"F3",
+		strlen("F3")
 	);
 }
 

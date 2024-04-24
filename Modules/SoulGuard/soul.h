@@ -34,6 +34,7 @@ typedef enum _SOUK_STATUS {
 	MODBUS_FAULT,
 	PUMP_FAULT,
 	RTC_FAULT,
+	CAN_FAULT,
 
 	/* Device statuses end */
 	STATUSES_END,

@@ -113,8 +113,10 @@ extern I2C_HandleTypeDef         hi2c2;
 extern UART_HandleTypeDef        huart1;
 #define BEDUG_UART               (huart1)
 
+// Display
 extern SPI_HandleTypeDef         hspi1;
 #define DISPLAY_SPI              (hspi1)
+
 
 /* USER CODE END Private defines */
 

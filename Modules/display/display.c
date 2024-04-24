@@ -63,6 +63,12 @@ void display_sections_show()
 
     y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT;
     BSP_LCD_DrawLine(0, y, DISPLAY_WIDTH, y);
+
+    uint16_t x = DISPLAY_WIDTH / 3;
+    BSP_LCD_DrawLine(x, y, x, DISPLAY_HEIGHT);
+
+    x = 2 * DISPLAY_WIDTH / 3;
+	BSP_LCD_DrawLine(x, y, x, DISPLAY_HEIGHT);
 }
 
 void display_set_color(uint16_t color)
