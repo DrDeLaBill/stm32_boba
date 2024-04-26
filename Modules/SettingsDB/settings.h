@@ -45,7 +45,7 @@ typedef struct __attribute__((packed)) _settings_t  {
     uint32_t cf_id;
 
     // Last target sensor value
-    uint32_t last_target;
+    int16_t last_target;
 } settings_t;
 
 

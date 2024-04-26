@@ -13,7 +13,6 @@ extern "C" {
 #include <stdbool.h>
 
 
-void sensor_init();
 void sensor_tick();
 bool sensor_available();
 int16_t get_sensor_value();

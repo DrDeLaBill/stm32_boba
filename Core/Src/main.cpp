@@ -23,6 +23,7 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
+#include "crc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -104,22 +105,20 @@ int main(void)
   MX_I2C2_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_CRC_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
 	// TODO: RAM analyzer & crystal check & clock check & modbus check & reload controller
 	SoulGuard<
 		RestartWatchdog,
-		StackWatchdog
-	> hardwareSoulGuard;
-	SoulGuard<
+		StackWatchdog,
+		MemoryWatchdog,
 		SettingsWatchdog,
 		SensorWatchdog
-	> softwareSoulGuard;
+	> soulGuard;
 
 	set_status(WAIT_LOAD);
-	set_error(STACK_ERROR);
-	set_status(NO_SENSOR);
 
 	gprint("\n\n\n");
 	printTagLog(MAIN_TAG, "The device is loading");
@@ -128,38 +127,28 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	while (has_errors()) hardwareSoulGuard.defend();
-
     storage = new StorageAT(
 		eeprom_get_size() / STORAGE_PAGE_SIZE,
 		&storageDriver
 	);
 
-    while (is_status(WAIT_LOAD)) {
-    	hardwareSoulGuard.defend();
-    	softwareSoulGuard.defend();
-    }
-
     printTagLog(MAIN_TAG, "The device has been loaded");
 
     UI ui;
-
-    sensor_init();
 
 	while (1)
 	{
 		utl::CodeStopwatch stopwatch(MAIN_TAG, GENERAL_TIMEOUT_MS);
 
-		hardwareSoulGuard.defend();
-		softwareSoulGuard.defend();
+		soulGuard.defend();
+
+		ui.tick();
 
 		if (has_errors() || is_status(WAIT_LOAD)) {
 			continue;
 		}
 
 		sensor_tick();
-
-		ui.tick();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -179,12 +168,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -196,7 +186,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)

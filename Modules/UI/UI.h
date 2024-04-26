@@ -26,10 +26,10 @@ protected:
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
-	FSM_CREATE_EVENT(no_sens_e,     0);
 	FSM_CREATE_EVENT(sens_found_e,  0);
 	FSM_CREATE_EVENT(change_mode_e, 0);
-	FSM_CREATE_EVENT(error_e,       1);
+	FSM_CREATE_EVENT(no_sens_e,     1);
+	FSM_CREATE_EVENT(error_e,       2);
 
 
 	// States:
@@ -49,7 +49,7 @@ protected:
 
 
 	// Actions:
-	struct none_a          { void operator()() const; };
+	struct error_a         { void operator()() const; };
 	struct load_start_a    { void operator()() const; };
 	struct no_sens_start_a { void operator()() const; };
 	struct manual_start_a  { void operator()() const; };
@@ -62,17 +62,17 @@ protected:
 
 		fsm::Transition<load_s,        success_e,     manual_mode_s, manual_start_a>,
 		fsm::Transition<load_s,        no_sens_e,     no_sens_s,     no_sens_start_a>,
-		fsm::Transition<load_s,        error_e,       error_s,       none_a>,
+		fsm::Transition<load_s,        error_e,       error_s,       error_a>,
 
 		fsm::Transition<no_sens_s,     sens_found_e,  manual_mode_s, manual_start_a>,
 
 		fsm::Transition<manual_mode_s, change_mode_e, auto_mode_s,   auto_start_a>,
 		fsm::Transition<manual_mode_s, no_sens_e,     no_sens_s,     no_sens_start_a>,
-		fsm::Transition<manual_mode_s, error_e,       error_s,       none_a>,
+		fsm::Transition<manual_mode_s, error_e,       error_s,       error_a>,
 
 		fsm::Transition<auto_mode_s,   change_mode_e, manual_mode_s, manual_start_a>,
 		fsm::Transition<auto_mode_s,   no_sens_e,     no_sens_s,     no_sens_start_a>,
-		fsm::Transition<auto_mode_s,   error_e,       error_s,       none_a>
+		fsm::Transition<auto_mode_s,   error_e,       error_s,       error_a>
 	>;
 	static fsm::FiniteStateMachine<fsm_table> fsm;
 
@@ -103,6 +103,7 @@ public:
 
 	static void showUp(bool flag = true);
 	static void showDown(bool flag = true);
+	static void showMiddle(bool flag = true);
 
 	void tick();
 

@@ -92,15 +92,15 @@ void UI::tick()
 
 void UI::showHeader()
 {
-	display_set_color(DISPLAY_COLOR_WHITE);
-	display_text_show(
-		display_width() / 2,
-		DISPLAY_HEADER_HEIGHT / 2,
-		&Font24,
-		DISPLAY_ALIGN_CENTER,
-		"statusbar",
-		strlen("statusbar")
-	);
+//	display_set_color(DISPLAY_COLOR_WHITE);
+//	display_text_show(
+//		display_width() / 2,
+//		DISPLAY_HEADER_HEIGHT / 2,
+//		&Font24,
+//		DISPLAY_ALIGN_CENTER,
+//		"statusbar",
+//		strlen("statusbar")
+//	);
 }
 
 void UI::showFooter()
@@ -160,7 +160,7 @@ void UI::showValue()
 	{
 		offset_y = display_height() / 2;
 		char value[30] = {};
-		snprintf(value, sizeof(value), "Value: %03lu.%02lu", get_sensor_value() / 100, get_sensor_value() % 100);
+		snprintf(value, sizeof(value), "Value: %03d.%02d", get_sensor_value() / 100, get_sensor_value() % 100);
 		display_set_color(DISPLAY_COLOR_WHITE);
 		display_text_show(
 			offset_x,
@@ -194,6 +194,7 @@ void UI::showUp(bool flag)
 		display_clear_rect(x, y, static_cast<uint16_t>(bmp_up_15x15.infoHeader.biWidth), static_cast<uint16_t>(bmp_up_15x15.infoHeader.biHeight));
 	}
 	HAL_GPIO_WritePin(LED_UP_GPIO_Port, LED_UP_Pin, static_cast<GPIO_PinState>(flag));
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, static_cast<GPIO_PinState>(flag));
 }
 
 void UI::showDown(bool flag)
@@ -214,6 +215,14 @@ void UI::showDown(bool flag)
 		display_clear_rect(x, y, static_cast<uint16_t>(bmp_down_15x15.infoHeader.biWidth), static_cast<uint16_t>(bmp_down_15x15.infoHeader.biHeight));
 	}
 	HAL_GPIO_WritePin(LED_DOWN_GPIO_Port, LED_DOWN_Pin, static_cast<GPIO_PinState>(flag));
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, static_cast<GPIO_PinState>(flag));
+}
+
+void UI::showMiddle(bool flag)
+{
+	GPIO_PinState enable_mid = static_cast<GPIO_PinState>(flag);
+	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, enable_mid);
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, enable_mid);
 }
 
 void UI::_init_s::operator ()() const
@@ -244,6 +253,9 @@ void UI::_load_s::operator ()() const
 	}
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
+	}
+	if (has_errors()) {
+		fsm.push_event(error_e{});
 	}
 
 	if (timer.wait()) {
@@ -293,6 +305,7 @@ void UI::_no_sens_s::operator ()() const
 	);
 
 	if (!is_status(NO_SENSOR)) {
+		fsm.push_event(sens_found_e{});
 	}
 }
 
@@ -302,8 +315,14 @@ void UI::_manual_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
+	showMiddle(settings.last_target == get_sensor_value());
 
-	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, static_cast<GPIO_PinState>(settings.last_target == get_sensor_value()));
+	if (is_status(NO_SENSOR)) {
+		fsm.push_event(no_sens_e{});
+	}
+	if (has_errors()) {
+		fsm.push_event(error_e{});
+	}
 
 	if (clicks.empty()) {
 		return;
@@ -333,8 +352,16 @@ void UI::_manual_mode_s::operator ()() const
 void UI::_auto_mode_s::operator ()() const
 {
 	showValue();
+	showUp(is_status(AUTO_NEED_VALVE_UP));
+	showDown(is_status(AUTO_NEED_VALVE_DOWN));
+	showMiddle(settings.last_target == get_sensor_value());
 
-	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, static_cast<GPIO_PinState>(settings.last_target == get_sensor_value()));
+	if (is_status(NO_SENSOR)) {
+		fsm.push_event(no_sens_e{});
+	}
+	if (has_errors()) {
+		fsm.push_event(error_e{});
+	}
 
 	if (clicks.empty()) {
 		return;
@@ -362,20 +389,27 @@ void UI::_auto_mode_s::operator ()() const
 
 void UI::_error_s::operator ()() const
 {
+	char line[20] = "";
+	snprintf(line, sizeof(line), "ERROR%u", get_first_error());
+
 	display_set_color(DISPLAY_COLOR_RED);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
 		&Font24,
 		DISPLAY_ALIGN_CENTER,
-		"ERROR",
-		strlen("ERROR")
+		line,
+		strlen(line)
 	);
 }
 
-void UI::none_a::operator ()() const
+void UI::error_a::operator ()() const
 {
 	display_clear_content();
+
+	showDown(false);
+	showUp(false);
+	showMiddle(false);
 }
 
 void UI::load_start_a::operator ()() const
@@ -396,8 +430,17 @@ void UI::no_sens_start_a::operator ()() const
 
 void UI::manual_start_a::operator ()() const
 {
-	display_clear();
 	display_sections_show();
+
+	display_set_color(DISPLAY_COLOR_WHITE);
+	display_text_show(
+		display_width() / 2,
+		DISPLAY_HEADER_HEIGHT / 2,
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		"    manual    ",
+		strlen("    manual    ")
+	);
 
 	showHeader();
 	showFooter();
@@ -405,8 +448,17 @@ void UI::manual_start_a::operator ()() const
 
 void UI::auto_start_a::operator ()() const
 {
-	display_clear();
 	display_sections_show();
+
+	display_set_color(DISPLAY_COLOR_WHITE);
+	display_text_show(
+		display_width() / 2,
+		DISPLAY_HEADER_HEIGHT / 2,
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		"     auto     ",
+		strlen("     auto     ")
+	);
 
 	showHeader();
 	showFooter();

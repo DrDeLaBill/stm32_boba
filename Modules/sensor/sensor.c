@@ -12,8 +12,8 @@
 
 #define SENSOR_DATA_MAX_SIZE     (8)
 #define SENSOR_FRAME_DELAY_MS    (400)
-#define SENSOR_COMMAND_DELAY_MS  (5)
-#define SENSOR_MAX_ERRORS        (10)
+#define SENSOR_COMMAND_DELAY_MS  (15)
+#define SENSOR_MAX_ERRORS        (1000)
 
 #define SENSOR_FRAME_ID          (0x02A7)
 #define SENSOR_DISTANCE_FRAME_ID (0x02)
@@ -25,7 +25,7 @@ typedef struct _sensor_state_t {
 	bool                received;
 	bool                available;
 
-	uint8_t             errors;
+	unsigned            errors;
 	util_old_timer_t    timer;
 	util_old_timer_t    frame_timer;
 
@@ -81,8 +81,19 @@ sensor_state_t sensor_state = {
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
+	DWT->CYCCNT           = 0;
 	sensor_state.received = false;
     if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &sensor_state.rx_header, sensor_state.rx_buffer) == HAL_OK) {
+//        printMessage(
+//			"%08lu; 0x%04X; 0x%02lu; ",
+//			getMillis() % 10000000,
+//			(unsigned)sensor_state.rx_header.StdId,
+//			sensor_state.rx_header.DLC
+//		);
+//        for (unsigned i = 0; i < sensor_state.rx_header.DLC; i++) {
+//        	gprint("0x%02X; ", sensor_state.rx_buffer[i]);
+//        }
+//        gprint("\n");
     	sensor_state.received = true;
     }
 	reset_status(CAN_FAULT);
@@ -91,19 +102,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 {
 	(void)hcan;
+
+//	uint32_t er = HAL_CAN_GetError(hcan);
+//    printTagLog(SENSOR_TAG, "ERRCAN %06lX", er);
+
 	sensor_state.errors++;
 	set_status(CAN_FAULT);
-}
-
-
-void sensor_init()
-{
-	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-	DWT->CYCCNT       = 0;
-	DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;
-
-	HAL_CAN_Start(&hcan);
-	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
 }
 
 void sensor_tick()
@@ -139,8 +143,21 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 }
 
 
+#define    DWT_CYCCNT    *(volatile unsigned long *)0xE0001004
+#define    DWT_CONTROL   *(volatile unsigned long *)0xE0001000
+#define    SCB_DEMCR     *(volatile unsigned long *)0xE000EDFC
 void _fsm_sensor_init()
 {
+    SCB_DEMCR   |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
+//	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+//	DWT->CYCCNT       = 0;
+//	DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;
+
+	HAL_CAN_Start(&hcan);
+	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+
+	util_old_timer_start(&sensor_state.timer, 100);
 	sensor_state.fsm = _fsm_sensor_start;
 }
 
@@ -150,11 +167,11 @@ void _fsm_sensor_idle()
 		util_old_timer_start(&sensor_state.frame_timer, SENSOR_FRAME_DELAY_MS);
 		sensor_state.fsm = _fsm_sensor_send_frame1;
 	}
-	if (sensor_state.received) {
-		sensor_state.fsm = _fsm_sensor_receive_frame;
-	}
 	if (sensor_state.errors > SENSOR_MAX_ERRORS) {
 		sensor_state.fsm = _fsm_sensor_start;
+	}
+	if (sensor_state.received) {
+		sensor_state.fsm = _fsm_sensor_receive_frame;
 	}
 }
 
@@ -195,7 +212,9 @@ void _fsm_sensor_receive_frame()
 		);
     }
 
-	sensor_state.fsm = _fsm_sensor_idle;
+	sensor_state.errors   = 0;
+	sensor_state.received = false;
+	sensor_state.fsm      = _fsm_sensor_idle;
 }
 
 void _fsm_sensor_send_frame1()
