@@ -4,6 +4,7 @@
 #define _UI_H_
 
 
+#include <utility>
 #include <cstdint>
 
 #include "Timer.h"
@@ -19,7 +20,7 @@ private:
 
 	static constexpr uint32_t DEBOUNCE_MS = 20;
 
-	static constexpr unsigned BUTTONS_COUNT = 4;
+	static constexpr unsigned BUTTONS_COUNT = 7;
 
 protected:
 	static constexpr uint16_t DEFAULT_MARGIN = 10;
@@ -81,25 +82,15 @@ protected:
 
 	static void showHeader();
 	static void showFooter();
-
 	static void showValue();
+	static void showLoading();
 
 
 public:
 	static constexpr char TAG[] = "UI";
 
-	typedef enum _button_t {
-		BUTTON_UP = 0,
-		BUTTON_DOWN,
-		BUTTON_MODE,
-		BUTTON_ENTER,
-		BUTTON_F1,
-		BUTTON_F2,
-		BUTTON_F3
-	} button_t;
-
-	static utl::circle_buffer<UI_CLICKS_SIZE, button_t> clicks;
-	static Button buttons[];
+	static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
+	static std::pair<uint16_t, Button> buttons[];
 
 	static void showUp(bool flag = true);
 	static void showDown(bool flag = true);

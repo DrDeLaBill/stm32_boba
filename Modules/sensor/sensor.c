@@ -10,13 +10,14 @@
 #include "hal_defs.h"
 
 
-#define SENSOR_DATA_MAX_SIZE     (8)
-#define SENSOR_FRAME_DELAY_MS    (400)
-#define SENSOR_COMMAND_DELAY_MS  (15)
-#define SENSOR_MAX_ERRORS        (1000)
+#define SENSOR_DATA_MAX_SIZE       (8)
+#define SENSOR_FRAME_DELAY_MS      (400)
+#define SENSOR_COMMAND_DELAY_MS    (15)
+#define SENSOR_MAX_ERRORS          (100)
+#define SENSOR_CONNECTION_DELAY_MS (1000)
 
-#define SENSOR_FRAME_ID          (0x02A7)
-#define SENSOR_DISTANCE_FRAME_ID (0x02)
+#define SENSOR_FRAME_ID            (0x02A7)
+#define SENSOR_DISTANCE_FRAME_ID   (0x02)
 
 
 typedef struct _sensor_state_t {
@@ -28,6 +29,7 @@ typedef struct _sensor_state_t {
 	unsigned            errors;
 	util_old_timer_t    timer;
 	util_old_timer_t    frame_timer;
+	util_old_timer_t    connection_timer;
 
 	uint32_t            tx_mailbox;
 	CAN_TxHeaderTypeDef tx_header;
@@ -173,6 +175,9 @@ void _fsm_sensor_idle()
 	if (sensor_state.received) {
 		sensor_state.fsm = _fsm_sensor_receive_frame;
 	}
+	if (!util_old_timer_wait(&sensor_state.connection_timer)) {
+		set_status(NO_SENSOR);
+	}
 }
 
 void _fsm_sensor_start()
@@ -208,8 +213,10 @@ void _fsm_sensor_receive_frame()
 			SENSOR_TAG,
 			"distance=%d.%d",
 			sensor_state.value / 100,
-			sensor_state.value % 100
+			__abs(sensor_state.value % 100)
 		);
+		util_old_timer_start(&sensor_state.connection_timer, SENSOR_CONNECTION_DELAY_MS);
+		reset_status(NO_SENSOR);
     }
 
 	sensor_state.errors   = 0;

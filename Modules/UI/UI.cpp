@@ -15,16 +15,21 @@
 #include "settings.h"
 #include "hal_defs.h"
 
+#include "App.h"
 
-utl::circle_buffer<UI::UI_CLICKS_SIZE, UI::button_t> UI::clicks;
-Button UI::buttons[UI::BUTTONS_COUNT] = {
-	{BTN_UP_GPIO_Port,    BTN_UP_Pin,    true},
-	{BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true},
-	{BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true},
-	{BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true},
-//	{BTN_F1_GPIO_Port,    BTN_F1_Pin, true},
-//	{BTN_F2_GPIO_Port,    BTN_F2_Pin, true},
-//	{BTN_F3_GPIO_Port,    BTN_F3_Pin, true}
+
+#define LOAD_POINT_COUNT (3)
+
+
+utl::circle_buffer<UI::UI_CLICKS_SIZE, uint16_t> UI::clicks;
+std::pair<uint16_t, Button> UI::buttons[UI::BUTTONS_COUNT] = {
+	{BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}},
+	{BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}},
+	{BTN_MODE_Pin,  {BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true}},
+	{BTN_ENTER_Pin, {BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true}},
+	{BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin, true}},
+	{BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin, true}},
+	{BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin, true}}
 };
 
 utl::Timer UI::timer(SECOND_MS);
@@ -33,14 +38,17 @@ fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	UI::buttons[GPIO_Pin].second.tick();
+	bool wasClicked = UI::buttons[GPIO_Pin].second.wasClicked();
+	if (wasClicked) {
+		UI::clicks.push_back(GPIO_Pin);
+	}
 	switch (GPIO_Pin) {
 	case BTN_UP_Pin:
 #ifdef DEBUG
 		printTagLog(UI::TAG, "UP irq %u", HAL_GPIO_ReadPin(BTN_UP_GPIO_Port, BTN_UP_Pin));
 #endif
-		UI::buttons[UI::BUTTON_UP].tick();
-		if (UI::buttons[UI::BUTTON_UP].wasClicked()) {
-			UI::clicks.push_back(UI::BUTTON_UP);
+		if (wasClicked) {
 			set_status(MANUAL_NEED_VALVE_UP);
 		} else {
 			reset_status(MANUAL_NEED_VALVE_UP);
@@ -50,9 +58,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 #ifdef DEBUG
 		printTagLog(UI::TAG, "DOWN irq %u", HAL_GPIO_ReadPin(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin));
 #endif
-		UI::buttons[UI::BUTTON_DOWN].tick();
-		if (UI::buttons[UI::BUTTON_DOWN].wasClicked()) {
-			UI::clicks.push_back(UI::BUTTON_DOWN);
+		if (wasClicked) {
 			set_status(MANUAL_NEED_VALVE_DOWN);
 		} else {
 			reset_status(MANUAL_NEED_VALVE_DOWN);
@@ -62,19 +68,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 #ifdef DEBUG
 		printTagLog(UI::TAG, "MODE irq %u", HAL_GPIO_ReadPin(BTN_MODE_GPIO_Port, BTN_MODE_Pin));
 #endif
-		UI::buttons[UI::BUTTON_MODE].tick();
-		if (UI::buttons[UI::BUTTON_MODE].wasClicked()) {
-			UI::clicks.push_back(UI::BUTTON_MODE);
-		}
 		break;
 	case BTN_ENTER_Pin:
 #ifdef DEBUG
 		printTagLog(UI::TAG, "ENTER irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
-		UI::buttons[UI::BUTTON_ENTER].tick();
-		if (UI::buttons[UI::BUTTON_ENTER].wasClicked()) {
-			UI::clicks.push_back(UI::BUTTON_ENTER);
-		}
+		break;
+	case BTN_F1_Pin:
+#ifdef DEBUG
+		printTagLog(UI::TAG, "F1 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
+#endif
+		break;
+	case BTN_F2_Pin:
+#ifdef DEBUG
+		printTagLog(UI::TAG, "F2 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
+#endif
+		break;
+	case BTN_F3_Pin:
+#ifdef DEBUG
+		printTagLog(UI::TAG, "F3 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
+#endif
 		break;
 	default:
 #ifdef DEBUG
@@ -145,7 +158,7 @@ void UI::showValue()
 
 	{
 		char target[30] = {};
-		snprintf(target, sizeof(target), "Target: %03lu.%02lu", settings.last_target / 100, settings.last_target % 100);
+		snprintf(target, sizeof(target), "Target: %03d.%02d", settings.last_target / 100, __abs(settings.last_target % 100));
 		display_set_color(DISPLAY_COLOR_WHITE);
 		display_text_show(
 			offset_x,
@@ -160,7 +173,7 @@ void UI::showValue()
 	{
 		offset_y = display_height() / 2;
 		char value[30] = {};
-		snprintf(value, sizeof(value), "Value: %03d.%02d", get_sensor_value() / 100, get_sensor_value() % 100);
+		snprintf(value, sizeof(value), "Value: %03d.%02d", get_sensor_value() / 100, __abs(get_sensor_value() % 100));
 		display_set_color(DISPLAY_COLOR_WHITE);
 		display_text_show(
 			offset_x,
@@ -171,6 +184,33 @@ void UI::showValue()
 			strlen(value)
 		);
 	}
+}
+
+void UI::showLoading()
+{
+	static unsigned counter = 0;
+	if (counter > LOAD_POINT_COUNT) {
+		counter = 0;
+	}
+	char label[20] = "Loading";
+	for (unsigned i = 0; i < LOAD_POINT_COUNT; i++) {
+		if (i < counter) {
+			label[strlen(label)] = '.';
+		} else {
+			label[strlen(label)] = ' ';
+		}
+	}
+	display_set_color(DISPLAY_COLOR_WHITE);
+	display_text_show(
+		display_width() / 2,
+		display_height() / 2,
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		label,
+		strlen(label)
+	);
+
+	counter++;
 }
 
 void UI::showUp(bool flag)
@@ -243,11 +283,8 @@ void UI::_init_s::operator ()() const
 }
 
 
-#define LOAD_POINT_COUNT (3)
 void UI::_load_s::operator ()() const
 {
-	static unsigned counter = 0;
-
 	if (!is_status(WAIT_LOAD)) {
 		fsm.push_event(success_e{});
 	}
@@ -263,28 +300,7 @@ void UI::_load_s::operator ()() const
 	}
 	timer.start();
 
-	if (counter > LOAD_POINT_COUNT) {
-		counter = 0;
-	}
-	char label[20] = "Loading";
-	for (unsigned i = 0; i < LOAD_POINT_COUNT; i++) {
-		if (i < counter) {
-			label[strlen(label)] = '.';
-		} else {
-			label[strlen(label)] = ' ';
-		}
-	}
-	display_set_color(DISPLAY_COLOR_WHITE);
-	display_text_show(
-		display_width() / 2,
-		display_height() / 2,
-		&Font24,
-		DISPLAY_ALIGN_CENTER,
-		label,
-		strlen(label)
-	);
-
-	counter++;
+	showLoading();
 }
 
 
@@ -328,23 +344,31 @@ void UI::_manual_mode_s::operator ()() const
 		return;
 	}
 
-	button_t btn = clicks.pop_front();
-	switch (btn) {
-	case BUTTON_MODE:
+	switch (clicks.pop_front()) {
+	case BTN_MODE_Pin:
 		fsm.push_event(change_mode_e{});
+		App::setMode(APP_MODE_SURFACE);
 		break;
-	case BUTTON_ENTER:
+	case BTN_ENTER_Pin:
 		settings.last_target = get_sensor_value();
 		set_status(NEED_SAVE_SETTINGS);
 		break;
-	case BUTTON_UP:
+	case BTN_UP_Pin:
 		break;
-	case BUTTON_DOWN:
+	case BTN_DOWN_Pin:
+		break;
+	case BTN_F1_Pin:
+		break;
+	case BTN_F2_Pin:
+		break;
+	case BTN_F3_Pin:
 		break;
 	default:
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown button in buffer");
 #endif
+		fsm.push_event(error_e{});
+		set_error(INTERNAL_ERROR);
 		break;
 	}
 }
@@ -367,21 +391,32 @@ void UI::_auto_mode_s::operator ()() const
 		return;
 	}
 
-	button_t btn = clicks.pop_front();
-	switch (btn) {
-	case BUTTON_MODE:
+	switch (clicks.pop_front()) {
+	case BTN_MODE_Pin:
 		fsm.push_event(change_mode_e{});
+		App::setMode(APP_MODE_MANUAL);
 		break;
-	case BUTTON_ENTER:
+	case BTN_ENTER_Pin:
 		break;
-	case BUTTON_UP:
+	case BTN_UP_Pin:
 		break;
-	case BUTTON_DOWN:
+	case BTN_DOWN_Pin:
+		break;
+	case BTN_F1_Pin:
+		App::setMode(APP_MODE_GROUND);
+		break;
+	case BTN_F2_Pin:
+		App::setMode(APP_MODE_STRING);
+		break;
+	case BTN_F3_Pin:
+		App::setMode(APP_MODE_SURFACE);
 		break;
 	default:
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown button in buffer");
 #endif
+		fsm.push_event(error_e{});
+		set_error(INTERNAL_ERROR);
 		break;
 	}
 }
@@ -420,6 +455,7 @@ void UI::load_start_a::operator ()() const
 
 	showHeader();
 	showFooter();
+	showLoading();
 }
 
 void UI::no_sens_start_a::operator ()() const

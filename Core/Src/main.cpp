@@ -32,7 +32,7 @@
 #include "bmacro.h"
 #include "at24cm01.h"
 
-#include "UI.h"
+#include "App.h"
 #include "SoulGuard.h"
 #include "StorageAT.h"
 #include "StorageDriver.h"
@@ -114,8 +114,7 @@ int main(void)
 		RestartWatchdog,
 		StackWatchdog,
 		MemoryWatchdog,
-		SettingsWatchdog,
-		SensorWatchdog
+		SettingsWatchdog
 	> soulGuard;
 
 	set_status(WAIT_LOAD);
@@ -134,7 +133,7 @@ int main(void)
 
     printTagLog(MAIN_TAG, "The device has been loaded");
 
-    UI ui;
+    App app;
 
 	while (1)
 	{
@@ -142,7 +141,7 @@ int main(void)
 
 		soulGuard.defend();
 
-		ui.tick();
+		app.proccess();
 
 		if (has_errors() || is_status(WAIT_LOAD)) {
 			continue;

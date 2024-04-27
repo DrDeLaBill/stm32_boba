@@ -111,9 +111,3 @@ public:
 	void check();
 
 };
-
-
-struct SensorWatchdog
-{
-	void check();
-};
