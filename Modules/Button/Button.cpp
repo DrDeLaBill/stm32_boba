@@ -4,7 +4,7 @@
 
 
 Button::Button(GPIO_TypeDef* port, uint16_t pin, bool inverse):
-	debounce(DEBOUNCE_MS), port(port), pin(pin), currState(inverse), inverse(inverse), clicked(false)
+	debounce(BUTTON_DEBOUNCE_MS), port(port), pin(pin), currState(inverse), inverse(inverse), clicked(false)
 {}
 
 void Button::tick()

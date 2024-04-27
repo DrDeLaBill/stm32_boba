@@ -87,6 +87,7 @@ protected:
 	>;
 
 	static fsm::FiniteStateMachine<fsm_table> fsm;
+	static utl::Timer pidTimer;
 	static utl::Timer timer;
 	static GyverPID pid;
 	static UI ui;

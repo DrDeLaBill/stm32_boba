@@ -10,11 +10,12 @@
 #include "hal_defs.h"
 
 
+#define BUTTON_DEBOUNCE_MS (20)
+
+
 class Button
 {
 private:
-	static constexpr uint32_t DEBOUNCE_MS = 20;
-
 	utl::Timer debounce;
 	const GPIO_TypeDef* port;
 	const uint16_t pin;

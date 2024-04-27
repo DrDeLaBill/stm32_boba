@@ -90,11 +90,11 @@ public:
 	static constexpr char TAG[] = "UI";
 
 	static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
-	static std::pair<uint16_t, Button> buttons[];
+	static std::pair<uint16_t, Button> buttons[BUTTONS_COUNT];
 
-	static void showUp(bool flag = true);
-	static void showDown(bool flag = true);
-	static void showMiddle(bool flag = true);
+	static void showUp(bool flag = false);
+	static void showDown(bool flag = false);
+	static void showMiddle(bool flag = false);
 
 	void tick();
 

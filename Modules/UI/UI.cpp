@@ -23,13 +23,13 @@
 
 utl::circle_buffer<UI::UI_CLICKS_SIZE, uint16_t> UI::clicks;
 std::pair<uint16_t, Button> UI::buttons[UI::BUTTONS_COUNT] = {
-	{BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}},
-	{BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}},
-	{BTN_MODE_Pin,  {BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true}},
-	{BTN_ENTER_Pin, {BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true}},
-	{BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin, true}},
-	{BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin, true}},
-	{BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin, true}}
+	std::make_pair<uint16_t, Button>(BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin, true}),
+	std::make_pair<uint16_t, Button>(BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}),
+	std::make_pair<uint16_t, Button>(BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}),
+	std::make_pair<uint16_t, Button>(BTN_ENTER_Pin, {BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true}),
+	std::make_pair<uint16_t, Button>(BTN_MODE_Pin,  {BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true}),
+	std::make_pair<uint16_t, Button>(BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin, true}),
+	std::make_pair<uint16_t, Button>(BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin, true})
 };
 
 utl::Timer UI::timer(SECOND_MS);
@@ -38,8 +38,21 @@ fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	UI::buttons[GPIO_Pin].second.tick();
-	bool wasClicked = UI::buttons[GPIO_Pin].second.wasClicked();
+	std::pair<uint16_t, Button>* pair = NULL;
+	for (unsigned i = 0; i < __arr_len(UI::buttons); i++) {
+		if (UI::buttons[i].first == GPIO_Pin) {
+			pair = &(UI::buttons[i]);
+			break;
+		}
+	}
+	if (!pair) {
+#ifdef DEBUG
+		BEDUG_ASSERT(false, "Unknown button interrupt");
+#endif
+		return;
+	}
+	pair->second.tick();
+	bool wasClicked = pair->second.wasClicked();
 	if (wasClicked) {
 		UI::clicks.push_back(GPIO_Pin);
 	}
@@ -234,7 +247,6 @@ void UI::showUp(bool flag)
 		display_clear_rect(x, y, static_cast<uint16_t>(bmp_up_15x15.infoHeader.biWidth), static_cast<uint16_t>(bmp_up_15x15.infoHeader.biHeight));
 	}
 	HAL_GPIO_WritePin(LED_UP_GPIO_Port, LED_UP_Pin, static_cast<GPIO_PinState>(flag));
-	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, static_cast<GPIO_PinState>(flag));
 }
 
 void UI::showDown(bool flag)
@@ -255,14 +267,19 @@ void UI::showDown(bool flag)
 		display_clear_rect(x, y, static_cast<uint16_t>(bmp_down_15x15.infoHeader.biWidth), static_cast<uint16_t>(bmp_down_15x15.infoHeader.biHeight));
 	}
 	HAL_GPIO_WritePin(LED_DOWN_GPIO_Port, LED_DOWN_Pin, static_cast<GPIO_PinState>(flag));
-	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, static_cast<GPIO_PinState>(flag));
 }
 
 void UI::showMiddle(bool flag)
 {
 	GPIO_PinState enable_mid = static_cast<GPIO_PinState>(flag);
 	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, enable_mid);
-	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, enable_mid);
+
+	GPIO_PinState enable_center = static_cast<GPIO_PinState>(
+		HAL_GPIO_ReadPin(LED_UP_GPIO_Port, LED_UP_Pin) ||
+		HAL_GPIO_ReadPin(LED_MID_GPIO_Port, LED_MID_Pin) ||
+		HAL_GPIO_ReadPin(LED_DOWN_GPIO_Port, LED_DOWN_Pin)
+	);
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, enable_center);
 }
 
 void UI::_init_s::operator ()() const

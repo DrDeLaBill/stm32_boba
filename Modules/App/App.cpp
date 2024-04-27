@@ -4,17 +4,24 @@
 
 #include "main.h"
 #include "soul.h"
+#include "sensor.h"
+#include "settings.h"
 #include "hal_defs.h"
 
 
-#define VALVE_UP()   HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
-#define VALVE_DOWN() HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
-#define VALVE_STOP() HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET); HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+#define APP_PID_DT_MS (500)
+#define APP_PID_MIN   (-7000)
+#define APP_PID_MAX   (7000)
+
+#define VALVE_UP()    HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
+#define VALVE_DOWN()  HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
+#define VALVE_STOP()  HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET); HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
 
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
-utl::Timer App::timer(0);
-GyverPID App::pid(1.0f, 0.3f, 0.1f, 500); // TODO
+GyverPID App::pid(1.0f, 0.3f, 0.1f, APP_PID_DT_MS); // TODO
+utl::Timer App::pidTimer(0);
+utl::Timer App::timer(APP_PID_DT_MS);
 UI App::ui;
 
 
@@ -55,6 +62,7 @@ void App::stop()
 void App::_init_s::operator ()()
 {
 	pid.setDirection(REVERSE);
+	pid.setLimits(APP_PID_MIN, APP_PID_MAX);
 	fsm.push_event(success_e{});
 }
 
@@ -75,7 +83,9 @@ void App::_manual_s::operator ()()
 
 void App::_auto_s::operator ()()
 {
-
+	if (!timer.wait()) {
+		fsm.push_event(pid_timeout_e{});
+	}
 
 	if (has_errors()) {
 		fsm.push_event(error_e{});
@@ -131,7 +141,29 @@ void App::string_start_a::operator ()()
 
 void App::setup_pid_a::operator ()()
 {
+	pid.input    = get_sensor_value();
+	pid.setpoint = settings.last_target;
 
+	int16_t pid_ms = pid.getResult();
+	if (pid_ms < 0) {
+		pidTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
+		reset_status(AUTO_NEED_VALVE_UP);
+		set_status(AUTO_NEED_VALVE_DOWN);
+		VALVE_DOWN();
+	} else if (pid_ms > 0) {
+		pidTimer.changeDelay(static_cast<uint32_t>(pid_ms));
+		set_status(AUTO_NEED_VALVE_UP);
+		reset_status(AUTO_NEED_VALVE_DOWN);
+		VALVE_UP();
+	} else {
+		pidTimer.changeDelay(0);
+		reset_status(AUTO_NEED_VALVE_DOWN);
+		reset_status(AUTO_NEED_VALVE_UP);
+		VALVE_STOP();
+	}
+	pidTimer.start();
+
+	timer.start();
 }
 
 void App::move_up_a::operator ()()
