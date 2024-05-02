@@ -28,6 +28,12 @@ extern "C" {
 #define CF_VERSION  ((uint8_t)0x01)
 
 
+#define SETTINGS_DEFUALT_KP       (1.0f)
+#define SETTINGS_DEFUALT_KI       (0.3f)
+#define SETTINGS_DEFUALT_KD       (0.1f)
+#define SETTINGS_DEFAULT_SAMPLING (500)
+
+
 typedef enum _SettingsStatus {
     SETTINGS_OK = 0,
     SETTINGS_ERROR
@@ -46,6 +52,13 @@ typedef struct __attribute__((packed)) _settings_t  {
 
     // Last target sensor value
     int16_t last_target;
+
+    // PID coefficients
+    float kp;
+    float ki;
+    float kd;
+    // PID sampling
+    uint32_t sampling;
 } settings_t;
 
 

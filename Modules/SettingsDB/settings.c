@@ -35,6 +35,10 @@ void settings_reset(settings_t* other)
 	other->cf_id = CF_VERSION;
 
 	other->last_target = 0;
+	other->kp = SETTINGS_DEFUALT_KP;
+	other->ki = SETTINGS_DEFUALT_KI;
+	other->kd = SETTINGS_DEFUALT_KD;
+	other->sampling = SETTINGS_DEFAULT_SAMPLING;
 }
 
 uint32_t settings_size()
@@ -68,5 +72,12 @@ void settings_show()
 
     printPretty("------------------------------------------------\n");
 	printPretty("Last valve target: %ld\n", settings.last_target);
+	printPretty(
+		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
+		((int)settings.kp), __abs(((int)(settings.kp * 100)) % 100),
+		((int)settings.ki), __abs(((int)(settings.ki * 100)) % 100),
+		((int)settings.kd), __abs(((int)(settings.kd * 100)) % 100)
+	);
+	printPretty("PID sampling: %lu ms\n", settings.sampling);
     printPretty("####################SETTINGS####################\n\n");
 }

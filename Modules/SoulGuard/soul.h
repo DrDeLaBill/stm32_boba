@@ -38,6 +38,10 @@ typedef enum _SOUK_STATUS {
 	RTC_FAULT,
 	CAN_FAULT,
 
+	BTN_F1_PRESSED,
+	BTN_F2_PRESSED,
+	BTN_F3_PRESSED,
+
 	/* Device statuses end */
 	STATUSES_END,
 

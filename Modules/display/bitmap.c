@@ -9,8 +9,8 @@
 
 #define BMP_UP_15x15_HEIGHT (15)
 #define BMP_UP_15x15_WIDTH  (15)
-#define _COLOR              (DISPLAY_COLOR_RED)
-#define _BCKGR              (DISPLAY_COLOR_BLACK)
+#define _COLOR              (DISPLAY_COLOR_BLACK)
+#define _BCKGR              (DISPLAY_COLOR_WHITE)
 
 const BITMAPSTRUCT bmp_up_15x15 __attribute__((aligned)) =
 {
@@ -58,7 +58,7 @@ const BITMAPSTRUCT bmp_up_15x15 __attribute__((aligned)) =
 
 #define BMP_DOWN_15x15_HEIGHT (15)
 #define BMP_DOWN_15x15_WIDTH  (15)
-#define _COLOR                (DISPLAY_COLOR_RED)
+#define _COLOR                (DISPLAY_COLOR_BLACK)
 
 const BITMAPSTRUCT bmp_down_15x15 __attribute__((aligned)) =
 {

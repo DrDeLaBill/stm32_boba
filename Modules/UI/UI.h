@@ -4,9 +4,11 @@
 #define _UI_H_
 
 
+#include <memory>
 #include <utility>
 #include <cstdint>
 
+#include "Menu.h"
 #include "Timer.h"
 #include "Button.h"
 #include "CircleBuffer.h"
@@ -29,8 +31,9 @@ protected:
 	FSM_CREATE_EVENT(success_e,     0);
 	FSM_CREATE_EVENT(sens_found_e,  0);
 	FSM_CREATE_EVENT(change_mode_e, 0);
-	FSM_CREATE_EVENT(no_sens_e,     1);
-	FSM_CREATE_EVENT(error_e,       2);
+	FSM_CREATE_EVENT(service_e,     1);
+	FSM_CREATE_EVENT(no_sens_e,     2);
+	FSM_CREATE_EVENT(error_e,       3);
 
 
 	// States:
@@ -39,6 +42,7 @@ protected:
 	struct _no_sens_s     { void operator()() const; };
 	struct _manual_mode_s { void operator()() const; };
 	struct _auto_mode_s   { void operator()() const; };
+	struct _service_s     { void operator()() const; };
 	struct _error_s       { void operator()() const; };
 
 	FSM_CREATE_STATE(init_s,        _init_s);
@@ -46,6 +50,7 @@ protected:
 	FSM_CREATE_STATE(no_sens_s,     _no_sens_s);
 	FSM_CREATE_STATE(manual_mode_s, _manual_mode_s);
 	FSM_CREATE_STATE(auto_mode_s,   _auto_mode_s);
+	FSM_CREATE_STATE(service_s,     _service_s);
 	FSM_CREATE_STATE(error_s,       _error_s);
 
 
@@ -55,6 +60,7 @@ protected:
 	struct no_sens_start_a { void operator()() const; };
 	struct manual_start_a  { void operator()() const; };
 	struct auto_start_a    { void operator()() const; };
+	struct service_start_a { void operator()() const; };
 
 
 	// FSM:
@@ -66,24 +72,31 @@ protected:
 		fsm::Transition<load_s,        error_e,       error_s,       error_a>,
 
 		fsm::Transition<no_sens_s,     sens_found_e,  manual_mode_s, manual_start_a>,
+		fsm::Transition<no_sens_s,     service_e,     service_s,     service_start_a>,
+		fsm::Transition<no_sens_s,     error_e,       error_s,       error_a>,
 
 		fsm::Transition<manual_mode_s, change_mode_e, auto_mode_s,   auto_start_a>,
 		fsm::Transition<manual_mode_s, no_sens_e,     no_sens_s,     no_sens_start_a>,
+		fsm::Transition<manual_mode_s, service_e,     service_s,     service_start_a>,
 		fsm::Transition<manual_mode_s, error_e,       error_s,       error_a>,
 
 		fsm::Transition<auto_mode_s,   change_mode_e, manual_mode_s, manual_start_a>,
 		fsm::Transition<auto_mode_s,   no_sens_e,     no_sens_s,     no_sens_start_a>,
-		fsm::Transition<auto_mode_s,   error_e,       error_s,       error_a>
+		fsm::Transition<auto_mode_s,   error_e,       error_s,       error_a>,
+
+		fsm::Transition<error_s,       success_e,     load_s,        load_start_a>
 	>;
 	static fsm::FiniteStateMachine<fsm_table> fsm;
 
 	static utl::Timer timer;
 
+	static std::unique_ptr<Menu> serviceMenu;
 
 	static void showHeader();
 	static void showFooter();
 	static void showValue();
 	static void showLoading();
+	static bool isServiceCombination();
 
 
 public:
@@ -95,6 +108,8 @@ public:
 	static void showUp(bool flag = false);
 	static void showDown(bool flag = false);
 	static void showMiddle(bool flag = false);
+
+	UI();
 
 	void tick();
 

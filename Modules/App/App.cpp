@@ -9,7 +9,6 @@
 #include "hal_defs.h"
 
 
-#define APP_PID_DT_MS (500)
 #define APP_PID_MIN   (-7000)
 #define APP_PID_MAX   (7000)
 
@@ -19,9 +18,9 @@
 
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
-GyverPID App::pid(1.0f, 0.3f, 0.1f, APP_PID_DT_MS); // TODO
+utl::Timer App::timer(SETTINGS_DEFAULT_SAMPLING);
 utl::Timer App::pidTimer(0);
-utl::Timer App::timer(APP_PID_DT_MS);
+GyverPID* App::pid;
 UI App::ui;
 
 
@@ -61,8 +60,13 @@ void App::stop()
 
 void App::_init_s::operator ()()
 {
-	pid.setDirection(REVERSE);
-	pid.setLimits(APP_PID_MIN, APP_PID_MAX);
+	if (is_status(WAIT_LOAD)) {
+		return;
+	}
+	pid = new GyverPID(settings.kp, settings.ki, settings.kd, settings.sampling);
+	pid->setDirection(REVERSE);
+	pid->setLimits(APP_PID_MIN, APP_PID_MAX);
+	timer.changeDelay(settings.sampling);
 	fsm.push_event(success_e{});
 }
 
@@ -141,10 +145,10 @@ void App::string_start_a::operator ()()
 
 void App::setup_pid_a::operator ()()
 {
-	pid.input    = get_sensor_value();
-	pid.setpoint = settings.last_target;
+	pid->input    = get_sensor_value();
+	pid->setpoint = settings.last_target;
 
-	int16_t pid_ms = pid.getResult();
+	int16_t pid_ms = pid->getResult();
 	if (pid_ms < 0) {
 		pidTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
 		reset_status(AUTO_NEED_VALVE_UP);

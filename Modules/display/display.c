@@ -15,7 +15,7 @@
 void display_init()
 {
 	BSP_LCD_Init();
-	BSP_LCD_Clear(DISPLAY_COLOR_BLACK);
+	BSP_LCD_Clear(DISPLAY_COLOR_WHITE);
 }
 
 uint16_t display_height()
@@ -30,7 +30,7 @@ uint16_t display_width()
 
 void display_clear()
 {
-	BSP_LCD_Clear(DISPLAY_COLOR_BLACK);
+	BSP_LCD_Clear(DISPLAY_COLOR_WHITE);
 }
 
 void display_clear_header()
@@ -50,13 +50,18 @@ void display_clear_footer()
 
 void display_clear_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    BSP_LCD_SetTextColor(DISPLAY_COLOR_BLACK);
+	display_fill_rect(x, y, w, h, DISPLAY_COLOR_WHITE);
+}
+
+void display_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
+{
+    BSP_LCD_SetTextColor(color);
     BSP_LCD_FillRect(x, y, w, h);
 }
 
 void display_sections_show()
 {
-    BSP_LCD_SetTextColor(DISPLAY_COLOR_RED);
+    BSP_LCD_SetTextColor(DISPLAY_COLOR_BLACK);
 
     uint16_t y = (uint16_t)DISPLAY_HEADER_HEIGHT;
     BSP_LCD_DrawLine(0, y, DISPLAY_WIDTH, y);
@@ -69,6 +74,11 @@ void display_sections_show()
 
     x = 2 * DISPLAY_WIDTH / 3;
 	BSP_LCD_DrawLine(x, y, x, DISPLAY_HEIGHT);
+}
+
+void display_set_background(uint16_t color)
+{
+    BSP_LCD_SetBackColor(color);
 }
 
 void display_set_color(uint16_t color)
@@ -85,8 +95,6 @@ void display_text_show(
 	const unsigned len
 ) {
     BSP_LCD_SetFont(font);
-
-    BSP_LCD_SetBackColor(DISPLAY_COLOR_BLACK);
 
     uint16_t tmp_x = x, tmp_y = y - font->Height;
 
@@ -108,6 +116,7 @@ void display_text_show(
         BSP_LCD_DisplayChar(tmp_x + (uint16_t)i * font->Width, tmp_y + font->Height, text[i]);
     }
 
+    BSP_LCD_SetBackColor(DISPLAY_COLOR_WHITE);
     BSP_LCD_SetTextColor(DISPLAY_DEFAULT_COLOR);
 }
 

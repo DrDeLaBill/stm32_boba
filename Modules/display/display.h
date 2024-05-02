@@ -19,9 +19,9 @@ extern "C" {
 #define DISPLAY_HEIGHT           ((uint16_t)ILI9341_LCD_PIXEL_HEIGHT)
 #define DISPLAY_WIDTH            ((uint16_t)ILI9341_LCD_PIXEL_WIDTH)
 
-#define DISPLAY_HEADER_HEIGHT    (DISPLAY_HEIGHT / 6)
-#define DISPLAY_FOOTER_HEIGHT    (DISPLAY_HEIGHT / 6)
-#define DISPLAY_CONTENT_HEIGHT   (DISPLAY_HEIGHT - DISPLAY_HEADER_HEIGHT - DISPLAY_FOOTER_HEIGHT)
+#define DISPLAY_HEADER_HEIGHT    ((uint16_t)DISPLAY_HEIGHT / 6)
+#define DISPLAY_FOOTER_HEIGHT    ((uint16_t)DISPLAY_HEIGHT / 6)
+#define DISPLAY_CONTENT_HEIGHT   ((uint16_t)DISPLAY_HEIGHT - DISPLAY_HEADER_HEIGHT - DISPLAY_FOOTER_HEIGHT)
 
 
 #define DISPLAY_COLOR(color)     (RC((uint16_t)(color ^ 0xFFFF)))
@@ -29,6 +29,8 @@ extern "C" {
 #define DISPLAY_COLOR_RED        DISPLAY_COLOR(0xF800)
 #define DISPLAY_COLOR_GREEN      DISPLAY_COLOR(0x07E0)
 #define DISPLAY_COLOR_BLUE       DISPLAY_COLOR(0x001F)
+#define DISPLAY_COLOR_GRAY       DISPLAY_COLOR(0x31C7)
+#define DISPLAY_COLOR_LIGHT_GRAY DISPLAY_COLOR(0xC659)
 #define DISPLAY_COLOR_WHITE      DISPLAY_COLOR(LCD_COLOR_WHITE)
 #define DISPLAY_COLOR_BLACK      DISPLAY_COLOR(LCD_COLOR_BLACK)
 
@@ -53,8 +55,10 @@ void display_clear_header();
 void display_clear_content();
 void display_clear_footer();
 void display_clear_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void display_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
 
 void display_sections_show();
+void display_set_background(uint16_t color);
 void display_set_color(uint16_t color);
 void display_text_show(
 	const uint16_t x,

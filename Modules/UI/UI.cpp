@@ -23,17 +23,18 @@
 
 utl::circle_buffer<UI::UI_CLICKS_SIZE, uint16_t> UI::clicks;
 std::pair<uint16_t, Button> UI::buttons[UI::BUTTONS_COUNT] = {
-	std::make_pair<uint16_t, Button>(BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin, true}),
+	std::make_pair<uint16_t, Button>(BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin,    true}),
 	std::make_pair<uint16_t, Button>(BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}),
 	std::make_pair<uint16_t, Button>(BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}),
 	std::make_pair<uint16_t, Button>(BTN_ENTER_Pin, {BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true}),
 	std::make_pair<uint16_t, Button>(BTN_MODE_Pin,  {BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true}),
-	std::make_pair<uint16_t, Button>(BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin, true}),
-	std::make_pair<uint16_t, Button>(BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin, true})
+	std::make_pair<uint16_t, Button>(BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin,    true}),
+	std::make_pair<uint16_t, Button>(BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin,    true})
 };
 
 utl::Timer UI::timer(SECOND_MS);
 fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
+std::unique_ptr<Menu> UI::serviceMenu;
 
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -91,16 +92,31 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 #ifdef DEBUG
 		printTagLog(UI::TAG, "F1 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
+		if (wasClicked) {
+			set_status(BTN_F1_PRESSED);
+		} else {
+			reset_status(BTN_F1_PRESSED);
+		}
 		break;
 	case BTN_F2_Pin:
 #ifdef DEBUG
 		printTagLog(UI::TAG, "F2 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
+		if (wasClicked) {
+			set_status(BTN_F2_PRESSED);
+		} else {
+			reset_status(BTN_F2_PRESSED);
+		}
 		break;
 	case BTN_F3_Pin:
 #ifdef DEBUG
 		printTagLog(UI::TAG, "F3 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
+		if (wasClicked) {
+			set_status(BTN_F3_PRESSED);
+		} else {
+			reset_status(BTN_F3_PRESSED);
+		}
 		break;
 	default:
 #ifdef DEBUG
@@ -110,6 +126,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	};
 }
 
+
+UI::UI()
+{
+	MenuItem menuItems[] = {
+		{"PID Kp:",        "0.00"},
+		{"PID Ki:",        "0.00"},
+		{"PID Kd:",        "0.00"},
+		{"PID sambpling:", "0"}
+	};
+	serviceMenu = std::make_unique<Menu>(menuItems, __arr_len(menuItems));
+}
 
 void UI::tick()
 {
@@ -131,37 +158,71 @@ void UI::showHeader()
 
 void UI::showFooter()
 {
+	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
+	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
+	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
+
 	uint16_t halfSection = display_width() / 3 / 2;
 
-	display_set_color(DISPLAY_COLOR_WHITE);
-	display_text_show(
-		halfSection,
-		DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
-		DISPLAY_ALIGN_CENTER,
-		"F1",
-		strlen("F1")
-	);
+	uint16_t x = 0;
+	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
+	uint16_t w = display_width() / 3;
+	uint16_t h = display_height() - y;
+	uint16_t curr_color = is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f1_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f1_color = curr_color;
+	}
+	if (!is_status(BTN_F1_PRESSED)) {
+		display_set_color(DISPLAY_COLOR_BLACK);
+		display_text_show(
+			x + halfSection,
+			y + (DISPLAY_FOOTER_HEIGHT / 2),
+			&Font24,
+			DISPLAY_ALIGN_CENTER,
+			"F1",
+			strlen("F1")
+		);
+	}
 
-	display_set_color(DISPLAY_COLOR_WHITE);
-	display_text_show(
-		display_width() / 3  + halfSection,
-		DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
-		DISPLAY_ALIGN_CENTER,
-		"F2",
-		strlen("F2")
-	);
 
-	display_set_color(DISPLAY_COLOR_WHITE);
-	display_text_show(
-		2 * display_width() / 3  + halfSection,
-		DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
-		DISPLAY_ALIGN_CENTER,
-		"F3",
-		strlen("F3")
-	);
+	w -= 1;
+	x += display_width() / 3 + 1;
+	curr_color = is_status(BTN_F2_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f2_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f2_color = curr_color;
+	}
+	if (!is_status(BTN_F2_PRESSED)) {
+		display_set_color(DISPLAY_COLOR_BLACK);
+		display_text_show(
+			x  + halfSection,
+			y + (DISPLAY_FOOTER_HEIGHT / 2),
+			&Font24,
+			DISPLAY_ALIGN_CENTER,
+			"F2",
+			strlen("F2")
+		);
+	}
+
+
+	x += display_width() / 3;
+	curr_color = is_status(BTN_F3_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f3_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f3_color = curr_color;
+	}
+	if (!is_status(BTN_F3_PRESSED)) {
+		display_set_color(DISPLAY_COLOR_BLACK);
+		display_text_show(
+			x + halfSection,
+			y + (DISPLAY_FOOTER_HEIGHT / 2),
+			&Font24,
+			DISPLAY_ALIGN_CENTER,
+			"F3",
+			strlen("F3")
+		);
+	}
 }
 
 void UI::showValue()
@@ -172,7 +233,7 @@ void UI::showValue()
 	{
 		char target[30] = {};
 		snprintf(target, sizeof(target), "Target: %03d.%02d", settings.last_target / 100, __abs(settings.last_target % 100));
-		display_set_color(DISPLAY_COLOR_WHITE);
+		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			offset_x,
 			offset_y,
@@ -187,7 +248,7 @@ void UI::showValue()
 		offset_y = display_height() / 2;
 		char value[30] = {};
 		snprintf(value, sizeof(value), "Value: %03d.%02d", get_sensor_value() / 100, __abs(get_sensor_value() % 100));
-		display_set_color(DISPLAY_COLOR_WHITE);
+		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			offset_x,
 			offset_y,
@@ -213,7 +274,7 @@ void UI::showLoading()
 			label[strlen(label)] = ' ';
 		}
 	}
-	display_set_color(DISPLAY_COLOR_WHITE);
+	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
@@ -224,6 +285,26 @@ void UI::showLoading()
 	);
 
 	counter++;
+}
+
+bool UI::isServiceCombination()
+{
+	if (clicks.count() < 4) {
+		return false;
+	}
+
+	bool flag = true;
+	for (unsigned i = 0; i < clicks.count() - 3; i++) {
+		if (clicks[i]     == BTN_F1_Pin &&
+			clicks[i + 1] == BTN_F3_Pin &&
+			clicks[i + 2] == BTN_F3_Pin &&
+			clicks[i + 3] == BTN_F1_Pin
+		) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void UI::showUp(bool flag)
@@ -286,7 +367,7 @@ void UI::_init_s::operator ()() const
 {
     display_init();
 	display_clear();
-	display_set_color(DISPLAY_COLOR_WHITE);
+	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
@@ -327,7 +408,7 @@ void UI::_no_sens_s::operator ()() const
 	showFooter();
 
 	char label[] = "NO SENSOR";
-	display_set_color(DISPLAY_COLOR_WHITE);
+	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
@@ -339,6 +420,10 @@ void UI::_no_sens_s::operator ()() const
 
 	if (!is_status(NO_SENSOR)) {
 		fsm.push_event(sens_found_e{});
+	}
+
+	if (isServiceCombination()) {
+		fsm.push_event(service_e{});
 	}
 }
 
@@ -357,11 +442,16 @@ void UI::_manual_mode_s::operator ()() const
 		fsm.push_event(error_e{});
 	}
 
+	if (isServiceCombination()) {
+		fsm.push_event(service_e{});
+	}
+
 	if (clicks.empty()) {
 		return;
 	}
 
-	switch (clicks.pop_front()) {
+	uint16_t click = clicks.pop_front();
+	switch (click) {
 	case BTN_MODE_Pin:
 		fsm.push_event(change_mode_e{});
 		App::setMode(APP_MODE_SURFACE);
@@ -371,14 +461,11 @@ void UI::_manual_mode_s::operator ()() const
 		set_status(NEED_SAVE_SETTINGS);
 		break;
 	case BTN_UP_Pin:
-		break;
 	case BTN_DOWN_Pin:
-		break;
 	case BTN_F1_Pin:
-		break;
 	case BTN_F2_Pin:
-		break;
 	case BTN_F3_Pin:
+		clicks.push_back(click);
 		break;
 	default:
 #ifdef DEBUG
@@ -439,20 +526,53 @@ void UI::_auto_mode_s::operator ()() const
 }
 
 
+void UI::_service_s::operator ()() const
+{
+	showFooter();
+
+	char value[MenuItem::VALUE_MAX_LEN] = "";
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.kp), __abs(((int)(settings.kp * 100)) % 100));
+	serviceMenu->setValue(0, value);
+
+	memset(value, 0, sizeof(value));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ki), __abs(((int)(settings.ki * 100)) % 100));
+	serviceMenu->setValue(1, value);
+
+	memset(value, 0, sizeof(value));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.kd), __abs(((int)(settings.kd * 100)) % 100));
+	serviceMenu->setValue(2, value);
+
+	memset(value, 0, sizeof(value));
+	snprintf(value, sizeof(value), "%lu ms", settings.sampling);
+	serviceMenu->setValue(3, value);
+
+	if (!clicks.empty()) {
+		serviceMenu->click(clicks.pop_front());
+	}
+
+	serviceMenu->show();
+}
+
+
 void UI::_error_s::operator ()() const
 {
 	char line[20] = "";
-	snprintf(line, sizeof(line), "ERROR%u", get_first_error());
+	unsigned error = get_first_error();
+	if (error) {
+		snprintf(line, sizeof(line), "ERROR%u", error);
 
-	display_set_color(DISPLAY_COLOR_RED);
-	display_text_show(
-		display_width() / 2,
-		display_height() / 2,
-		&Font24,
-		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line)
-	);
+		display_set_color(DISPLAY_COLOR_BLACK);
+		display_text_show(
+			display_width() / 2,
+			display_height() / 2,
+			&Font24,
+			DISPLAY_ALIGN_CENTER,
+			line,
+			strlen(line)
+		);
+	} else {
+		fsm.push_event(success_e{});
+	}
 }
 
 void UI::error_a::operator ()() const
@@ -464,11 +584,12 @@ void UI::error_a::operator ()() const
 	showMiddle(false);
 }
 
+#define LOADING_DELAY_MS ((uint32_t)300)
 void UI::load_start_a::operator ()() const
 {
 	display_clear();
 	display_sections_show();
-	timer.changeDelay(SECOND_MS);
+	timer.changeDelay(LOADING_DELAY_MS);
 
 	showHeader();
 	showFooter();
@@ -477,22 +598,33 @@ void UI::load_start_a::operator ()() const
 
 void UI::no_sens_start_a::operator ()() const
 {
+	clicks.clear();
+	fsm.clear_events();
+
 	display_clear();
 	display_sections_show();
+
+	showDown(false);
+	showUp(false);
+	showMiddle(false);
 }
 
 void UI::manual_start_a::operator ()() const
 {
+	clicks.clear();
+	fsm.clear_events();
+
 	display_sections_show();
 
-	display_set_color(DISPLAY_COLOR_WHITE);
+	char line[] = "    manual    ";
+	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		DISPLAY_HEADER_HEIGHT / 2,
 		&Font24,
 		DISPLAY_ALIGN_CENTER,
-		"    manual    ",
-		strlen("    manual    ")
+		line,
+		strlen(line)
 	);
 
 	showHeader();
@@ -501,18 +633,42 @@ void UI::manual_start_a::operator ()() const
 
 void UI::auto_start_a::operator ()() const
 {
+	clicks.clear();
+	fsm.clear_events();
+
 	display_sections_show();
 
-	display_set_color(DISPLAY_COLOR_WHITE);
+	char line[] = "     auto     ";
+	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		DISPLAY_HEADER_HEIGHT / 2,
 		&Font24,
 		DISPLAY_ALIGN_CENTER,
-		"     auto     ",
-		strlen("     auto     ")
+		line,
+		strlen(line)
 	);
 
 	showHeader();
 	showFooter();
+}
+
+void UI::service_start_a::operator ()() const
+{
+	clicks.clear();
+	fsm.clear_events();
+
+	display_clear_content();
+	display_sections_show();
+
+	char line[] = "    service    ";
+	display_set_color(DISPLAY_COLOR_BLACK);
+	display_text_show(
+		display_width() / 2,
+		DISPLAY_HEADER_HEIGHT / 2,
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		line,
+		strlen(line)
+	);
 }
