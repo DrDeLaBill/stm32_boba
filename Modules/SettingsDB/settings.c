@@ -30,15 +30,26 @@ void settings_reset(settings_t* other)
 {
 	printTagLog(SETTINGS_TAG, "Reset settings");
 	other->dv_type = DEVICE_TYPE;
-	other->sw_id = SW_VERSION;
-	other->fw_id = FW_VERSION;
-	other->cf_id = CF_VERSION;
+	other->sw_id   = SW_VERSION;
+	other->fw_id   = FW_VERSION;
+	other->cf_id   = CF_VERSION;
 
 	other->last_target = 0;
-	other->kp = SETTINGS_DEFUALT_KP;
-	other->ki = SETTINGS_DEFUALT_KI;
-	other->kd = SETTINGS_DEFUALT_KD;
-	other->sampling = SETTINGS_DEFAULT_SAMPLING;
+
+	other->surface_kp = SETTINGS_DEFUALT_SURFACE_KP;
+	other->surface_ki = SETTINGS_DEFUALT_SURFACE_KI;
+	other->surface_kd = SETTINGS_DEFUALT_SURFACE_KD;
+	other->surface_sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
+
+	other->ground_kp = SETTINGS_DEFUALT_GROUND_KP;
+	other->ground_ki = SETTINGS_DEFUALT_GROUND_KI;
+	other->ground_kd = SETTINGS_DEFUALT_GROUND_KD;
+	other->ground_sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
+
+	other->string_kp = SETTINGS_DEFUALT_STRING_KP;
+	other->string_ki = SETTINGS_DEFUALT_STRING_KI;
+	other->string_kd = SETTINGS_DEFUALT_STRING_KD;
+	other->string_sampling = SETTINGS_DEFAULT_STRING_SAMPLING;
 }
 
 uint32_t settings_size()
@@ -72,12 +83,29 @@ void settings_show()
 
     printPretty("------------------------------------------------\n");
 	printPretty("Last valve target: %ld\n", settings.last_target);
+    printPretty("------------------SURFACE MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.kp), __abs(((int)(settings.kp * 100)) % 100),
-		((int)settings.ki), __abs(((int)(settings.ki * 100)) % 100),
-		((int)settings.kd), __abs(((int)(settings.kd * 100)) % 100)
+		((int)settings.surface_kp), __abs(((int)(settings.surface_kp * 100)) % 100),
+		((int)settings.surface_ki), __abs(((int)(settings.surface_ki * 100)) % 100),
+		((int)settings.surface_kd), __abs(((int)(settings.surface_kd * 100)) % 100)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.sampling);
+	printPretty("PID sampling: %lu ms\n", settings.surface_sampling);
+    printPretty("------------------GROUND  MODE------------------\n");
+	printPretty(
+		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
+		((int)settings.ground_kp), __abs(((int)(settings.ground_kp * 100)) % 100),
+		((int)settings.ground_ki), __abs(((int)(settings.ground_ki * 100)) % 100),
+		((int)settings.ground_kd), __abs(((int)(settings.ground_kd * 100)) % 100)
+	);
+	printPretty("PID sampling: %lu ms\n", settings.ground_sampling);
+    printPretty("------------------STRING  MODE------------------\n");
+	printPretty(
+		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
+		((int)settings.string_kp), __abs(((int)(settings.string_kp * 100)) % 100),
+		((int)settings.string_ki), __abs(((int)(settings.string_ki * 100)) % 100),
+		((int)settings.string_kd), __abs(((int)(settings.string_kd * 100)) % 100)
+	);
+	printPretty("PID sampling: %lu ms\n", settings.string_sampling);
     printPretty("####################SETTINGS####################\n\n");
 }

@@ -109,7 +109,11 @@ void _reset_status(SOUL_STATUS status)
 	soul.statuses[status_num / BITS_IN_BYTE] &= (uint8_t)~(0x01 << (status_num % BITS_IN_BYTE));
 }
 
-void restart_i2c_errata()
+void soul_hard_fault()
 {
-	// TODO
+#ifdef DEBUG
+	while(1) {}
+#else
+	NVIC_SystemReset();
+#endif
 }

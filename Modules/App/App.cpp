@@ -18,7 +18,7 @@
 
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
-utl::Timer App::timer(SETTINGS_DEFAULT_SAMPLING);
+utl::Timer App::timer(SETTINGS_DEFAULT_SURFACE_SAMPLING);
 utl::Timer App::pidTimer(0);
 GyverPID* App::pid;
 UI App::ui;
@@ -63,10 +63,10 @@ void App::_init_s::operator ()()
 	if (is_status(WAIT_LOAD)) {
 		return;
 	}
-	pid = new GyverPID(settings.kp, settings.ki, settings.kd, settings.sampling);
+	pid = new GyverPID(settings.surface_kp, settings.surface_ki, settings.surface_kd, settings.surface_sampling);
 	pid->setDirection(REVERSE);
 	pid->setLimits(APP_PID_MIN, APP_PID_MAX);
-	timer.changeDelay(settings.sampling);
+	timer.changeDelay(settings.surface_sampling);
 	fsm.push_event(success_e{});
 }
 

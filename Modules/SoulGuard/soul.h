@@ -41,6 +41,7 @@ typedef enum _SOUK_STATUS {
 	BTN_F1_PRESSED,
 	BTN_F2_PRESSED,
 	BTN_F3_PRESSED,
+	NEED_UI_EXIT,
 
 	/* Device statuses end */
 	STATUSES_END,
@@ -81,7 +82,7 @@ bool is_status(SOUL_STATUS status);
 void set_status(SOUL_STATUS status);
 void reset_status(SOUL_STATUS status);
 
-void restart_i2c_errata();
+void soul_hard_fault();
 
 
 #ifdef __cplusplus

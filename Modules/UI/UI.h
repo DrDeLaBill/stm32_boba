@@ -15,6 +15,9 @@
 #include "FiniteStateMachine.h"
 
 
+#define UI_BEDUG (false)
+
+
 struct UI
 {
 private:
@@ -80,6 +83,8 @@ protected:
 		fsm::Transition<manual_mode_s, service_e,     service_s,     service_start_a>,
 		fsm::Transition<manual_mode_s, error_e,       error_s,       error_a>,
 
+		fsm::Transition<service_s,     service_e,     manual_mode_s, manual_start_a>,
+
 		fsm::Transition<auto_mode_s,   change_mode_e, manual_mode_s, manual_start_a>,
 		fsm::Transition<auto_mode_s,   no_sens_e,     no_sens_s,     no_sens_start_a>,
 		fsm::Transition<auto_mode_s,   error_e,       error_s,       error_a>,
@@ -108,8 +113,6 @@ public:
 	static void showUp(bool flag = false);
 	static void showDown(bool flag = false);
 	static void showMiddle(bool flag = false);
-
-	UI();
 
 	void tick();
 

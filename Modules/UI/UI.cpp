@@ -16,6 +16,7 @@
 #include "hal_defs.h"
 
 #include "App.h"
+#include "Callbacks.h"
 
 
 #define LOAD_POINT_COUNT (3)
@@ -34,7 +35,33 @@ std::pair<uint16_t, Button> UI::buttons[UI::BUTTONS_COUNT] = {
 
 utl::Timer UI::timer(SECOND_MS);
 fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
-std::unique_ptr<Menu> UI::serviceMenu;
+MenuItem menuItems[] =
+{
+	{(new version_callback()),          false, "Version:",       "v0.0.0"},
+	{(new label_callback())  ,          false, "        SURFACE MODE        "},
+	{(new surface_kp_callback()),       true,  "PID Kp:",        "0.00"},
+	{(new surface_ki_callback()),       true,  "PID Ki:",        "0.00"},
+	{(new surface_kd_callback()),       true,  "PID Kd:",        "0.00"},
+	{(new surface_sampling_callback()), true,  "PID sampling:",  "0 ms"},
+	{(new label_callback())  ,          false, "        GROUND  MODE        "},
+	{(new ground_kp_callback()),        true,  "PID Kp:",        "0.00"},
+	{(new ground_ki_callback()),        true,  "PID Ki:",        "0.00"},
+	{(new ground_kd_callback()),        true,  "PID Kd:",        "0.00"},
+	{(new ground_sampling_callback()),  true,  "PID sampling:",  "0 ms"},
+	{(new label_callback())  ,          false, "        STRING  MODE        "},
+	{(new string_kp_callback()),        true,  "PID Kp:",        "0.00"},
+	{(new string_ki_callback()),        true,  "PID Ki:",        "0.00"},
+	{(new string_kd_callback()),        true,  "PID Kd:",        "0.00"},
+	{(new string_sampling_callback()),  true,  "PID sampling:",  "0 ms"}
+};
+std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
+	0,
+	DISPLAY_HEADER_HEIGHT,
+	display_width(),
+	DISPLAY_CONTENT_HEIGHT,
+	menuItems,
+	__arr_len(menuItems)
+);
 
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -47,7 +74,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 	}
 	if (!pair) {
-#ifdef DEBUG
+#if UI_BEDUG
 		BEDUG_ASSERT(false, "Unknown button interrupt");
 #endif
 		return;
@@ -59,7 +86,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 	switch (GPIO_Pin) {
 	case BTN_UP_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "UP irq %u", HAL_GPIO_ReadPin(BTN_UP_GPIO_Port, BTN_UP_Pin));
 #endif
 		if (wasClicked) {
@@ -69,7 +96,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 		break;
 	case BTN_DOWN_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "DOWN irq %u", HAL_GPIO_ReadPin(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin));
 #endif
 		if (wasClicked) {
@@ -79,17 +106,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 		break;
 	case BTN_MODE_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "MODE irq %u", HAL_GPIO_ReadPin(BTN_MODE_GPIO_Port, BTN_MODE_Pin));
 #endif
 		break;
 	case BTN_ENTER_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "ENTER irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
 		break;
 	case BTN_F1_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "F1 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
 		if (wasClicked) {
@@ -99,7 +126,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 		break;
 	case BTN_F2_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "F2 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
 		if (wasClicked) {
@@ -109,7 +136,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 		break;
 	case BTN_F3_Pin:
-#ifdef DEBUG
+#if UI_BEDUG
 		printTagLog(UI::TAG, "F3 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
 #endif
 		if (wasClicked) {
@@ -119,23 +146,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 		break;
 	default:
-#ifdef DEBUG
+#if UI_BEDUG
 		BEDUG_ASSERT(false, "Unknown button interrupt");
 #endif
 		break;
 	};
-}
-
-
-UI::UI()
-{
-	MenuItem menuItems[] = {
-		{"PID Kp:",        "0.00"},
-		{"PID Ki:",        "0.00"},
-		{"PID Kd:",        "0.00"},
-		{"PID sambpling:", "0"}
-	};
-	serviceMenu = std::make_unique<Menu>(menuItems, __arr_len(menuItems));
 }
 
 void UI::tick()
@@ -144,17 +159,7 @@ void UI::tick()
 }
 
 void UI::showHeader()
-{
-//	display_set_color(DISPLAY_COLOR_WHITE);
-//	display_text_show(
-//		display_width() / 2,
-//		DISPLAY_HEADER_HEIGHT / 2,
-//		&Font24,
-//		DISPLAY_ALIGN_CENTER,
-//		"statusbar",
-//		strlen("statusbar")
-//	);
-}
+{}
 
 void UI::showFooter()
 {
@@ -173,62 +178,62 @@ void UI::showFooter()
 		display_fill_rect(x, y, w, h, curr_color);
 		f1_color = curr_color;
 	}
-	if (!is_status(BTN_F1_PRESSED)) {
-		display_set_color(DISPLAY_COLOR_BLACK);
-		display_text_show(
-			x + halfSection,
-			y + (DISPLAY_FOOTER_HEIGHT / 2),
-			&Font24,
-			DISPLAY_ALIGN_CENTER,
-			"F1",
-			strlen("F1")
-		);
-	}
+	char linef1[] = "F1";
+	display_set_background(curr_color);
+	display_set_color(is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		linef1,
+		strlen(linef1)
+	);
 
 
 	w -= 1;
-	x += display_width() / 3 + 1;
+	x += static_cast<uint16_t>(display_width() / 3 + 1);
 	curr_color = is_status(BTN_F2_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f2_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f2_color = curr_color;
 	}
-	if (!is_status(BTN_F2_PRESSED)) {
-		display_set_color(DISPLAY_COLOR_BLACK);
-		display_text_show(
-			x  + halfSection,
-			y + (DISPLAY_FOOTER_HEIGHT / 2),
-			&Font24,
-			DISPLAY_ALIGN_CENTER,
-			"F2",
-			strlen("F2")
-		);
-	}
+	char linef2[] = "F2";
+	display_set_background(curr_color);
+	display_set_color(is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		linef2,
+		strlen(linef2)
+	);
 
 
-	x += display_width() / 3;
+	x += static_cast<uint16_t>(display_width() / 3);
 	curr_color = is_status(BTN_F3_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f3_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f3_color = curr_color;
 	}
-	if (!is_status(BTN_F3_PRESSED)) {
-		display_set_color(DISPLAY_COLOR_BLACK);
-		display_text_show(
-			x + halfSection,
-			y + (DISPLAY_FOOTER_HEIGHT / 2),
-			&Font24,
-			DISPLAY_ALIGN_CENTER,
-			"F3",
-			strlen("F3")
-		);
-	}
+	char linef3[] = "F3";
+	display_set_background(curr_color);
+	display_set_color(is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		linef3,
+		strlen(linef3)
+	);
 }
 
 void UI::showValue()
 {
 	uint16_t offset_x = display_width() / 2;
-	uint16_t offset_y = display_height() / (uint16_t)2 - Font16.Height - DEFAULT_MARGIN; // TODO
+	uint16_t offset_y = static_cast<uint16_t>(display_height() / (uint16_t)2 - Font16.Height - DEFAULT_MARGIN);
 
 	{
 		char target[30] = {};
@@ -293,8 +298,7 @@ bool UI::isServiceCombination()
 		return false;
 	}
 
-	bool flag = true;
-	for (unsigned i = 0; i < clicks.count() - 3; i++) {
+	for (uint8_t i = 0; i < clicks.count() - 3; i++) {
 		if (clicks[i]     == BTN_F1_Pin &&
 			clicks[i + 1] == BTN_F3_Pin &&
 			clicks[i + 2] == BTN_F3_Pin &&
@@ -313,14 +317,14 @@ void UI::showUp(bool flag)
 	extern const BITMAPSTRUCT bmp_down_15x15;
 
 	uint16_t x = DEFAULT_MARGIN;
-	uint16_t y =
+	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
 		DISPLAY_CONTENT_HEIGHT -
 		DEFAULT_MARGIN -
-		static_cast<uint16_t>(bmp_down_15x15.infoHeader.biHeight) -
-		(uint16_t)DEFAULT_MARGIN - // TODO
-		static_cast<uint16_t>(bmp_up_15x15.infoHeader.biHeight)
-	;
+		bmp_down_15x15.infoHeader.biHeight -
+		DEFAULT_MARGIN -
+		bmp_up_15x15.infoHeader.biHeight
+	);
 
 	if (flag) {
 		display_draw_bitmap(x, y, &bmp_up_15x15);
@@ -530,24 +534,13 @@ void UI::_service_s::operator ()() const
 {
 	showFooter();
 
-	char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.kp), __abs(((int)(settings.kp * 100)) % 100));
-	serviceMenu->setValue(0, value);
-
-	memset(value, 0, sizeof(value));
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ki), __abs(((int)(settings.ki * 100)) % 100));
-	serviceMenu->setValue(1, value);
-
-	memset(value, 0, sizeof(value));
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.kd), __abs(((int)(settings.kd * 100)) % 100));
-	serviceMenu->setValue(2, value);
-
-	memset(value, 0, sizeof(value));
-	snprintf(value, sizeof(value), "%lu ms", settings.sampling);
-	serviceMenu->setValue(3, value);
-
 	if (!clicks.empty()) {
 		serviceMenu->click(clicks.pop_front());
+	}
+
+	if (is_status(NEED_UI_EXIT)) {
+		reset_status(NEED_UI_EXIT);
+		fsm.push_event(service_e{});
 	}
 
 	serviceMenu->show();
@@ -671,4 +664,6 @@ void UI::service_start_a::operator ()() const
 		line,
 		strlen(line)
 	);
+
+	serviceMenu->reset();
 }
