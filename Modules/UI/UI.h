@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 #include <cstdint>
+#include <unordered_map>
 
 #include "Menu.h"
 #include "Timer.h"
@@ -25,10 +26,11 @@ private:
 
 	static constexpr uint32_t DEBOUNCE_MS = 20;
 
-	static constexpr unsigned BUTTONS_COUNT = 7;
-
 protected:
 	static constexpr uint16_t DEFAULT_MARGIN = 10;
+
+	static constexpr int16_t TRIG_VALUE_LOW = 30;
+	static constexpr int16_t TRIG_VALUE_HIGH = 30;
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
@@ -97,8 +99,11 @@ protected:
 
 	static std::unique_ptr<Menu> serviceMenu;
 
+	static void showMode();
 	static void showHeader();
-	static void showFooter();
+	static void showAutoFooter();
+	static void showManualFooter();
+	static void showServiceFooter();
 	static void showValue();
 	static void showLoading();
 	static bool isServiceCombination();
@@ -108,7 +113,8 @@ public:
 	static constexpr char TAG[] = "UI";
 
 	static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
-	static std::pair<uint16_t, Button> buttons[BUTTONS_COUNT];
+	static std::unordered_map<uint16_t, Button> buttons;
+//	static std::pair<uint16_t, Button> buttons[BUTTONS_COUNT];
 
 	static void showUp(bool flag = false);
 	static void showDown(bool flag = false);

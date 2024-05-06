@@ -7,6 +7,7 @@
 #include <memory>
 #include <cstdint>
 
+#include "Timer.h"
 #include "MenuItem.h"
 
 
@@ -17,6 +18,8 @@ private:
 
 	static const uint16_t SCROLL_HEIGHT = 40;
 	static const uint16_t SCROLL_WIDTH = 10;
+
+	static const uint32_t HOLD_TIMEOUT_MS = 100;
 
 	uint16_t x;
 	uint16_t y;
@@ -32,12 +35,16 @@ private:
 	bool selected;
 	bool needRefresh;
 
+	utl::Timer timer;
+
 public:
 	Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t size);
 
 	void reset();
 
 	void click(uint16_t button);
+	void holdUp();
+	void holdDown();
 
 	void show();
 

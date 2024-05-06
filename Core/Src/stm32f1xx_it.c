@@ -228,23 +228,6 @@ void CAN1_SCE_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles EXTI line[9:5] interrupts.
-  */
-void EXTI9_5_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
-  /* USER CODE END EXTI9_5_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(BTN_F1_Pin);
-  HAL_GPIO_EXTI_IRQHandler(BTN_DOWN_Pin);
-  HAL_GPIO_EXTI_IRQHandler(BTN_UP_Pin);
-  HAL_GPIO_EXTI_IRQHandler(BTN_ENTER_Pin);
-  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
-
-  /* USER CODE END EXTI9_5_IRQn 1 */
-}
-
-/**
   * @brief This function handles EXTI line[15:10] interrupts.
   */
 void EXTI15_10_IRQHandler(void)
@@ -252,8 +235,6 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
 
   /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(BTN_MODE_Pin);
-  HAL_GPIO_EXTI_IRQHandler(BTN_F2_Pin);
   HAL_GPIO_EXTI_IRQHandler(BTN_F3_Pin);
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 

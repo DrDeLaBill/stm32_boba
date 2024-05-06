@@ -13,6 +13,9 @@ extern "C" {
 #include <stdbool.h>
 
 
+#define SENSOR_BEDUG (false)
+
+
 void sensor_tick();
 bool sensor_available();
 int16_t get_sensor_value();

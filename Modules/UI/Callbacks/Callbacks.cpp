@@ -69,52 +69,52 @@ char* label_callback::value()
 
 void surface_kp_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.surface_kp), 0.05f, button);
+	callback_click<float>(&(settings.surface_pid.kp), 0.05f, button);
 }
 
 char* surface_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_kp), __abs(((int)(settings.surface_kp * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * 100)) % 100));
 	return value;
 }
 
 
 void surface_ki_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.surface_ki), 0.05f, button);
+	callback_click<float>(&(settings.surface_pid.ki), 0.05f, button);
 }
 
 char* surface_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_ki), __abs(((int)(settings.surface_ki * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * 100)) % 100));
 	return value;
 }
 
 
 void surface_kd_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.surface_kd), 0.05f, button);
+	callback_click<float>(&(settings.surface_pid.kd), 0.05f, button);
 }
 
 char* surface_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_kd), __abs(((int)(settings.surface_kd * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * 100)) % 100));
 	return value;
 }
 
 
 void surface_sampling_callback::click(uint16_t button)
 {
-	callback_click<uint32_t>(&(settings.surface_sampling), 50, button);
+	callback_click<uint32_t>(&(settings.surface_pid.sampling), 50, button);
 }
 
 char* surface_sampling_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.surface_sampling);
+	snprintf(value, sizeof(value), "%lu ms", settings.surface_pid.sampling);
 	return value;
 }
 
@@ -123,52 +123,52 @@ char* surface_sampling_callback::value()
 
 void ground_kp_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.ground_kp), 0.05f, button);
+	callback_click<float>(&(settings.ground_pid.kp), 0.05f, button);
 }
 
 char* ground_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_kp), __abs(((int)(settings.ground_kp * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * 100)) % 100));
 	return value;
 }
 
 
 void ground_ki_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.ground_ki), 0.05f, button);
+	callback_click<float>(&(settings.ground_pid.ki), 0.05f, button);
 }
 
 char* ground_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_ki), __abs(((int)(settings.ground_ki * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * 100)) % 100));
 	return value;
 }
 
 
 void ground_kd_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.ground_kd), 0.05f, button);
+	callback_click<float>(&(settings.ground_pid.kd), 0.05f, button);
 }
 
 char* ground_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_kd), __abs(((int)(settings.ground_kd * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * 100)) % 100));
 	return value;
 }
 
 
 void ground_sampling_callback::click(uint16_t button)
 {
-	callback_click<uint32_t>(&(settings.ground_sampling), 50, button);
+	callback_click<uint32_t>(&(settings.ground_pid.sampling), 50, button);
 }
 
 char* ground_sampling_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.ground_sampling);
+	snprintf(value, sizeof(value), "%lu ms", settings.ground_pid.sampling);
 	return value;
 }
 
@@ -177,52 +177,52 @@ char* ground_sampling_callback::value()
 
 void string_kp_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.string_kp), 0.05f, button);
+	callback_click<float>(&(settings.string_pid.kp), 0.05f, button);
 }
 
 char* string_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_kp), __abs(((int)(settings.string_kp * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * 100)) % 100));
 	return value;
 }
 
 
 void string_ki_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.string_ki), 0.05f, button);
+	callback_click<float>(&(settings.string_pid.ki), 0.05f, button);
 }
 
 char* string_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_ki), __abs(((int)(settings.string_ki * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * 100)) % 100));
 	return value;
 }
 
 
 void string_kd_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.string_kd), 0.05f, button);
+	callback_click<float>(&(settings.string_pid.kd), 0.05f, button);
 }
 
 char* string_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_kd), __abs(((int)(settings.string_kd * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * 100)) % 100));
 	return value;
 }
 
 
 void string_sampling_callback::click(uint16_t button)
 {
-	callback_click<uint32_t>(&(settings.string_sampling), 50, button);
+	callback_click<uint32_t>(&(settings.string_pid.sampling), 50, button);
 }
 
 char* string_sampling_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.string_sampling);
+	snprintf(value, sizeof(value), "%lu ms", settings.string_pid.sampling);
 	return value;
 }
 

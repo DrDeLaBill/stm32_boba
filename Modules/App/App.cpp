@@ -2,6 +2,7 @@
 
 #include "App.h"
 
+#include "log.h"
 #include "main.h"
 #include "soul.h"
 #include "sensor.h"
@@ -18,9 +19,10 @@
 
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
-utl::Timer App::timer(SETTINGS_DEFAULT_SURFACE_SAMPLING);
-utl::Timer App::pidTimer(0);
-GyverPID* App::pid;
+utl::Timer App::samplingTimer(0);
+utl::Timer App::valveTimer(0);
+GyverPID* App::pid;;
+APP_mode_t App::mode = APP_MODE_MANUAL;
 UI App::ui;
 
 
@@ -47,9 +49,15 @@ void App::setMode(APP_mode_t mode)
 		break;
 	default:
 		fsm.push_event(error_e{});
-		set_error(INTERNAL_ERROR);
-		break;
+		set_error(APP_MODE_ERROR);
+		return;
 	};
+	App::mode = mode;
+}
+
+APP_mode_t App::getMode()
+{
+	return mode;
 }
 
 void App::stop()
@@ -60,13 +68,22 @@ void App::stop()
 
 void App::_init_s::operator ()()
 {
+	VALVE_STOP();
+
 	if (is_status(WAIT_LOAD)) {
 		return;
 	}
-	pid = new GyverPID(settings.surface_kp, settings.surface_ki, settings.surface_kd, settings.surface_sampling);
-	pid->setDirection(REVERSE);
+
+	pid = new GyverPID(
+		settings.surface_pid.kp,
+		settings.surface_pid.ki,
+		settings.surface_pid.kd,
+		settings.surface_pid.sampling
+	);
+	pid->setDirection(NORMAL);
 	pid->setLimits(APP_PID_MIN, APP_PID_MAX);
-	timer.changeDelay(settings.surface_sampling);
+
+	samplingTimer.changeDelay(settings.surface_pid.sampling);
 	fsm.push_event(success_e{});
 }
 
@@ -87,8 +104,14 @@ void App::_manual_s::operator ()()
 
 void App::_auto_s::operator ()()
 {
-	if (!timer.wait()) {
+	if (!samplingTimer.wait()) {
 		fsm.push_event(pid_timeout_e{});
+	}
+
+	if (!valveTimer.wait() && __abs_dif(samplingTimer.end(), getMillis()) > VALVE_MIN_TIME_MS) {
+		reset_status(AUTO_NEED_VALVE_DOWN);
+		reset_status(AUTO_NEED_VALVE_UP);
+		VALVE_STOP();
 	}
 
 	if (has_errors()) {
@@ -130,44 +153,72 @@ void App::manual_start_a::operator ()()
 
 void App::surface_start_a::operator ()()
 {
+	pid->Kp = settings.surface_pid.kp;
+	pid->Ki = settings.surface_pid.ki;
+	pid->Kd = settings.surface_pid.kd;
+	pid->setDt(settings.surface_pid.sampling);
 
+	samplingTimer.changeDelay(settings.surface_pid.sampling);
+	samplingTimer.reset();
 }
 
 void App::ground_start_a::operator ()()
 {
+	pid->Kp = settings.ground_pid.kp;
+	pid->Ki = settings.ground_pid.ki;
+	pid->Kd = settings.ground_pid.kd;
+	pid->setDt(settings.ground_pid.sampling);
 
+	samplingTimer.changeDelay(settings.ground_pid.sampling);
+	samplingTimer.reset();
 }
 
 void App::string_start_a::operator ()()
 {
+	pid->Kp = settings.string_pid.kp;
+	pid->Ki = settings.string_pid.ki;
+	pid->Kd = settings.string_pid.kd;
+	pid->setDt(settings.string_pid.sampling);
 
+	samplingTimer.changeDelay(settings.string_pid.sampling);
+	samplingTimer.reset();
 }
 
 void App::setup_pid_a::operator ()()
 {
-	pid->input    = get_sensor_value();
+	int16_t newValue = get_sensor_value();
+
+	if (__abs_dif(newValue, settings.last_target) < TRIG_VALUE_LOW) {
+		pid->input = settings.last_target;
+	} else {
+		pid->input = newValue;
+	}
 	pid->setpoint = settings.last_target;
 
 	int16_t pid_ms = pid->getResult();
-	if (pid_ms < 0) {
-		pidTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
-		reset_status(AUTO_NEED_VALVE_UP);
-		set_status(AUTO_NEED_VALVE_DOWN);
-		VALVE_DOWN();
-	} else if (pid_ms > 0) {
-		pidTimer.changeDelay(static_cast<uint32_t>(pid_ms));
-		set_status(AUTO_NEED_VALVE_UP);
-		reset_status(AUTO_NEED_VALVE_DOWN);
-		VALVE_UP();
-	} else {
-		pidTimer.changeDelay(0);
+	if (__abs(pid_ms) < VALVE_MIN_TIME_MS) {
+		valveTimer.changeDelay(0);
 		reset_status(AUTO_NEED_VALVE_DOWN);
 		reset_status(AUTO_NEED_VALVE_UP);
 		VALVE_STOP();
+	} else if (pid_ms < 0) {
+		valveTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
+		reset_status(AUTO_NEED_VALVE_UP);
+		set_status(AUTO_NEED_VALVE_DOWN);
+		VALVE_DOWN();
+	} else {
+		valveTimer.changeDelay(static_cast<uint32_t>(pid_ms));
+		set_status(AUTO_NEED_VALVE_UP);
+		reset_status(AUTO_NEED_VALVE_DOWN);
+		VALVE_UP();
 	}
-	pidTimer.start();
 
-	timer.start();
+	samplingTimer.start();
+	valveTimer.start();
+
+	if (pid_ms) {
+		printTagLog(TAG, "value: %06d(%06d), new PID: %d ms", pid->input, newValue, pid_ms);
+	}
 }
 
 void App::move_up_a::operator ()()

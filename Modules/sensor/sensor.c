@@ -14,23 +14,35 @@
 #define SENSOR_FRAME_DELAY_MS      (400)
 #define SENSOR_COMMAND_DELAY_MS    (15)
 #define SENSOR_MAX_ERRORS          (100)
-#define SENSOR_CONNECTION_DELAY_MS (1000)
+#define SENSOR_CONNECTION_DELAY_MS (3000)
 
-#define SENSOR_FRAME_ID            (0x02A7)
+#define SENSOR_FRAME_ID1           (0x02A7)
+#define SENSOR_FRAME_ID2           (0x02A8)
+#define SENSOR_FRAME_ID3           (0x02AB)
 #define SENSOR_DISTANCE_FRAME_ID   (0x02)
 
 
+const uint16_t SENSOR_FRAME_IDS[] = {
+	SENSOR_FRAME_ID1,
+	SENSOR_FRAME_ID2,
+	SENSOR_FRAME_ID3,
+};
+
+typedef struct _sensor_t {
+	int16_t             value;
+	bool                available;
+	util_old_timer_t    connection_timer;
+} sensor_t;
+
 typedef struct _sensor_state_t {
 	void                (*fsm) (void);
-	int16_t             value;
-	bool                received;
-	bool                available;
+	sensor_t            sensors[__arr_len(SENSOR_FRAME_IDS)];
 
 	unsigned            errors;
 	util_old_timer_t    timer;
 	util_old_timer_t    frame_timer;
-	util_old_timer_t    connection_timer;
 
+	bool                received;
 	uint32_t            tx_mailbox;
 	CAN_TxHeaderTypeDef tx_header;
 	uint8_t             tx_buffer[SENSOR_DATA_MAX_SIZE];
@@ -122,12 +134,25 @@ void sensor_tick()
 
 bool sensor_available()
 {
-	return sensor_state.available;
+	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
+		if (sensor_state.sensors[i].available) {
+			return true;
+		}
+	}
+	return false;
 }
 
 int16_t get_sensor_value()
 {
-	return sensor_state.value;
+	int16_t value = 0;
+	int16_t counter = 0;
+	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
+		if (sensor_state.sensors[i].available) {
+			value += sensor_state.sensors[i].value;
+			counter++;
+		}
+	}
+	return counter ? value / counter : 0;
 }
 
 
@@ -175,7 +200,16 @@ void _fsm_sensor_idle()
 	if (sensor_state.received) {
 		sensor_state.fsm = _fsm_sensor_receive_frame;
 	}
-	if (!util_old_timer_wait(&sensor_state.connection_timer)) {
+
+	bool status = true;
+	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
+		if (util_old_timer_wait(&sensor_state.sensors[i].connection_timer)) {
+			status = false;
+		} else {
+			sensor_state.sensors[i].available = false;
+		}
+	}
+	if (status) {
 		set_status(NO_SENSOR);
 	}
 }
@@ -205,19 +239,26 @@ void _fsm_sensor_start()
 
 void _fsm_sensor_receive_frame()
 {
-    if (sensor_state.rx_header.StdId == SENSOR_FRAME_ID &&
-		sensor_state.rx_buffer[0]    == SENSOR_DISTANCE_FRAME_ID
-	) {
-		sensor_state.value = ((int16_t)sensor_state.rx_buffer[1] << 8) | (int16_t)sensor_state.rx_buffer[2];
+	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
+	    if (sensor_state.rx_header.StdId != SENSOR_FRAME_IDS[i] ||
+			sensor_state.rx_buffer[0]    != SENSOR_DISTANCE_FRAME_ID
+		) {
+	    	continue;
+		}
+	    int16_t value = ((int16_t)sensor_state.rx_buffer[1] << 8) | (int16_t)sensor_state.rx_buffer[2];
+		sensor_state.sensors[i].value = value;
+		sensor_state.sensors[i].available = true;
+#if SENSOR_BEDUG
 		printTagLog(
 			SENSOR_TAG,
 			"distance=%d.%d",
-			sensor_state.value / 100,
-			__abs(sensor_state.value % 100)
+			value / 100,
+			__abs(value % 100)
 		);
-		util_old_timer_start(&sensor_state.connection_timer, SENSOR_CONNECTION_DELAY_MS);
+#endif
+		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
 		reset_status(NO_SENSOR);
-    }
+	}
 
 	sensor_state.errors   = 0;
 	sensor_state.received = false;
@@ -226,7 +267,16 @@ void _fsm_sensor_receive_frame()
 
 void _fsm_sensor_send_frame1()
 {
-	uint8_t data[8] = {(uint8_t)(sensor_state.value >> 8), (uint8_t)(sensor_state.value), 0x00, 0x0C, 0xFE, 0x01, 0x00, 0x0B};
+	uint8_t data[8] = {
+		(uint8_t)(sensor_state.sensors[0].value >> 8),
+		(uint8_t)(sensor_state.sensors[0].value),
+		0x00,
+		0x0C,
+		0xFE,
+		0x01,
+		0x00,
+		0x0B
+	};
 	_sensor_send_frame(0x0028, 0x08, data);
 
 	util_old_timer_start(&sensor_state.timer, SENSOR_COMMAND_DELAY_MS);

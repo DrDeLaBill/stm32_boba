@@ -21,6 +21,12 @@ typedef enum _APP_mode_t {
 struct App
 {
 protected:
+	static constexpr char TAG[] = "APP";
+
+	static constexpr uint32_t VALVE_MIN_TIME_MS = 400;
+	static constexpr int16_t TRIG_VALUE_LOW = 30;
+	static constexpr int16_t TRIG_VALUE_HIGH = 100;
+
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
 	FSM_CREATE_EVENT(manual_e,      0);
@@ -62,36 +68,36 @@ protected:
 
 
 	using fsm_table = fsm::TransitionTable<
-		fsm::Transition<init_s,   success_e,    manual_s, manual_start_a>,
+		fsm::Transition<init_s,   success_e,     manual_s, manual_start_a>,
 
-		fsm::Transition<manual_s, surface_e,    auto_s,   surface_start_a>,
-		fsm::Transition<manual_s, ground_e,     auto_s,   ground_start_a>,
-		fsm::Transition<manual_s, string_e,     auto_s,   string_start_a>,
-		fsm::Transition<manual_s, plate_up_e,   up_s,     move_up_a>,
-		fsm::Transition<manual_s, plate_down_e, down_s,   move_down_a>,
-		fsm::Transition<manual_s, plate_stop_e, manual_s, plate_stop_a>,
-		fsm::Transition<manual_s, error_e,      error_s,  error_start_a>,
+		fsm::Transition<manual_s, surface_e,     auto_s,   surface_start_a>,
+		fsm::Transition<manual_s, ground_e,      auto_s,   ground_start_a>,
+		fsm::Transition<manual_s, string_e,      auto_s,   string_start_a>,
+		fsm::Transition<manual_s, plate_up_e,    up_s,     move_up_a>,
+		fsm::Transition<manual_s, plate_down_e,  down_s,   move_down_a>,
+		fsm::Transition<manual_s, plate_stop_e,  manual_s, plate_stop_a>,
+		fsm::Transition<manual_s, error_e,       error_s,  error_start_a>,
 
-		fsm::Transition<auto_s,  manual_e,      manual_s, manual_start_a>,
-		fsm::Transition<auto_s,  surface_e,     auto_s,   surface_start_a>,
-		fsm::Transition<auto_s,  ground_e,      auto_s,   ground_start_a>,
-		fsm::Transition<auto_s,  string_e,      auto_s,   string_start_a>,
-		fsm::Transition<auto_s,  pid_timeout_e, auto_s,   setup_pid_a>,
-		fsm::Transition<auto_s,  error_e,       error_s,  error_start_a>,
+		fsm::Transition<auto_s,   manual_e,      manual_s, manual_start_a>,
+		fsm::Transition<auto_s,   surface_e,     auto_s,   surface_start_a>,
+		fsm::Transition<auto_s,   ground_e,      auto_s,   ground_start_a>,
+		fsm::Transition<auto_s,   string_e,      auto_s,   string_start_a>,
+		fsm::Transition<auto_s,   pid_timeout_e, auto_s,   setup_pid_a>,
+		fsm::Transition<auto_s,   error_e,       error_s,  error_start_a>,
 
-		fsm::Transition<up_s,    plate_stop_e,  manual_s, plate_stop_a>,
+		fsm::Transition<up_s,     plate_stop_e,  manual_s, plate_stop_a>,
 
-		fsm::Transition<down_s,  plate_stop_e,  manual_s, plate_stop_a>,
+		fsm::Transition<down_s,   plate_stop_e,  manual_s, plate_stop_a>,
 
-		fsm::Transition<error_s, solved_e,      manual_s, manual_start_a>
+		fsm::Transition<error_s,  solved_e,      manual_s, manual_start_a>
 	>;
 
 	static fsm::FiniteStateMachine<fsm_table> fsm;
-	static utl::Timer pidTimer;
-	static utl::Timer timer;
+	static utl::Timer samplingTimer;
+	static utl::Timer valveTimer;
 	static GyverPID* pid;
+	static APP_mode_t mode;
 	static UI ui;
-
 
 	static void stop();
 
@@ -100,6 +106,7 @@ public:
 	void proccess();
 
 	static void setMode(APP_mode_t mode);
+	static APP_mode_t getMode();
 
 };
 

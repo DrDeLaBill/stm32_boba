@@ -38,9 +38,6 @@ typedef enum _SOUK_STATUS {
 	RTC_FAULT,
 	CAN_FAULT,
 
-	BTN_F1_PRESSED,
-	BTN_F2_PRESSED,
-	BTN_F3_PRESSED,
 	NEED_UI_EXIT,
 
 	/* Device statuses end */
@@ -57,6 +54,7 @@ typedef enum _SOUK_STATUS {
 	RAM_ERROR,
 	USB_ERROR,
 	SETTINGS_LOAD_ERROR,
+	APP_MODE_ERROR,
 
 	/* Device errors end */
 	ERRORS_END,

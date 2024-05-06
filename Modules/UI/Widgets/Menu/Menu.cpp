@@ -14,7 +14,8 @@
 
 Menu::Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t count):
 	x(x), y(y), w(w), h(h), items(), count(count),
-	start_idx(0), focused_idx(0), real_start_idx(0), selected(false), needRefresh(true)
+	start_idx(0), focused_idx(0), real_start_idx(0),
+	selected(false), needRefresh(true), timer(HOLD_TIMEOUT_MS)
 {
 	this->items = std::make_unique<MenuItem[]>(count);
 	for (uint16_t i = 0; i < count; i++) {
@@ -92,6 +93,26 @@ void Menu::click(uint16_t button)
 		Error_Handler();
 		break;
 	}
+}
+
+void Menu::holdUp()
+{
+	if (timer.wait()) {
+		return;
+	}
+
+	click(BTN_UP_Pin);
+	timer.start();
+}
+
+void Menu::holdDown()
+{
+	if (timer.wait()) {
+		return;
+	}
+
+	click(BTN_DOWN_Pin);
+	timer.start();
 }
 
 void Menu::show()

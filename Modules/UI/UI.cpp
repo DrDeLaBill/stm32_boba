@@ -23,16 +23,15 @@
 
 
 utl::circle_buffer<UI::UI_CLICKS_SIZE, uint16_t> UI::clicks;
-std::pair<uint16_t, Button> UI::buttons[UI::BUTTONS_COUNT] = {
-	std::make_pair<uint16_t, Button>(BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin,    true}),
-	std::make_pair<uint16_t, Button>(BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}),
-	std::make_pair<uint16_t, Button>(BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}),
-	std::make_pair<uint16_t, Button>(BTN_ENTER_Pin, {BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true}),
-	std::make_pair<uint16_t, Button>(BTN_MODE_Pin,  {BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true}),
-	std::make_pair<uint16_t, Button>(BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin,    true}),
-	std::make_pair<uint16_t, Button>(BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin,    true})
+std::unordered_map<uint16_t, Button> UI::buttons = {
+	{BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin,    true}},
+	{BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}},
+	{BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}},
+	{BTN_ENTER_Pin, {BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true}},
+	{BTN_MODE_Pin,  {BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true}},
+	{BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin,    true}},
+	{BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin,    true}}
 };
-
 utl::Timer UI::timer(SECOND_MS);
 fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 MenuItem menuItems[] =
@@ -64,104 +63,60 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 );
 
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	std::pair<uint16_t, Button>* pair = NULL;
-	for (unsigned i = 0; i < __arr_len(UI::buttons); i++) {
-		if (UI::buttons[i].first == GPIO_Pin) {
-			pair = &(UI::buttons[i]);
-			break;
-		}
-	}
-	if (!pair) {
-#if UI_BEDUG
-		BEDUG_ASSERT(false, "Unknown button interrupt");
-#endif
-		return;
-	}
-	pair->second.tick();
-	bool wasClicked = pair->second.wasClicked();
-	if (wasClicked) {
-		UI::clicks.push_back(GPIO_Pin);
-	}
-	switch (GPIO_Pin) {
-	case BTN_UP_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "UP irq %u", HAL_GPIO_ReadPin(BTN_UP_GPIO_Port, BTN_UP_Pin));
-#endif
-		if (wasClicked) {
-			set_status(MANUAL_NEED_VALVE_UP);
-		} else {
-			reset_status(MANUAL_NEED_VALVE_UP);
-		}
-		break;
-	case BTN_DOWN_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "DOWN irq %u", HAL_GPIO_ReadPin(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin));
-#endif
-		if (wasClicked) {
-			set_status(MANUAL_NEED_VALVE_DOWN);
-		} else {
-			reset_status(MANUAL_NEED_VALVE_DOWN);
-		}
-		break;
-	case BTN_MODE_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "MODE irq %u", HAL_GPIO_ReadPin(BTN_MODE_GPIO_Port, BTN_MODE_Pin));
-#endif
-		break;
-	case BTN_ENTER_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "ENTER irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
-#endif
-		break;
-	case BTN_F1_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "F1 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
-#endif
-		if (wasClicked) {
-			set_status(BTN_F1_PRESSED);
-		} else {
-			reset_status(BTN_F1_PRESSED);
-		}
-		break;
-	case BTN_F2_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "F2 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
-#endif
-		if (wasClicked) {
-			set_status(BTN_F2_PRESSED);
-		} else {
-			reset_status(BTN_F2_PRESSED);
-		}
-		break;
-	case BTN_F3_Pin:
-#if UI_BEDUG
-		printTagLog(UI::TAG, "F3 irq %u", HAL_GPIO_ReadPin(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin));
-#endif
-		if (wasClicked) {
-			set_status(BTN_F3_PRESSED);
-		} else {
-			reset_status(BTN_F3_PRESSED);
-		}
-		break;
-	default:
-#if UI_BEDUG
-		BEDUG_ASSERT(false, "Unknown button interrupt");
-#endif
-		break;
-	};
-}
-
 void UI::tick()
 {
+	for (auto& button : buttons) {
+		button.second.tick();
+		if (button.second.oneClick()) {
+			clicks.push_back(button.first);
+		}
+	}
+
 	fsm.proccess();
+}
+
+void UI::showMode()
+{
+	char line[20] = "";
+	memset(line, 0, sizeof(line));
+	switch (App::getMode()) {
+	case APP_MODE_MANUAL:
+		snprintf(line, sizeof(line), "manual ");
+		break;
+	case APP_MODE_SURFACE:
+		snprintf(line, sizeof(line), "surface");
+		break;
+	case APP_MODE_GROUND:
+		snprintf(line, sizeof(line), "ground ");
+		break;
+	case APP_MODE_STRING:
+		snprintf(line, sizeof(line), "string ");
+		break;
+	default:
+#ifdef DEBUG
+		BEDUG_ASSERT(false, "Unknown APP mode");
+#endif
+		snprintf(line, sizeof(line), "error  ");
+		fsm.push_event(error_e{});
+		set_error(INTERNAL_ERROR);
+		break;
+	};
+
+	display_set_color(DISPLAY_COLOR_BLACK);
+	display_text_show(
+		Font16.Width,
+		(uint16_t)(DISPLAY_HEADER_HEIGHT + 2 * Font16.Height),
+		&Font16,
+		DISPLAY_ALIGN_LEFT,
+		line,
+		strlen(line)
+	);
 }
 
 void UI::showHeader()
 {}
 
-void UI::showFooter()
+void UI::showAutoFooter()
 {
 	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
 	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
@@ -173,14 +128,14 @@ void UI::showFooter()
 	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
 	uint16_t w = display_width() / 3;
 	uint16_t h = display_height() - y;
-	uint16_t curr_color = is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f1_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f1_color = curr_color;
 	}
-	char linef1[] = "F1";
+	char linef1[] = "MD1";
 	display_set_background(curr_color);
-	display_set_color(is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_set_color(buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
@@ -193,14 +148,14 @@ void UI::showFooter()
 
 	w -= 1;
 	x += static_cast<uint16_t>(display_width() / 3 + 1);
-	curr_color = is_status(BTN_F2_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f2_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f2_color = curr_color;
 	}
-	char linef2[] = "F2";
+	char linef2[] = "MD2";
 	display_set_background(curr_color);
-	display_set_color(is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_set_color(buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
@@ -212,14 +167,14 @@ void UI::showFooter()
 
 
 	x += static_cast<uint16_t>(display_width() / 3);
-	curr_color = is_status(BTN_F3_PRESSED) ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f3_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f3_color = curr_color;
 	}
-	char linef3[] = "F3";
+	char linef3[] = "MD3";
 	display_set_background(curr_color);
-	display_set_color(is_status(BTN_F1_PRESSED) ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_set_color(buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
@@ -228,6 +183,62 @@ void UI::showFooter()
 		linef3,
 		strlen(linef3)
 	);
+}
+
+void UI::showManualFooter()
+{
+	uint16_t x = 0;
+	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
+	uint16_t w = display_width() / 3;
+	uint16_t h = display_height() - y;
+	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+
+
+	display_fill_rect(x, y, w, h, curr_color);
+
+	w -= 1;
+	x += static_cast<uint16_t>(display_width() / 3 + 1);
+	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	display_fill_rect(x, y, w, h, curr_color);
+
+	x += static_cast<uint16_t>(display_width() / 3);
+	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	display_fill_rect(x, y, w, h, curr_color);
+}
+
+void UI::showServiceFooter()
+{
+	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
+
+	uint16_t halfSection = display_width() / 3 / 2;
+
+	uint16_t x = 0;
+	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
+	uint16_t w = display_width() / 3;
+	uint16_t h = display_height() - y;
+	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f1_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f1_color = curr_color;
+	}
+	char linef1[] = "BCK";
+	display_set_background(curr_color);
+	display_set_color(buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		&Font24,
+		DISPLAY_ALIGN_CENTER,
+		linef1,
+		strlen(linef1)
+	);
+
+	w -= 1;
+	x += static_cast<uint16_t>(display_width() / 3 + 1);
+	display_fill_rect(x, y, w, h, DISPLAY_COLOR_WHITE);
+
+	x += static_cast<uint16_t>(display_width() / 3);
+	display_fill_rect(x, y, w, h, DISPLAY_COLOR_WHITE);
 }
 
 void UI::showValue()
@@ -409,7 +420,7 @@ void UI::_load_s::operator ()() const
 void UI::_no_sens_s::operator ()() const
 {
 	showHeader();
-	showFooter();
+	showManualFooter();
 
 	char label[] = "NO SENSOR";
 	display_set_color(DISPLAY_COLOR_BLACK);
@@ -434,10 +445,12 @@ void UI::_no_sens_s::operator ()() const
 
 void UI::_manual_mode_s::operator ()() const
 {
+	showMode();
+	showManualFooter();
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
-	showMiddle(settings.last_target == get_sensor_value());
+	showMiddle(__abs_dif(settings.last_target, get_sensor_value()) < TRIG_VALUE_LOW);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -449,6 +462,9 @@ void UI::_manual_mode_s::operator ()() const
 	if (isServiceCombination()) {
 		fsm.push_event(service_e{});
 	}
+
+	buttons[BTN_UP_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_UP) : reset_status(MANUAL_NEED_VALVE_UP);
+	buttons[BTN_DOWN_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_DOWN) : reset_status(MANUAL_NEED_VALVE_DOWN);
 
 	if (clicks.empty()) {
 		return;
@@ -483,10 +499,12 @@ void UI::_manual_mode_s::operator ()() const
 
 void UI::_auto_mode_s::operator ()() const
 {
+	showMode();
+	showAutoFooter();
 	showValue();
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
-	showMiddle(settings.last_target == get_sensor_value());
+	showMiddle(__abs_dif(settings.last_target, get_sensor_value()) < TRIG_VALUE_LOW);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -511,13 +529,13 @@ void UI::_auto_mode_s::operator ()() const
 	case BTN_DOWN_Pin:
 		break;
 	case BTN_F1_Pin:
-		App::setMode(APP_MODE_GROUND);
+		App::setMode(APP_MODE_SURFACE);
 		break;
 	case BTN_F2_Pin:
-		App::setMode(APP_MODE_STRING);
+		App::setMode(APP_MODE_GROUND);
 		break;
 	case BTN_F3_Pin:
-		App::setMode(APP_MODE_SURFACE);
+		App::setMode(APP_MODE_STRING);
 		break;
 	default:
 #ifdef DEBUG
@@ -532,7 +550,20 @@ void UI::_auto_mode_s::operator ()() const
 
 void UI::_service_s::operator ()() const
 {
-	showFooter();
+	showServiceFooter();
+
+	auto button = buttons.find(BTN_UP_Pin);
+	if (button != buttons.end()) {
+		if (buttons[BTN_UP_Pin].isHolded()) {
+			serviceMenu->holdUp();
+		}
+	}
+	button = buttons.find(BTN_DOWN_Pin);
+	if (button != buttons.end()) {
+		if (buttons[BTN_DOWN_Pin].isHolded()) {
+			serviceMenu->holdDown();
+		}
+	}
 
 	if (!clicks.empty()) {
 		serviceMenu->click(clicks.pop_front());
@@ -585,7 +616,6 @@ void UI::load_start_a::operator ()() const
 	timer.changeDelay(LOADING_DELAY_MS);
 
 	showHeader();
-	showFooter();
 	showLoading();
 }
 
@@ -607,6 +637,7 @@ void UI::manual_start_a::operator ()() const
 	clicks.clear();
 	fsm.clear_events();
 
+	display_clear_content();
 	display_sections_show();
 
 	char line[] = "    manual    ";
@@ -621,7 +652,6 @@ void UI::manual_start_a::operator ()() const
 	);
 
 	showHeader();
-	showFooter();
 }
 
 void UI::auto_start_a::operator ()() const
@@ -629,6 +659,7 @@ void UI::auto_start_a::operator ()() const
 	clicks.clear();
 	fsm.clear_events();
 
+	display_clear_content();
 	display_sections_show();
 
 	char line[] = "     auto     ";
@@ -643,7 +674,6 @@ void UI::auto_start_a::operator ()() const
 	);
 
 	showHeader();
-	showFooter();
 }
 
 void UI::service_start_a::operator ()() const

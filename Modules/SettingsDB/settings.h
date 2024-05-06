@@ -26,12 +26,12 @@ extern "C" {
  * 0x0004 - B.O.B.A.
  */
 #define DEVICE_TYPE ((uint16_t)0x0004)
-#define SW_VERSION  ((uint8_t)0x02)
+#define SW_VERSION  ((uint8_t)0x01)
 #define FW_VERSION  ((uint8_t)0x01)
 #define CF_VERSION  ((uint8_t)0x01)
 
 
-#define SETTINGS_DEFUALT_SURFACE_KP       (1.0f)
+#define SETTINGS_DEFUALT_SURFACE_KP       (7.0f)
 #define SETTINGS_DEFUALT_SURFACE_KI       (0.3f)
 #define SETTINGS_DEFUALT_SURFACE_KD       (0.1f)
 #define SETTINGS_DEFAULT_SURFACE_SAMPLING (500)
@@ -53,6 +53,16 @@ typedef enum _SettingsStatus {
 } SettingsStatus;
 
 
+typedef struct __attribute__((packed)) _pid_t {
+    // PID coefficients
+    float     kp;
+    float     ki;
+    float     kd;
+    // PID sampling
+    uint32_t  sampling;
+} pid_t;
+
+
 typedef struct __attribute__((packed)) _settings_t  {
     // Device type
 	uint16_t  dv_type;
@@ -67,28 +77,13 @@ typedef struct __attribute__((packed)) _settings_t  {
     int16_t   last_target;
 
     // Surface mode PID
-    // PID coefficients
-    float     surface_kp;
-    float     surface_ki;
-    float     surface_kd;
-    // PID sampling
-    uint32_t  surface_sampling;
+    pid_t     surface_pid;
 
-    // Surface mode PID
-    // PID coefficients
-    float     ground_kp;
-    float     ground_ki;
-    float     ground_kd;
-    // PID sampling
-    uint32_t  ground_sampling;
+    // Ground mode PID
+    pid_t     ground_pid;
 
-    // Surface mode PID
-    // PID coefficients
-    float     string_kp;
-    float     string_ki;
-    float     string_kd;
-    // PID sampling
-    uint32_t  string_sampling;
+    // String mode PID
+    pid_t     string_pid;
 } settings_t;
 
 

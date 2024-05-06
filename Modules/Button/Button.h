@@ -16,19 +16,27 @@
 class Button
 {
 private:
+	static constexpr uint32_t DEFAULT_HOLD_TIME_MS = 1500;
+
 	utl::Timer debounce;
-	const GPIO_TypeDef* port;
-	const uint16_t pin;
+	GPIO_TypeDef* port;
+	uint16_t pin;
 	bool currState;
 	bool inverse;
 	bool clicked;
 
+	uint32_t HOLD_TIME_MS;
+	uint32_t holdStart;
+
 public:
-	Button(GPIO_TypeDef* port, uint16_t pin, bool inverse = false);
+	Button();
+	Button(GPIO_TypeDef* port, uint16_t pin, bool inverse = false, uint32_t holdTime = DEFAULT_HOLD_TIME_MS);
 
 	void tick();
 
-	bool wasClicked();
+	bool oneClick();
+	bool isHolded();
+	bool pressed();
 
 };
 

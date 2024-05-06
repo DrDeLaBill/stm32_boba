@@ -36,20 +36,20 @@ void settings_reset(settings_t* other)
 
 	other->last_target = 0;
 
-	other->surface_kp = SETTINGS_DEFUALT_SURFACE_KP;
-	other->surface_ki = SETTINGS_DEFUALT_SURFACE_KI;
-	other->surface_kd = SETTINGS_DEFUALT_SURFACE_KD;
-	other->surface_sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
+	other->surface_pid.kp = SETTINGS_DEFUALT_SURFACE_KP;
+	other->surface_pid.ki = SETTINGS_DEFUALT_SURFACE_KI;
+	other->surface_pid.kd = SETTINGS_DEFUALT_SURFACE_KD;
+	other->surface_pid.sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
 
-	other->ground_kp = SETTINGS_DEFUALT_GROUND_KP;
-	other->ground_ki = SETTINGS_DEFUALT_GROUND_KI;
-	other->ground_kd = SETTINGS_DEFUALT_GROUND_KD;
-	other->ground_sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
+	other->ground_pid.kp = SETTINGS_DEFUALT_GROUND_KP;
+	other->ground_pid.ki = SETTINGS_DEFUALT_GROUND_KI;
+	other->ground_pid.kd = SETTINGS_DEFUALT_GROUND_KD;
+	other->ground_pid.sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
 
-	other->string_kp = SETTINGS_DEFUALT_STRING_KP;
-	other->string_ki = SETTINGS_DEFUALT_STRING_KI;
-	other->string_kd = SETTINGS_DEFUALT_STRING_KD;
-	other->string_sampling = SETTINGS_DEFAULT_STRING_SAMPLING;
+	other->string_pid.kp = SETTINGS_DEFUALT_STRING_KP;
+	other->string_pid.ki = SETTINGS_DEFUALT_STRING_KI;
+	other->string_pid.kd = SETTINGS_DEFUALT_STRING_KD;
+	other->string_pid.sampling = SETTINGS_DEFAULT_STRING_SAMPLING;
 }
 
 uint32_t settings_size()
@@ -57,6 +57,7 @@ uint32_t settings_size()
 	return sizeof(settings_t);
 }
 
+// TODO: version updater (if version older than current -> update settings)
 bool settings_check(settings_t* other)
 {
 	if (other->dv_type != DEVICE_TYPE) {
@@ -86,26 +87,26 @@ void settings_show()
     printPretty("------------------SURFACE MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.surface_kp), __abs(((int)(settings.surface_kp * 100)) % 100),
-		((int)settings.surface_ki), __abs(((int)(settings.surface_ki * 100)) % 100),
-		((int)settings.surface_kd), __abs(((int)(settings.surface_kd * 100)) % 100)
+		((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * 100)) % 100),
+		((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * 100)) % 100),
+		((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * 100)) % 100)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.surface_sampling);
+	printPretty("PID sampling: %lu ms\n", settings.surface_pid.sampling);
     printPretty("------------------GROUND  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.ground_kp), __abs(((int)(settings.ground_kp * 100)) % 100),
-		((int)settings.ground_ki), __abs(((int)(settings.ground_ki * 100)) % 100),
-		((int)settings.ground_kd), __abs(((int)(settings.ground_kd * 100)) % 100)
+		((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * 100)) % 100),
+		((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * 100)) % 100),
+		((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * 100)) % 100)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.ground_sampling);
+	printPretty("PID sampling: %lu ms\n", settings.ground_pid.sampling);
     printPretty("------------------STRING  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.string_kp), __abs(((int)(settings.string_kp * 100)) % 100),
-		((int)settings.string_ki), __abs(((int)(settings.string_ki * 100)) % 100),
-		((int)settings.string_kd), __abs(((int)(settings.string_kd * 100)) % 100)
+		((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * 100)) % 100),
+		((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * 100)) % 100),
+		((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * 100)) % 100)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.string_sampling);
+	printPretty("PID sampling: %lu ms\n", settings.string_pid.sampling);
     printPretty("####################SETTINGS####################\n\n");
 }
