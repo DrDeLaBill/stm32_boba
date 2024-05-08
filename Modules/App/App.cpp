@@ -13,9 +13,11 @@
 #define APP_PID_MIN   (-7000)
 #define APP_PID_MAX   (7000)
 
-#define VALVE_UP()    HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
-#define VALVE_DOWN()  HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
-#define VALVE_STOP()  HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET); HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+#define VALVE_UP_START()    HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
+#define VALVE_DOWN_START()  HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
+#define VALVE_UP_STOP()     HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
+#define VALVE_DOWN_STOP()   HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+#define VALVE_STOP()        VALVE_UP_STOP(); VALVE_DOWN_STOP();
 
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
@@ -23,12 +25,10 @@ utl::Timer App::samplingTimer(0);
 utl::Timer App::valveTimer(0);
 GyverPID* App::pid;;
 APP_mode_t App::mode = APP_MODE_MANUAL;
-UI App::ui;
 
 
 void App::proccess()
 {
-	ui.tick();
 	fsm.proccess();
 }
 
@@ -205,12 +205,14 @@ void App::setup_pid_a::operator ()()
 		valveTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
 		reset_status(AUTO_NEED_VALVE_UP);
 		set_status(AUTO_NEED_VALVE_DOWN);
-		VALVE_DOWN();
+		VALVE_UP_STOP();
+		VALVE_DOWN_START();
 	} else {
 		valveTimer.changeDelay(static_cast<uint32_t>(pid_ms));
 		set_status(AUTO_NEED_VALVE_UP);
 		reset_status(AUTO_NEED_VALVE_DOWN);
-		VALVE_UP();
+		VALVE_DOWN_STOP();
+		VALVE_UP_START();
 	}
 
 	samplingTimer.start();
@@ -223,12 +225,14 @@ void App::setup_pid_a::operator ()()
 
 void App::move_up_a::operator ()()
 {
-	VALVE_UP();
+	VALVE_DOWN_STOP();
+	VALVE_UP_START();
 }
 
 void App::move_down_a::operator ()()
 {
-	VALVE_DOWN();
+	VALVE_UP_STOP();
+	VALVE_DOWN_START();
 }
 
 void App::plate_stop_a::operator ()()
@@ -238,5 +242,5 @@ void App::plate_stop_a::operator ()()
 
 void App::error_start_a::operator ()()
 {
-
+	VALVE_STOP();
 }

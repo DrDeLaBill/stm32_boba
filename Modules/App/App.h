@@ -97,7 +97,6 @@ protected:
 	static utl::Timer valveTimer;
 	static GyverPID* pid;
 	static APP_mode_t mode;
-	static UI ui;
 
 	static void stop();
 

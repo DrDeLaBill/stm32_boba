@@ -22,6 +22,7 @@
 #include "crc.h"
 #include "i2c.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -60,6 +61,9 @@ static constexpr char MAIN_TAG[] = "MAIN";
 
 StorageDriver storageDriver;
 StorageAT* storage;
+
+UI ui;
+App app;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,6 +110,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_CRC_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
@@ -131,9 +136,10 @@ int main(void)
 		&storageDriver
 	);
 
-    printTagLog(MAIN_TAG, "The device has been loaded");
+    // Buttons TIM start
+    HAL_TIM_Base_Start_IT(&BTN_TIM);
 
-    App app;
+    printTagLog(MAIN_TAG, "The device has been loaded");
 
 	while (1)
 	{
@@ -142,6 +148,7 @@ int main(void)
 		soulGuard.defend();
 
 		app.proccess();
+		ui.tick();
 
 		if (has_errors() || is_status(WAIT_LOAD)) {
 			continue;
@@ -207,6 +214,13 @@ int _write(int, uint8_t *ptr, int len) {
     return len;
 #endif
     return 0;
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim->Instance == BTN_TIM.Instance) {
+    	ui.buttonsTick();
+    }
 }
 
 /* USER CODE END 4 */

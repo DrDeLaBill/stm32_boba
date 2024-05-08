@@ -19,6 +19,7 @@
 
 #include "App.h"
 #include "Callbacks.h"
+#include "CodeStopwatch.h"
 
 
 #define LOAD_POINT_COUNT   (3)
@@ -46,6 +47,7 @@ fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 MenuItem menuItems[] =
 {
 	{(new version_callback()),          false, "Version:",       "v0.0.0"},
+	{(new language_callback()),         true,  "Language:",      "_"},
 	{(new label_callback())  ,          false, "        SURFACE MODE        "},
 	{(new surface_kp_callback()),       true,  "PID Kp:",        "0.00"},
 	{(new surface_ki_callback()),       true,  "PID Ki:",        "0.00"},
@@ -74,13 +76,7 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 
 void UI::tick()
 {
-	for (auto& button : buttons) {
-		button.second.tick();
-		if (button.second.oneClick()) {
-			clicks.push_back(button.first);
-		}
-	}
-
+	utl::CodeStopwatch watch("UI2", 100);
 	fsm.proccess();
 
 	// TODO: test
@@ -103,6 +99,21 @@ void UI::tick()
 //		(char*)T_TEST_CYRILLIC,
 //		strlen((char*)T_TEST_CYRILLIC)
 //	);
+}
+
+
+void UI::buttonsTick()
+{
+	utl::CodeStopwatch watch("UI1", 100);
+
+	static uint16_t i = 0;
+
+	for (auto& button : buttons) {
+		button.second.tick();
+		if (button.second.oneClick()) {
+			clicks.push_back(button.first);
+		}
+	}
 }
 
 void UI::showMode()
@@ -716,6 +727,7 @@ void UI::manual_start_a::operator ()() const
 
 	display_clear_header();
 	display_clear_content();
+	display_clear_footer();
 	display_sections_show();
 
 
@@ -745,6 +757,7 @@ void UI::auto_start_a::operator ()() const
 	fsm.clear_events();
 
 	display_clear_content();
+	display_clear_footer();
 	display_sections_show();
 
 	char mode[PHRASE_LEN_MAX] = {};

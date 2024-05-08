@@ -93,6 +93,11 @@ EndDependencies */
 #define POLY_Y(Z)             ((int32_t)((Points + (Z))->Y))
 #define NULL                  (void *)0
 
+#define MAX_HEIGHT_FONT       61
+#define MAX_WIDTH_FONT        61
+#define OFFSET_BITMAP         54
+
+
 /* @defgroup STM32_ADAFRUIT_LCD_Private_Macros */
 #define ABS(X) ((X) > 0 ? (X) : -(X))
 #define SWAP16(a, b) {uint16_t t = a; a = b; b = t;}
@@ -101,6 +106,10 @@ EndDependencies */
 LCD_DrawPropTypeDef DrawProp;
 
 extern LCD_DrvTypeDef  *lcd_drv;
+
+/* Max size of bitmap will based on a font24 (17x24) */
+static uint8_t bitmap[MAX_HEIGHT_FONT * MAX_WIDTH_FONT * 2 + OFFSET_BITMAP] = {0};
+
 
 /* @defgroup STM32_ADAFRUIT_LCD_Private_FunctionPrototypes */ 
 static void DrawChar(uint16_t Xpos, uint16_t Ypos, const uint32_t bit_start);
@@ -818,24 +827,42 @@ void BSP_LCD_DisplayOff(void)
   */
 static void DrawChar(uint16_t Xpos, uint16_t Ypos, const uint32_t bit_start)
 {
-	uint16_t height = DrawProp.pFont->Height;
-	uint16_t width  = DrawProp.pFont->Width;
+	uint32_t height = DrawProp.pFont->Height;
+	uint32_t width  = DrawProp.pFont->Width;
 
-	for(uint16_t counterh = 0; counterh < height; counterh++)
+	/* Fill bitmap header*/
+	*(uint16_t *) (bitmap + 2) = (uint16_t)(height*width*2+OFFSET_BITMAP);
+	*(uint16_t *) (bitmap + 4) = (uint16_t)((height*width*2+OFFSET_BITMAP)>>16);
+	*(uint16_t *) (bitmap + 10) = OFFSET_BITMAP;
+	*(uint16_t *) (bitmap + 18) = (uint16_t)(width);
+	*(uint16_t *) (bitmap + 20) = (uint16_t)((width)>>16);
+	*(uint16_t *) (bitmap + 22) = (uint16_t)(height);
+	*(uint16_t *) (bitmap + 24) = (uint16_t)((height)>>16);
+
+	for(uint32_t counterh = 0; counterh < height; counterh++)
 	{
 		uint32_t bit_num = bit_start + (uint32_t)width * counterh;
-		for (uint16_t i = 0; i < width; i++) {
-			bool bit = (bool)((DrawProp.pFont->table[bit_num / 8] >> (7 - bit_num % 8)) & 0x01);
-			lcd_drv->WritePixel(
-				Xpos + i,
-				Ypos + counterh,
-				bit ?
-					(uint16_t)DrawProp.TextColor :
-					(uint16_t)DrawProp.BackColor
-			);
+		uint8_t line[MAX_WIDTH_FONT] = {0,};
+		for (uint32_t i = 0; i < width; i++) {
+			line[width - i] = (((DrawProp.pFont->table[bit_num / 8] >> (7 - bit_num % 8)) & 0x01));
 			bit_num++;
 		}
+
+		for (uint32_t counterw = 0; counterw < width; counterw++)
+		{
+			/* Image in the bitmap is written from the bottom to the top */
+			/* Need to invert image in the bitmap */
+			uint32_t index = (((height - counterh - 1) * width) + (counterw)) * 2 + OFFSET_BITMAP;
+			if(line[width - counterw]) {
+				bitmap[index]     = (uint8_t)DrawProp.TextColor;
+				bitmap[index + 1] = (uint8_t)(DrawProp.TextColor >> 8);
+			} else {
+				bitmap[index]     = (uint8_t)DrawProp.BackColor;
+				bitmap[index + 1] = (uint8_t)(DrawProp.BackColor >> 8);
+			}
+		}
 	}
+	BSP_LCD_DrawBitmap(Xpos, Ypos, bitmap);
 }
 
 /**

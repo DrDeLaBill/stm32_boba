@@ -57,6 +57,13 @@ struct label_callback: public IMenuCallback
 };
 
 
+struct language_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+};
+
+
 struct surface_kp_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;

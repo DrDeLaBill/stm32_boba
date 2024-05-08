@@ -13,7 +13,7 @@
 
 
 Menu::Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t count):
-	x(x), y(y), w(w), h(h), items(), count(count),
+	x(x), y(y + 1), w(w), h(h), items(), count(count),
 	start_idx(0), focused_idx(0), real_start_idx(0),
 	selected(false), needRefresh(true), timer(HOLD_TIMEOUT_MS)
 {
@@ -143,11 +143,11 @@ void Menu::show()
 
 	uint16_t curr_height = 0;
 	for (unsigned i = start_idx; i < count; i++) {
-		if (curr_height + items[i].height() > h) {
+		if (curr_height + items[i].height() >= h) {
 			break;
 		}
 		items[i].setNeedUpdate(needRefresh);
-		items[i].setY((uint16_t)(y + MARGIN + curr_height));
+		items[i].setY((uint16_t)(y + curr_height));
 		items[i].setFocused(focused_idx == i);
 		items[i].show();
 		items[i].setNeedUpdate(false);

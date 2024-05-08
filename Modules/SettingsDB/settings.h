@@ -31,22 +31,22 @@ extern "C" {
 #define CF_VERSION  ((uint8_t)0x01)
 
 
-#define SETTINGS_DEFUALT_SURFACE_KP       (700)
-#define SETTINGS_DEFUALT_SURFACE_KI       (030)
-#define SETTINGS_DEFUALT_SURFACE_KD       (010)
+#define SETTINGS_DEFUALT_SURFACE_KP       ((int32_t)7000)
+#define SETTINGS_DEFUALT_SURFACE_KI       ((int32_t)300)
+#define SETTINGS_DEFUALT_SURFACE_KD       ((int32_t)100)
 #define SETTINGS_DEFAULT_SURFACE_SAMPLING (500)
 
-#define SETTINGS_DEFUALT_GROUND_KP        (100)
-#define SETTINGS_DEFUALT_GROUND_KI        (030)
-#define SETTINGS_DEFUALT_GROUND_KD        (010)
+#define SETTINGS_DEFUALT_GROUND_KP        ((int32_t)1000)
+#define SETTINGS_DEFUALT_GROUND_KI        ((int32_t)300)
+#define SETTINGS_DEFUALT_GROUND_KD        ((int32_t)100)
 #define SETTINGS_DEFAULT_GROUND_SAMPLING  (500)
 
-#define SETTINGS_DEFUALT_STRING_KP        (100)
-#define SETTINGS_DEFUALT_STRING_KI        (030)
-#define SETTINGS_DEFUALT_STRING_KD        (010)
+#define SETTINGS_DEFUALT_STRING_KP        ((int32_t)1000)
+#define SETTINGS_DEFUALT_STRING_KI        ((int32_t)300)
+#define SETTINGS_DEFUALT_STRING_KD        ((int32_t)100)
 #define SETTINGS_DEFAULT_STRING_SAMPLING  (500)
 
-#define SETTINGS_PID_MULTIPLIER           (1000)
+#define SETTINGS_PID_MULTIPLIER           ((int32_t)1000)
 
 
 typedef enum _SettingsStatus {

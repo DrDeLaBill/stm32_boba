@@ -121,6 +121,8 @@ public:
 
 	void tick();
 
+	void buttonsTick();
+
 };
 
 

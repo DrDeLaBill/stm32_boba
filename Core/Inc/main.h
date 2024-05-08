@@ -69,10 +69,10 @@ int _write(int file, uint8_t *ptr, int len);
 #define LED_MID_GPIO_Port GPIOC
 #define LED_UP_Pin GPIO_PIN_5
 #define LED_UP_GPIO_Port GPIOC
-#define VALVE_DOWN_Pin GPIO_PIN_12
-#define VALVE_DOWN_GPIO_Port GPIOB
-#define VALVE_UP_Pin GPIO_PIN_13
+#define VALVE_UP_Pin GPIO_PIN_12
 #define VALVE_UP_GPIO_Port GPIOB
+#define VALVE_DOWN_Pin GPIO_PIN_13
+#define VALVE_DOWN_GPIO_Port GPIOB
 #define RESERVED2_Pin GPIO_PIN_14
 #define RESERVED2_GPIO_Port GPIOB
 #define RESERVED3_Pin GPIO_PIN_15
@@ -119,6 +119,10 @@ extern UART_HandleTypeDef        huart1;
 // Display
 extern SPI_HandleTypeDef         hspi1;
 #define DISPLAY_SPI              (hspi1)
+
+// Buttons
+extern TIM_HandleTypeDef         htim4;
+#define BTN_TIM                  (htim4)
 
 
 /* USER CODE END Private defines */
