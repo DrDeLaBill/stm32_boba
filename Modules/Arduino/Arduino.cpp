@@ -11,7 +11,7 @@ uint32_t millis()
 	return getMillis();
 }
 
-float constrain(float x, float a, float b)
+int32_t constrain(int32_t x, int32_t a, int32_t b)
 {
 	if (a <= x && x <= b) {
 		return x;

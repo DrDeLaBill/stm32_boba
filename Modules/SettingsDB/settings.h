@@ -26,25 +26,27 @@ extern "C" {
  * 0x0004 - B.O.B.A.
  */
 #define DEVICE_TYPE ((uint16_t)0x0004)
-#define SW_VERSION  ((uint8_t)0x02)
+#define SW_VERSION  ((uint8_t)0x01)
 #define FW_VERSION  ((uint8_t)0x01)
 #define CF_VERSION  ((uint8_t)0x01)
 
 
-#define SETTINGS_DEFUALT_SURFACE_KP       (7.0f)
-#define SETTINGS_DEFUALT_SURFACE_KI       (0.3f)
-#define SETTINGS_DEFUALT_SURFACE_KD       (0.1f)
+#define SETTINGS_DEFUALT_SURFACE_KP       (700)
+#define SETTINGS_DEFUALT_SURFACE_KI       (030)
+#define SETTINGS_DEFUALT_SURFACE_KD       (010)
 #define SETTINGS_DEFAULT_SURFACE_SAMPLING (500)
 
-#define SETTINGS_DEFUALT_GROUND_KP        (1.0f)
-#define SETTINGS_DEFUALT_GROUND_KI        (0.3f)
-#define SETTINGS_DEFUALT_GROUND_KD        (0.1f)
+#define SETTINGS_DEFUALT_GROUND_KP        (100)
+#define SETTINGS_DEFUALT_GROUND_KI        (030)
+#define SETTINGS_DEFUALT_GROUND_KD        (010)
 #define SETTINGS_DEFAULT_GROUND_SAMPLING  (500)
 
-#define SETTINGS_DEFUALT_STRING_KP        (1.0f)
-#define SETTINGS_DEFUALT_STRING_KI        (0.3f)
-#define SETTINGS_DEFUALT_STRING_KD        (0.1f)
+#define SETTINGS_DEFUALT_STRING_KP        (100)
+#define SETTINGS_DEFUALT_STRING_KI        (030)
+#define SETTINGS_DEFUALT_STRING_KD        (010)
 #define SETTINGS_DEFAULT_STRING_SAMPLING  (500)
+
+#define SETTINGS_PID_MULTIPLIER           (1000)
 
 
 typedef enum _SettingsStatus {
@@ -55,9 +57,9 @@ typedef enum _SettingsStatus {
 
 typedef struct __attribute__((packed)) _pid_t {
     // PID coefficients
-    float     kp;
-    float     ki;
-    float     kd;
+    int32_t   kp;
+    int32_t   ki;
+    int32_t   kd;
     // PID sampling
     uint32_t  sampling;
 } pid_t;

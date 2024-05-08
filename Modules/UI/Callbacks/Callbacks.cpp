@@ -69,39 +69,39 @@ char* label_callback::value()
 
 void surface_kp_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.surface_pid.kp), 0.05f, button);
+	callback_click<int32_t>(&(settings.surface_pid.kp), 50, button);
 }
 
 char* surface_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void surface_ki_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.surface_pid.ki), 0.05f, button);
+	callback_click<int32_t>(&(settings.surface_pid.ki), 50, button);
 }
 
 char* surface_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void surface_kd_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.surface_pid.kd), 0.05f, button);
+	callback_click<int32_t>(&(settings.surface_pid.kd), 50, button);
 }
 
 char* surface_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
@@ -123,39 +123,39 @@ char* surface_sampling_callback::value()
 
 void ground_kp_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.ground_pid.kp), 0.05f, button);
+	callback_click<int32_t>(&(settings.ground_pid.kp), 50, button);
 }
 
 char* ground_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void ground_ki_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.ground_pid.ki), 0.05f, button);
+	callback_click<int32_t>(&(settings.ground_pid.ki), 50, button);
 }
 
 char* ground_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void ground_kd_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.ground_pid.kd), 0.05f, button);
+	callback_click<int32_t>(&(settings.ground_pid.kd), 50, button);
 }
 
 char* ground_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
@@ -177,39 +177,39 @@ char* ground_sampling_callback::value()
 
 void string_kp_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.string_pid.kp), 0.05f, button);
+	callback_click<int32_t>(&(settings.string_pid.kp), 50, button);
 }
 
 char* string_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void string_ki_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.string_pid.ki), 0.05f, button);
+	callback_click<int32_t>(&(settings.string_pid.ki), 50, button);
 }
 
 char* string_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void string_kd_callback::click(uint16_t button)
 {
-	callback_click<float>(&(settings.string_pid.kd), 0.05f, button);
+	callback_click<int32_t>(&(settings.string_pid.kd), 50, button);
 }
 
 char* string_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * 100)) % 100));
+	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 

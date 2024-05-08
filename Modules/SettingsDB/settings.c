@@ -90,25 +90,25 @@ void settings_show()
     printPretty("------------------SURFACE MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * 100)) % 100),
-		((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * 100)) % 100),
-		((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * 100)) % 100)
+		((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
 	);
 	printPretty("PID sampling: %lu ms\n", settings.surface_pid.sampling);
     printPretty("------------------GROUND  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * 100)) % 100),
-		((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * 100)) % 100),
-		((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * 100)) % 100)
+		((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
 	);
 	printPretty("PID sampling: %lu ms\n", settings.ground_pid.sampling);
     printPretty("------------------STRING  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * 100)) % 100),
-		((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * 100)) % 100),
-		((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * 100)) % 100)
+		((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
 	);
 	printPretty("PID sampling: %lu ms\n", settings.string_pid.sampling);
     printPretty("####################SETTINGS####################\n\n");
