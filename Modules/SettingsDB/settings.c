@@ -8,6 +8,7 @@
 #include "log.h"
 #include "utils.h"
 #include "hal_defs.h"
+#include "translate.h"
 
 
 static const char SETTINGS_TAG[] = "STNG";
@@ -35,6 +36,7 @@ void settings_reset(settings_t* other)
 	other->cf_id   = CF_VERSION;
 
 	other->last_target = 0;
+	other->language    = ENGLISH;
 
 	other->surface_pid.kp = SETTINGS_DEFUALT_SURFACE_KP;
 	other->surface_pid.ki = SETTINGS_DEFUALT_SURFACE_KI;
@@ -84,6 +86,7 @@ void settings_show()
 
     printPretty("------------------------------------------------\n");
 	printPretty("Last valve target: %ld\n", settings.last_target);
+	printPretty("Language: %s\n", settings.language == RUSSIAN ? "RUSSIAN" : "ENGLISH"); // TODO
     printPretty("------------------SURFACE MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",

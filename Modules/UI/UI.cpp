@@ -9,17 +9,26 @@
 #include "log.h"
 #include "soul.h"
 #include "main.h"
+#include "utils.h"
 #include "sensor.h"
 #include "bmacro.h"
 #include "display.h"
 #include "settings.h"
 #include "hal_defs.h"
+#include "translate.h"
 
 #include "App.h"
 #include "Callbacks.h"
 
 
-#define LOAD_POINT_COUNT (3)
+#define LOAD_POINT_COUNT   (3)
+#define PHRASE_LEN_MAX     (40)
+
+#define ADD_SPACES_STRING(PHRASE, FONT) \
+	char NAME[PHRASE_LEN_MAX] = {}; \
+	memset(NAME, CHAR, __min(DISPLAY_WIDTH / FONT.Width, sizeof(target) - 1)); \
+	NAME[__min(strlen(NAME), sizeof(NAME) - 1)] = 0; \
+
 
 
 utl::circle_buffer<UI::UI_CLICKS_SIZE, uint16_t> UI::clicks;
@@ -73,40 +82,64 @@ void UI::tick()
 	}
 
 	fsm.proccess();
+
+	// TODO: test
+//	display_set_color(DISPLAY_COLOR_BLACK);
+//	display_text_show(
+//		0,
+//		DISPLAY_HEADER_HEIGHT + 10,
+//		&u8g2_font_10x20_t_cyrillic,
+//		DISPLAY_ALIGN_LEFT,
+//		(char*)T_TEST_CYRILLIC,
+//		strlen((char*)T_TEST_CYRILLIC)
+//	);
+//
+//	display_set_color(DISPLAY_COLOR_BLACK);
+//	display_text_show(
+//		0,
+//		DISPLAY_HEADER_HEIGHT + 60,
+//		&u8g2_font_8x13_t_cyrillic,
+//		DISPLAY_ALIGN_LEFT,
+//		(char*)T_TEST_CYRILLIC,
+//		strlen((char*)T_TEST_CYRILLIC)
+//	);
 }
 
 void UI::showMode()
 {
-	char line[20] = "";
-	memset(line, 0, sizeof(line));
+	const char* phrase;
 	switch (App::getMode()) {
 	case APP_MODE_MANUAL:
-		snprintf(line, sizeof(line), "manual ");
+		phrase = t(T_manual, settings.language);
 		break;
 	case APP_MODE_SURFACE:
-		snprintf(line, sizeof(line), "surface");
+		phrase = t(T_surface, settings.language);
 		break;
 	case APP_MODE_GROUND:
-		snprintf(line, sizeof(line), "ground ");
+		phrase = t(T_ground, settings.language);
 		break;
 	case APP_MODE_STRING:
-		snprintf(line, sizeof(line), "string ");
+		phrase = t(T_string, settings.language);
 		break;
 	default:
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown APP mode");
 #endif
-		snprintf(line, sizeof(line), "error  ");
+		phrase = t(T_error, settings.language);
 		fsm.push_event(error_e{});
 		set_error(INTERNAL_ERROR);
 		break;
 	};
 
+	char line[PHRASE_LEN_MAX] = {};
+	snprintf(line, sizeof(line) - 1, "%s", phrase);
+	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_LEFT);
+
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
-		Font16.Width,
-		(uint16_t)(DISPLAY_HEADER_HEIGHT + 2 * Font16.Height),
-		&Font16,
+		u8g2_font_8x13_t_cyrillic.Width,
+		(uint16_t)(DISPLAY_HEADER_HEIGHT + 2 * u8g2_font_8x13_t_cyrillic.Height),
+		&u8g2_font_8x13_t_cyrillic,
 		DISPLAY_ALIGN_LEFT,
 		line,
 		strlen(line)
@@ -139,7 +172,7 @@ void UI::showAutoFooter()
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		linef1,
 		strlen(linef1)
@@ -159,7 +192,7 @@ void UI::showAutoFooter()
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		linef2,
 		strlen(linef2)
@@ -178,7 +211,7 @@ void UI::showAutoFooter()
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		linef3,
 		strlen(linef3)
@@ -187,22 +220,40 @@ void UI::showAutoFooter()
 
 void UI::showManualFooter()
 {
+	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
+
 	uint16_t x = 0;
 	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
 	uint16_t w = display_width() / 3;
 	uint16_t h = display_height() - y;
+	uint16_t halfSection = display_width() / 3 / 2;
 	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 
 
 	display_fill_rect(x, y, w, h, curr_color);
 
+
 	w -= 1;
 	x += static_cast<uint16_t>(display_width() / 3 + 1);
 	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	display_fill_rect(x, y, w, h, curr_color);
+	if (f2_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f2_color = curr_color;
+	}
+	char linef2[] = " ";
+	display_set_background(curr_color);
+	display_set_color(buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		&settings_bitmap,
+		DISPLAY_ALIGN_CENTER,
+		linef2,
+		strlen(linef2)
+	);
 
 	x += static_cast<uint16_t>(display_width() / 3);
-	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	display_fill_rect(x, y, w, h, curr_color);
 }
 
@@ -221,13 +272,13 @@ void UI::showServiceFooter()
 		display_fill_rect(x, y, w, h, curr_color);
 		f1_color = curr_color;
 	}
-	char linef1[] = "BCK";
+	char linef1[] = " ";
 	display_set_background(curr_color);
 	display_set_color(buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&Font24,
+		&back_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef1,
 		strlen(linef1)
@@ -244,16 +295,26 @@ void UI::showServiceFooter()
 void UI::showValue()
 {
 	uint16_t offset_x = display_width() / 2;
-	uint16_t offset_y = static_cast<uint16_t>(display_height() / (uint16_t)2 - Font16.Height - DEFAULT_MARGIN);
+	uint16_t offset_y = static_cast<uint16_t>(display_height() / (uint16_t)2 - u8g2_font_8x13_t_cyrillic.Height - DEFAULT_MARGIN);
 
 	{
-		char target[30] = {};
-		snprintf(target, sizeof(target), "Target: %03d.%02d", settings.last_target / 100, __abs(settings.last_target % 100));
+		char target[PHRASE_LEN_MAX] = {};
+		const char* phrase = t(T_TARGET, settings.language);
+		snprintf(
+			target,
+			sizeof(target) - 1,
+			"%s: %03d.%02d",
+			phrase,
+			settings.last_target / 100,
+			__abs(settings.last_target % 100)
+		);
+		util_add_char(target, sizeof(target), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			offset_x,
 			offset_y,
-			&Font16,
+			&u8g2_font_8x13_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			target,
 			strlen(target)
@@ -262,13 +323,23 @@ void UI::showValue()
 
 	{
 		offset_y = display_height() / 2;
-		char value[30] = {};
-		snprintf(value, sizeof(value), "Value: %03d.%02d", get_sensor_value() / 100, __abs(get_sensor_value() % 100));
+		char value[PHRASE_LEN_MAX] = {};
+		const char* phrase = t(T_VALUE, settings.language);
+		snprintf(
+			value,
+			sizeof(value) - 1,
+			"%s: %03d.%02d",
+			phrase,
+			get_sensor_value() / 100,
+			__abs(get_sensor_value() % 100)
+		);
+		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			offset_x,
 			offset_y,
-			&Font24,
+			&u8g2_font_10x20_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			value,
 			strlen(value)
@@ -278,48 +349,20 @@ void UI::showValue()
 
 void UI::showLoading()
 {
-	static unsigned counter = 0;
-	if (counter > LOAD_POINT_COUNT) {
-		counter = 0;
-	}
-	char label[20] = "Loading";
-	for (unsigned i = 0; i < LOAD_POINT_COUNT; i++) {
-		if (i < counter) {
-			label[strlen(label)] = '.';
-		} else {
-			label[strlen(label)] = ' ';
-		}
-	}
+	char line[PHRASE_LEN_MAX] = {};
+	const char* phrase = t(T_LOADING, settings.language);
+	snprintf(line, sizeof(line) - 1, "%s", phrase);
+	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
-		label,
-		strlen(label)
+		line,
+		strlen(line)
 	);
-
-	counter++;
-}
-
-bool UI::isServiceCombination()
-{
-	if (clicks.count() < 4) {
-		return false;
-	}
-
-	for (uint8_t i = 0; i < clicks.count() - 3; i++) {
-		if (clicks[i]     == BTN_F1_Pin &&
-			clicks[i + 1] == BTN_F3_Pin &&
-			clicks[i + 2] == BTN_F3_Pin &&
-			clicks[i + 3] == BTN_F1_Pin
-		) {
-			return true;
-		}
-	}
-
-	return false;
 }
 
 void UI::showUp(bool flag)
@@ -380,16 +423,21 @@ void UI::showMiddle(bool flag)
 
 void UI::_init_s::operator ()() const
 {
+	char line[PHRASE_LEN_MAX] = "bObA";
+	const char* phrase = t(T_LOADING, settings.language);
+	snprintf(line, sizeof(line) - 1, "%s", phrase);
+	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
     display_init();
 	display_clear();
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
-		"bObA",
-		4
+		line,
+		strlen(line)
 	);
 
 	fsm.push_event(success_e{});
@@ -422,23 +470,49 @@ void UI::_no_sens_s::operator ()() const
 	showHeader();
 	showManualFooter();
 
-	char label[] = "NO SENSOR";
+	char line[PHRASE_LEN_MAX] = {};
+	const char* phrase = t(T_NO_SENSOR, settings.language);
+	snprintf(line, sizeof(line) - 1, "%s", phrase);
+	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
-		label,
-		strlen(label)
+		line,
+		strlen(line)
 	);
 
 	if (!is_status(NO_SENSOR)) {
 		fsm.push_event(sens_found_e{});
 	}
 
-	if (isServiceCombination()) {
+	if (clicks.empty()) {
+		return;
+	}
+
+	uint16_t click = clicks.pop_front();
+	switch (click) {
+	case BTN_F2_Pin:
 		fsm.push_event(service_e{});
+		break;
+	case BTN_MODE_Pin:
+	case BTN_ENTER_Pin:
+	case BTN_UP_Pin:
+	case BTN_DOWN_Pin:
+	case BTN_F1_Pin:
+	case BTN_F3_Pin:
+		clicks.push_back(click);
+		break;
+	default:
+#ifdef DEBUG
+		BEDUG_ASSERT(false, "Unknown button in buffer");
+#endif
+		fsm.push_event(error_e{});
+		set_error(INTERNAL_ERROR);
+		break;
 	}
 }
 
@@ -459,10 +533,6 @@ void UI::_manual_mode_s::operator ()() const
 		fsm.push_event(error_e{});
 	}
 
-	if (isServiceCombination()) {
-		fsm.push_event(service_e{});
-	}
-
 	buttons[BTN_UP_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_UP) : reset_status(MANUAL_NEED_VALVE_UP);
 	buttons[BTN_DOWN_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_DOWN) : reset_status(MANUAL_NEED_VALVE_DOWN);
 
@@ -480,10 +550,12 @@ void UI::_manual_mode_s::operator ()() const
 		settings.last_target = get_sensor_value();
 		set_status(NEED_SAVE_SETTINGS);
 		break;
+	case BTN_F2_Pin:
+		fsm.push_event(service_e{});
+		break;
 	case BTN_UP_Pin:
 	case BTN_DOWN_Pin:
 	case BTN_F1_Pin:
-	case BTN_F2_Pin:
 	case BTN_F3_Pin:
 		clicks.push_back(click);
 		break;
@@ -580,16 +652,20 @@ void UI::_service_s::operator ()() const
 
 void UI::_error_s::operator ()() const
 {
-	char line[20] = "";
 	unsigned error = get_first_error();
+
 	if (error) {
-		snprintf(line, sizeof(line), "ERROR%u", error);
+		char line[PHRASE_LEN_MAX] = {};
+		const char* phrase = t(T_ERROR, settings.language);
+		snprintf(line, sizeof(line) - 1, "%s %u", phrase, error);
+		util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 
 		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			display_width() / 2,
 			display_height() / 2,
-			&Font24,
+			&u8g2_font_10x20_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			line,
 			strlen(line)
@@ -601,6 +677,7 @@ void UI::_error_s::operator ()() const
 
 void UI::error_a::operator ()() const
 {
+	display_clear_header();
 	display_clear_content();
 
 	showDown(false);
@@ -637,18 +714,26 @@ void UI::manual_start_a::operator ()() const
 	clicks.clear();
 	fsm.clear_events();
 
+	display_clear_header();
 	display_clear_content();
 	display_sections_show();
 
-	char line[] = "    manual    ";
+
+	char mode[PHRASE_LEN_MAX] = {};
+	const char* phrase1 = t(T_manual, settings.language);
+	const char* phrase2 = t(T_mode, settings.language);
+	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
+	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
+	const char* phrase = t(T_manual, settings.language);
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		DISPLAY_HEADER_HEIGHT / 2,
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line)
+		mode,
+		strlen(mode)
 	);
 
 	showHeader();
@@ -662,15 +747,20 @@ void UI::auto_start_a::operator ()() const
 	display_clear_content();
 	display_sections_show();
 
-	char line[] = "     auto     ";
+	char mode[PHRASE_LEN_MAX] = {};
+	const char* phrase1 = t(T_auto, settings.language);
+	const char* phrase2 = t(T_mode, settings.language);
+	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
+	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		DISPLAY_HEADER_HEIGHT / 2,
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line)
+		mode,
+		strlen(mode)
 	);
 
 	showHeader();
@@ -684,12 +774,17 @@ void UI::service_start_a::operator ()() const
 	display_clear_content();
 	display_sections_show();
 
-	char line[] = "    service    ";
+	char line[PHRASE_LEN_MAX] = {};
+	const char* phrase1 = t(T_service, settings.language);
+	const char* phrase2 = t(T_mode, settings.language);
+	snprintf(line, sizeof(line), "%s %s", phrase1, phrase2);
+	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		DISPLAY_HEADER_HEIGHT / 2,
-		&Font24,
+		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
 		strlen(line)

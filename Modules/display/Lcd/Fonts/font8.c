@@ -1041,7 +1041,7 @@ const uint8_t Font8_Table[] =
 
 sFONT Font8 = {
   Font8_Table,
-  5, /* Width */
+  8, /* Width */
   8, /* Height */
 };
 

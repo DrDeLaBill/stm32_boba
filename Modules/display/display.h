@@ -20,7 +20,7 @@ extern "C" {
 #define DISPLAY_WIDTH             ((uint16_t)ILI9341_LCD_PIXEL_WIDTH)
 
 #define DISPLAY_HEADER_HEIGHT     ((uint16_t)(DISPLAY_HEIGHT / 6))
-#define DISPLAY_FOOTER_HEIGHT     ((uint16_t)(DISPLAY_HEIGHT / 6))
+#define DISPLAY_FOOTER_HEIGHT     ((uint16_t)(61))
 #define DISPLAY_CONTENT_HEIGHT    ((uint16_t)(DISPLAY_HEIGHT - DISPLAY_HEADER_HEIGHT - DISPLAY_FOOTER_HEIGHT))
 
 
@@ -44,6 +44,10 @@ typedef enum _DISPLAY_ALIGN_MODE
 	DISPLAY_ALIGN_LEFT,
 	DISPLAY_ALIGN_RIGHT
 } DISPLAY_ALIGN_MODE;
+
+
+extern sFONT settings_bitmap;
+extern sFONT back_bitmap;
 
 
 void display_init();

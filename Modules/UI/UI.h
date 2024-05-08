@@ -106,7 +106,6 @@ protected:
 	static void showServiceFooter();
 	static void showValue();
 	static void showLoading();
-	static bool isServiceCombination();
 
 
 public:

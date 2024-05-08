@@ -26,7 +26,7 @@ extern "C" {
  * 0x0004 - B.O.B.A.
  */
 #define DEVICE_TYPE ((uint16_t)0x0004)
-#define SW_VERSION  ((uint8_t)0x01)
+#define SW_VERSION  ((uint8_t)0x02)
 #define FW_VERSION  ((uint8_t)0x01)
 #define CF_VERSION  ((uint8_t)0x01)
 
@@ -75,6 +75,9 @@ typedef struct __attribute__((packed)) _settings_t  {
 
     // Last target sensor value
     int16_t   last_target;
+
+    // Language
+    uint8_t   language;
 
     // Surface mode PID
     pid_t     surface_pid;
