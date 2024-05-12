@@ -10,8 +10,8 @@
 #include "hal_defs.h"
 
 
-#define APP_PID_MIN   (-7000)
-#define APP_PID_MAX   (7000)
+#define APP_PID_MIN   (-1000)
+#define APP_PID_MAX   (1000)
 
 #define VALVE_UP_START()    HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
 #define VALVE_DOWN_START()  HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
@@ -204,7 +204,7 @@ void App::setup_pid_a::operator ()()
 	} else {
 		pid->input = newValue;
 	}
-	pid->setpoint = settings.last_target;
+	pid->setpoint = 0;
 
 	int16_t pid_ms = pid->getResult();
 	if (__abs(pid_ms) < VALVE_MIN_TIME_MS) {

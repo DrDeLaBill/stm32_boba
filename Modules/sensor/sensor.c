@@ -365,7 +365,7 @@ void _fsm_sencor_set_mode_end1()
 		return;
 	}
 
-	uint16_t target = -settings.last_target;
+	int16_t target = -settings.last_target;
 	can_frame_t request2 =
 		{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
 

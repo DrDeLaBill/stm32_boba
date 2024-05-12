@@ -143,15 +143,15 @@ class GyverPID {
     void reset() {
 		input = 0;
 		output = 0;
-		Kp = 0;
-		Ki = 0;
-		Kd = 0;
-		integral = 0;
+		Kp = 0.0f;
+		Ki = 0.0f;
+		Kd = 0.0f;
+		integral = 0.0f;
     }
 
    private:
     uint32_t _dt = 100;  // время итерации в мс
-    float _dt_s = 0.1;   // время итерации в с
+    float _dt_s = 0.1f;   // время итерации в с
     bool _mode = 0, _direction = 0;
     int16_t _minOut = 0, _maxOut = 255;
     pidtype prevInput = 0;
