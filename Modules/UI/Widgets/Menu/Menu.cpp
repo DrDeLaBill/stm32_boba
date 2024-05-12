@@ -9,11 +9,11 @@
 #include "display.h"
 
 
-#define IS_BACK_BUTTON(button) (button == BTN_ENTER_Pin || button == BTN_F1_Pin)
+#define IS_SPECIAL_BUTTON(button) (button == BTN_F3_Pin || button == BTN_F1_Pin)
 
 
 Menu::Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t count):
-	x(x), y(y + 1), w(w), h(h), items(), count(count),
+	x(x), y(y + 1), w(w), h(h - 1), items(), count(count),
 	start_idx(0), focused_idx(0), real_start_idx(0),
 	selected(false), needRefresh(true), timer(HOLD_TIMEOUT_MS)
 {
@@ -41,13 +41,14 @@ void Menu::reset()
 
 void Menu::click(uint16_t button)
 {
-	if (selected && !IS_BACK_BUTTON(button)) {
+	if (selected && !IS_SPECIAL_BUTTON(button)) {
 		items[focused_idx].click(button);
 		return;
 	}
 
 	switch (button) {
 	case BTN_ENTER_Pin:
+	case BTN_F3_Pin:
 		if (selected) {
 			set_status(NEED_SAVE_SETTINGS);
 		}
@@ -83,7 +84,6 @@ void Menu::click(uint16_t button)
 		break;
 	case BTN_MODE_Pin:
 	case BTN_F2_Pin:
-	case BTN_F3_Pin:
 		break;
 	default:
 #ifdef DEBUG

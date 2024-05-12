@@ -93,8 +93,8 @@ EndDependencies */
 #define POLY_Y(Z)             ((int32_t)((Points + (Z))->Y))
 #define NULL                  (void *)0
 
-#define MAX_HEIGHT_FONT       61
-#define MAX_WIDTH_FONT        61
+#define MAX_HEIGHT_FONT       51
+#define MAX_WIDTH_FONT        51
 #define OFFSET_BITMAP         54
 
 

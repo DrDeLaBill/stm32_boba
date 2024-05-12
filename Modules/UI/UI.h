@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "sensor.h"
+#include "translate.h"
+
 #include "Menu.h"
 #include "Timer.h"
 #include "Button.h"
@@ -86,6 +89,7 @@ protected:
 		fsm::Transition<manual_mode_s, error_e,       error_s,       error_a>,
 
 		fsm::Transition<service_s,     service_e,     manual_mode_s, manual_start_a>,
+		fsm::Transition<service_s,     no_sens_e,     no_sens_s,     no_sens_start_a>,
 
 		fsm::Transition<auto_mode_s,   change_mode_e, manual_mode_s, manual_start_a>,
 		fsm::Transition<auto_mode_s,   no_sens_e,     no_sens_s,     no_sens_start_a>,
@@ -98,6 +102,9 @@ protected:
 	static utl::Timer timer;
 
 	static std::unique_ptr<Menu> serviceMenu;
+
+	static SENSOR_MODE manual_f1_mode;
+	static SENSOR_MODE manual_f3_mode;
 
 	static void showMode();
 	static void showHeader();

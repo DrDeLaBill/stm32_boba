@@ -43,10 +43,10 @@ void settings_reset(settings_t* other)
 	other->surface_pid.kd = SETTINGS_DEFUALT_SURFACE_KD;
 	other->surface_pid.sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
 
-	other->ground_pid.kp = SETTINGS_DEFUALT_GROUND_KP;
-	other->ground_pid.ki = SETTINGS_DEFUALT_GROUND_KI;
-	other->ground_pid.kd = SETTINGS_DEFUALT_GROUND_KD;
-	other->ground_pid.sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
+	other->bigsky_pid.kp = SETTINGS_DEFUALT_GROUND_KP;
+	other->bigsky_pid.ki = SETTINGS_DEFUALT_GROUND_KI;
+	other->bigsky_pid.kd = SETTINGS_DEFUALT_GROUND_KD;
+	other->bigsky_pid.sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
 
 	other->string_pid.kp = SETTINGS_DEFUALT_STRING_KP;
 	other->string_pid.ki = SETTINGS_DEFUALT_STRING_KI;
@@ -98,11 +98,11 @@ void settings_show()
     printPretty("------------------GROUND  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.ground_pid.kp), __abs(((int)(settings.ground_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.ground_pid.ki), __abs(((int)(settings.ground_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.ground_pid.kd), __abs(((int)(settings.ground_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
+		((int)settings.bigsky_pid.kp), __abs(((int)(settings.bigsky_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.bigsky_pid.ki), __abs(((int)(settings.bigsky_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.bigsky_pid.kd), __abs(((int)(settings.bigsky_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.ground_pid.sampling);
+	printPretty("PID sampling: %lu ms\n", settings.bigsky_pid.sampling);
     printPretty("------------------STRING  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",

@@ -24,7 +24,8 @@ fsm::FiniteStateMachine<App::fsm_table> App::fsm;
 utl::Timer App::samplingTimer(0);
 utl::Timer App::valveTimer(0);
 GyverPID* App::pid;;
-APP_mode_t App::mode = APP_MODE_MANUAL;
+SENSOR_MODE App::sensorMode = SENSOR_MODE_SURFACE;
+APP_MODE App::appMode = APP_MODE_MANUAL;
 
 
 void App::proccess()
@@ -32,32 +33,32 @@ void App::proccess()
 	fsm.proccess();
 }
 
-void App::setMode(APP_mode_t mode)
+void App::setAppMode(APP_MODE mode)
 {
-	switch(mode) {
-	case APP_MODE_MANUAL:
-		fsm.push_event(manual_e{});
-		break;
-	case APP_MODE_SURFACE:
-		fsm.push_event(surface_e{});
-		break;
-	case APP_MODE_GROUND:
-		fsm.push_event(ground_e{});
-		break;
-	case APP_MODE_STRING:
-		fsm.push_event(string_e{});
-		break;
-	default:
-		fsm.push_event(error_e{});
-		set_error(APP_MODE_ERROR);
+	if (appMode == mode) {
 		return;
-	};
-	App::mode = mode;
+	}
+
+	if (mode == APP_MODE_AUTO) {
+		fsm.push_event(auto_e{});
+	}
+
+	if (mode == APP_MODE_MANUAL) {
+		fsm.push_event(manual_e{});
+	}
+
+	App::appMode = mode;
 }
 
-APP_mode_t App::getMode()
+APP_MODE App::getAppMode()
 {
-	return mode;
+	return appMode;
+}
+
+void App::changeSensorMode(SENSOR_MODE mode)
+{
+	set_sensor_mode(mode);
+	sensorMode = mode;
 }
 
 void App::stop()
@@ -151,42 +152,52 @@ void App::manual_start_a::operator ()()
 	VALVE_STOP();
 }
 
-void App::surface_start_a::operator ()()
+void App::auto_start_a::operator ()()
 {
-	pid->Kp = settings.surface_pid.kp;
-	pid->Ki = settings.surface_pid.ki;
-	pid->Kd = settings.surface_pid.kd;
-	pid->setDt(settings.surface_pid.sampling);
+	if (sensorMode == get_sensor_mode()) {
+		return;
+	}
 
-	samplingTimer.changeDelay(settings.surface_pid.sampling);
-	samplingTimer.reset();
-}
+	pid->reset();
 
-void App::ground_start_a::operator ()()
-{
-	pid->Kp = settings.ground_pid.kp;
-	pid->Ki = settings.ground_pid.ki;
-	pid->Kd = settings.ground_pid.kd;
-	pid->setDt(settings.ground_pid.sampling);
+	switch(get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		pid->Kp = settings.surface_pid.kp;
+		pid->Ki = settings.surface_pid.ki;
+		pid->Kd = settings.surface_pid.kd;
+		pid->setDt(settings.surface_pid.sampling);
 
-	samplingTimer.changeDelay(settings.ground_pid.sampling);
-	samplingTimer.reset();
-}
+		samplingTimer.changeDelay(settings.surface_pid.sampling);
+		break;
+	case SENSOR_MODE_STRING:
+		pid->Kp = settings.string_pid.kp;
+		pid->Ki = settings.string_pid.ki;
+		pid->Kd = settings.string_pid.kd;
+		pid->setDt(settings.string_pid.sampling);
 
-void App::string_start_a::operator ()()
-{
-	pid->Kp = settings.string_pid.kp;
-	pid->Ki = settings.string_pid.ki;
-	pid->Kd = settings.string_pid.kd;
-	pid->setDt(settings.string_pid.sampling);
+		samplingTimer.changeDelay(settings.string_pid.sampling);
+		break;
+	case SENSOR_MODE_BIGSKY:
+		pid->Kp = settings.bigsky_pid.kp;
+		pid->Ki = settings.bigsky_pid.ki;
+		pid->Kd = settings.bigsky_pid.kd;
+		pid->setDt(settings.bigsky_pid.sampling);
 
-	samplingTimer.changeDelay(settings.string_pid.sampling);
+		samplingTimer.changeDelay(settings.bigsky_pid.sampling);
+		break;
+	default:
+		BEDUG_ASSERT(false, "Unknown button in buffer");
+		fsm.push_event(error_e{});
+		Error_Handler();
+		break;
+	}
+
 	samplingTimer.reset();
 }
 
 void App::setup_pid_a::operator ()()
 {
-	int16_t newValue = get_sensor_value();
+	int16_t newValue = get_sensor_average_value();
 
 	if (__abs_dif(newValue, settings.last_target) < TRIG_VALUE_LOW) {
 		pid->input = settings.last_target;

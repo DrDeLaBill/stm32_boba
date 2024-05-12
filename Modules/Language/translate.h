@@ -30,7 +30,7 @@ extern const char T_mode[][TRANSLATE_MAX_LEN];
 extern const char T_manual[][TRANSLATE_MAX_LEN];
 extern const char T_auto[][TRANSLATE_MAX_LEN];
 extern const char T_surface[][TRANSLATE_MAX_LEN];
-extern const char T_ground[][TRANSLATE_MAX_LEN];
+extern const char T_BIGSKY[][TRANSLATE_MAX_LEN];
 extern const char T_string[][TRANSLATE_MAX_LEN];
 extern const char T_error[][TRANSLATE_MAX_LEN];
 extern const char T_TARGET[][TRANSLATE_MAX_LEN];

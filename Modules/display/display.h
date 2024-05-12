@@ -48,6 +48,10 @@ typedef enum _DISPLAY_ALIGN_MODE
 
 extern sFONT settings_bitmap;
 extern sFONT back_bitmap;
+extern sFONT save_bitmap;
+extern sFONT surface_bitmap;
+extern sFONT string_bitmap;
+extern sFONT bigsky_bitmap;
 
 
 void display_init();

@@ -136,54 +136,54 @@ char* surface_sampling_callback::value()
 
 
 
-void ground_kp_callback::click(uint16_t button)
+void bigsky_kp_callback::click(uint16_t button)
 {
-	callback_click<int32_t>(&(settings.ground_pid.kp), 50, button);
+	callback_click<int32_t>(&(settings.bigsky_pid.kp), 50, button);
 }
 
-char* ground_kp_callback::value()
+char* bigsky_kp_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%ld.%03ld", ((int)settings.ground_pid.kp / SETTINGS_PID_MULTIPLIER), __abs((int)settings.ground_pid.kp % SETTINGS_PID_MULTIPLIER));
+	snprintf(value, sizeof(value), "%ld.%03ld", ((int)settings.bigsky_pid.kp / SETTINGS_PID_MULTIPLIER), __abs((int)settings.bigsky_pid.kp % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
-void ground_ki_callback::click(uint16_t button)
+void bigsky_ki_callback::click(uint16_t button)
 {
-	callback_click<int32_t>(&(settings.ground_pid.ki), 50, button);
+	callback_click<int32_t>(&(settings.bigsky_pid.ki), 50, button);
 }
 
-char* ground_ki_callback::value()
+char* bigsky_ki_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%ld.%03ld", ((int)settings.ground_pid.ki / SETTINGS_PID_MULTIPLIER), __abs((int)settings.ground_pid.ki % SETTINGS_PID_MULTIPLIER));
+	snprintf(value, sizeof(value), "%ld.%03ld", ((int)settings.bigsky_pid.ki / SETTINGS_PID_MULTIPLIER), __abs((int)settings.bigsky_pid.ki % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
-void ground_kd_callback::click(uint16_t button)
+void bigsky_kd_callback::click(uint16_t button)
 {
-	callback_click<int32_t>(&(settings.ground_pid.kd), 50, button);
+	callback_click<int32_t>(&(settings.bigsky_pid.kd), 50, button);
 }
 
-char* ground_kd_callback::value()
+char* bigsky_kd_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%ld.%03ld", ((int)settings.ground_pid.kd / SETTINGS_PID_MULTIPLIER), __abs((int)settings.ground_pid.kd % SETTINGS_PID_MULTIPLIER));
+	snprintf(value, sizeof(value), "%ld.%03ld", ((int)settings.bigsky_pid.kd / SETTINGS_PID_MULTIPLIER), __abs((int)settings.bigsky_pid.kd % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
 
 
 void ground_sampling_callback::click(uint16_t button)
 {
-	callback_click<uint32_t>(&(settings.ground_pid.sampling), 50, button);
+	callback_click<uint32_t>(&(settings.bigsky_pid.sampling), 50, button);
 }
 
 char* ground_sampling_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.ground_pid.sampling);
+	snprintf(value, sizeof(value), "%lu ms", settings.bigsky_pid.sampling);
 	return value;
 }
 

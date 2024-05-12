@@ -84,11 +84,11 @@ typedef struct __attribute__((packed)) _settings_t  {
     // Surface mode PID
     pid_t     surface_pid;
 
-    // Ground mode PID
-    pid_t     ground_pid;
-
     // String mode PID
     pid_t     string_pid;
+
+    // Ground mode PID
+    pid_t     bigsky_pid;
 } settings_t;
 
 

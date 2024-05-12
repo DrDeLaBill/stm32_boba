@@ -62,23 +62,23 @@
 
 #if (TUNER_COEF_TYPE == 0)
 // не помню где нашёл
-#define TUNE_P_PI 400
-#define TUNE_I_PI 480
-#define TUNE_P_PID 600
-#define TUNE_I_PID 1200
-#define TUNE_D_PID 75
+#define TUNE_P_PI 0.4
+#define TUNE_I_PI 0.48
+#define TUNE_P_PID 0.6
+#define TUNE_I_PID 1.2
+#define TUNE_D_PID 0.075
 #elif (TUNER_COEF_TYPE == 1)
 // Ziegler-Nichols
-#define TUNE_P_PI 450
-#define TUNE_I_PI 830
-#define TUNE_P_PID 590
-#define TUNE_I_PID 500
-#define TUNE_D_PID 125
+#define TUNE_P_PI 0.45
+#define TUNE_I_PI 0.83
+#define TUNE_P_PID 0.59
+#define TUNE_I_PID 0.5
+#define TUNE_D_PID 0.125
 #endif
 
 class PIDtuner {
    public:
-    void setParameters(bool newDirection, int newSteady, int newStep, int newWait, int32_t newWindow, uint32_t newPulse, int newPeriod) {
+    void setParameters(bool newDirection, int newSteady, int newStep, int newWait, float newWindow, uint16_t newPulse, int newPeriod) {
         steady = newSteady;
         step = newDirection ? -newStep : newStep;
         wait = newWait;
@@ -87,7 +87,7 @@ class PIDtuner {
         period = newPeriod;
     }
 
-    void setInput(int32_t input) {
+    void setInput(float input) {
         thisValue = input;
     }
 
@@ -164,8 +164,8 @@ class PIDtuner {
                                 accuracy = 100.0f * min(oscTime, prevOscTime) / max(oscTime, prevOscTime);
                                 startTime = millis();
 
-                                int32_t Ku = abs(4.0 * step / (maxVal - minVal) / PI);
-                                int32_t Pu = oscTime / 1000.0;
+                                float Ku = abs(4.0 * step / (maxVal - minVal) / PI);
+                                float Pu = oscTime / 1000.0;
                                 PI_k[0] = TUNE_P_PI * Ku;
                                 PI_k[1] = TUNE_I_PI * Ku / Pu;
                                 PID_k[0] = TUNE_P_PID * Ku;
@@ -181,11 +181,11 @@ class PIDtuner {
         }
     }
 
-    int32_t getPI_p() { return PI_k[0]; }
-    int32_t getPI_i() { return PI_k[1]; }
-    int32_t getPID_p() { return PID_k[0]; }
-    int32_t getPID_i() { return PID_k[1]; }
-    int32_t getPID_d() { return PID_k[2]; }
+    float getPI_p() { return PI_k[0]; }
+    float getPI_i() { return PI_k[1]; }
+    float getPID_p() { return PID_k[0]; }
+    float getPID_i() { return PID_k[1]; }
+    float getPID_d() { return PID_k[2]; }
 
     int getOutput() {
         return output;
@@ -254,33 +254,33 @@ class PIDtuner {
 
     void derivative() {
         // линейный МНК
-        int32_t sumX = 0, sumY = 0, sumX2 = 0, sumXY = 0;
+        float sumX = 0, sumY = 0, sumX2 = 0, sumXY = 0;
         for (int i = 0; i < BUF_SIZE; i++) {
             sumX += i;
             sumY += buf[i];
             sumX2 += i * i;
             sumXY += buf[i] * i;
         }
-        thisDerivative = (int32_t)(BUF_SIZE * sumXY - sumX * sumY) / (BUF_SIZE * sumX2 - sumX * sumX);
-        b = (int32_t)(sumY - thisDerivative * sumX) / BUF_SIZE;
+        thisDerivative = (float)(BUF_SIZE * sumXY - sumX * sumY) / (BUF_SIZE * sumX2 - sumX * sumX);
+        b = (float)(sumY - thisDerivative * sumX) / BUF_SIZE;
     }
 
    private:
     bool debFlag;
     int accuracy;
     int steady, step, wait;
-    int32_t window;
-    uint32_t pulse, period;
-    int32_t steadyValue, thisValue, prevValue, realValue, thisDerivative, b;
+    float window;
+    uint16_t pulse, period;
+    float steadyValue, thisValue, prevValue, realValue, thisDerivative, b;
     uint32_t startTime, tmr, debTmr;
     int output;
     byte state = 0;
     bool trigger = true;
     bool changeDir = false;
-    int32_t maxVal, minVal;
-    int32_t buf[BUF_SIZE];
+    float maxVal, minVal;
+    float buf[BUF_SIZE];
     int32_t oscTime = 0, prevOscTime = 0;
-    int32_t PI_k[2];
-    int32_t PID_k[3];
+    float PI_k[2];
+    float PID_k[3];
 };
 #endif

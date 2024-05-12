@@ -23,7 +23,6 @@ void Button::tick()
 	if (debounce.wait()) {
 		return;
 	}
-	debounce.start();
 
 	bool state = pressed();
 	if (!state) {
@@ -32,6 +31,8 @@ void Button::tick()
 	if (state == currState) {
 		return;
 	}
+
+	debounce.start();
 
 	if (state) {
 		clicked = false;

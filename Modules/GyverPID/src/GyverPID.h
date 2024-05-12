@@ -36,9 +36,9 @@
 #include <Arduino.h>
 
 #if defined(PID_INTEGER)  // расчёты с целыми числами
-typedef int32_t pidtype;
-#else  // расчёты с int32_t числами
-typedef int32_t pidtype;
+typedef int16_t pidtype;
+#else  // расчёты с float числами
+typedef float pidtype;
 #endif
 
 #define NORMAL 0
@@ -48,11 +48,11 @@ typedef int32_t pidtype;
 
 class GyverPID {
    public:
-    // ==== pidtype это int32_t или int, в зависимости от выбранного (см. пример integer_calc) ====
+    // ==== pidtype это float или int, в зависимости от выбранного (см. пример integer_calc) ====
     GyverPID() {}
 
     // kp, ki, kd, dt
-    GyverPID(int32_t new_kp, int32_t new_ki, int32_t new_kd, uint32_t new_dt = 100) {
+    GyverPID(float new_kp, float new_ki, float new_kd, uint32_t new_dt = 100) {
         setDt(new_dt);
         Kp = new_kp;
         Ki = new_ki;
@@ -70,24 +70,24 @@ class GyverPID {
     }
 
     // лимит выходной величины (например для ШИМ ставим 0-255)
-    void setLimits(int32_t min_output, int32_t max_output) {
+    void setLimits(int16_t min_output, int16_t max_output) {
         _minOut = min_output;
         _maxOut = max_output;
     }
 
     // установка времени дискретизации (для getResultTimer)
     void setDt(uint32_t new_dt) {
-        _dt_s = new_dt / 1000000;
+        _dt_s = new_dt / 1000.0f;
         _dt = new_dt;
     }
 
     pidtype setpoint = 0;  // заданная величина, которую должен поддерживать регулятор
     pidtype input = 0;     // сигнал с датчика (например температура, которую мы регулируем)
     pidtype output = 0;    // выход с регулятора на управляющее устройство (например величина ШИМ или угол поворота серво)
-    int32_t Kp = 0;      // коэффициент P
-    int32_t Ki = 0;        // коэффициент I
-    int32_t Kd = 0;        // коэффициент D
-    int32_t integral = 0;  // интегральная сумма
+    float Kp = 0.0;        // коэффициент P
+    float Ki = 0.0;        // коэффициент I
+    float Kd = 0.0;        // коэффициент D
+    float integral = 0.0;  // интегральная сумма
 
     // возвращает новое значение при вызове (если используем свой таймер с периодом dt!)
     pidtype getResult() {
@@ -140,16 +140,25 @@ class GyverPID {
         return getResult();
     }
 
+    void reset() {
+		input = 0;
+		output = 0;
+		Kp = 0;
+		Ki = 0;
+		Kd = 0;
+		integral = 0;
+    }
+
    private:
     uint32_t _dt = 100;  // время итерации в мс
-    int32_t _dt_s = 100;   // время итерации в с
+    float _dt_s = 0.1;   // время итерации в с
     bool _mode = 0, _direction = 0;
-    int32_t _minOut = 0, _maxOut = 255;
+    int16_t _minOut = 0, _maxOut = 255;
     pidtype prevInput = 0;
     uint32_t pidTimer = 0;
 #if (PID_INTEGRAL_WINDOW > 0)
     pidtype errors[PID_INTEGRAL_WINDOW];
-    uint32_t t = 0;
+    uint16_t t = 0;
 #endif
 };
 #endif

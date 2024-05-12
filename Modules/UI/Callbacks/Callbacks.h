@@ -93,21 +93,21 @@ struct surface_sampling_callback: public IMenuCallback
 
 
 
-struct ground_kp_callback: public IMenuCallback
+struct bigsky_kp_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
 };
 
 
-struct ground_ki_callback: public IMenuCallback
+struct bigsky_ki_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value();
 };
 
 
-struct ground_kd_callback: public IMenuCallback
+struct bigsky_kd_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value();

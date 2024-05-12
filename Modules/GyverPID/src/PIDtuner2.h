@@ -57,7 +57,7 @@
 
 class PIDtuner2 {
 public:
-    void setParameters(bool newDirection, int newStart, int newEnd, unsigned long newWait, int32_t newWindow, unsigned long newPeriod) {
+    void setParameters(bool newDirection, int newStart, int newEnd, unsigned long newWait, float newWindow, unsigned long newPeriod) {
         direction = newDirection;
         start = newStart;
         end = newEnd;
@@ -66,7 +66,7 @@ public:
         period = newPeriod;
     }
 
-    void setInput(int32_t input) {
+    void setInput(float input) {
         thisValue = input;
     }
 
@@ -117,42 +117,42 @@ public:
 
                 break;
             case 4:		// ловим t2
-                if ( (!direction && thisValue >= (startValue + B / 2000)) ||
-                        (direction && thisValue <= (startValue + B / 2000)) ) {
-                    t2 = (millis() - startTime) / 1000000;
+                if ( (!direction && thisValue >= (startValue + B / 2.0f)) ||
+                        (direction && thisValue <= (startValue + B / 2.0f)) ) {
+                    t2 = (millis() - startTime) / 1000.0f;
                     state = 5;
                     debFlag = true;
                 }
                 break;
             case 5:		// ловим t3
-                if ( (!direction && thisValue >= (startValue + B * 632)) ||
-                        (direction && thisValue <= (startValue + B * 632)) ) {
+                if ( (!direction && thisValue >= (startValue + B * 0.632f)) ||
+                        (direction && thisValue <= (startValue + B * 0.632f)) ) {
                     state = 6;
                     debFlag = true;
-                    t3 = (millis() - startTime) / 1000000;
+                    t3 = (millis() - startTime) / 1000.0f;
                 }
                 break;
             case 6:		// считаем
-                int32_t Kc, Ki, Kd, tauI, tauD;
-                int32_t t1 = (t2 - 693 * t3) / 307;
+                float Kc, Ki, Kd, tauI, tauD;
+                float t1 = (t2 - 0.693f * t3) / 0.307f;
 
-                int32_t tau = t3 - t1;
-                int32_t tauDEL = t1 - startTime/*(t0)*/ / 1000000;
+                float tau = t3 - t1;
+                float tauDEL = t1 - startTime/*(t0)*/ / 1000.0f;
 
-                int32_t K = B / abs(end - start);
-                int32_t r = tauDEL / tau;
+                float K = B / abs(end - start);
+                float r = tauDEL / tau;
 
                 // PI рег
-                Kc = (1 / (r * K)) * (900 + r / 12000);
-                tauI = tauDEL * ((30000 + 3000 * r) / (9000 + 20000 * r));
+                Kc = (1 / (r * K)) * (0.9 + r / 12.0);
+                tauI = tauDEL * ((30.0 + 3.0 * r) / (9.0 + 20.0 * r));
                 Ki = Kc / tauI;
                 PI_k[0] = Kc;
                 PI_k[1] = Ki;
 
                 // PID рег
-                Kc = (1 / (r * K)) * (1330 + r / 4000);
-                tauI = tauDEL * ((32000 + 6000 * r) / (13000 + 8000 * r));
-                tauD = tauDEL * (4000 / (11000 + 2000 * r));
+                Kc = (1 / (r * K)) * (1.33 + r / 4.0);
+                tauI = tauDEL * ((32.0 + 6.0 * r) / (13.0 + 8.0 * r));
+                tauD = tauDEL * (4.0 / (11.0 + 2.0 * r));
                 Ki = Kc / tauI;
                 Kd = Kc * tauD;
                 PID_k[0] = Kc;
@@ -166,11 +166,11 @@ public:
         }
     }
 
-    int32_t getPI_p() {return PI_k[0];}
-    int32_t getPI_i() {return PI_k[1];}
-    int32_t getPID_p() {return PID_k[0];}
-    int32_t getPID_i() {return PID_k[1];}
-    int32_t getPID_d() {return PID_k[2];}
+    float getPI_p() {return PI_k[0];}
+    float getPI_i() {return PI_k[1];}
+    float getPID_p() {return PID_k[0];}
+    float getPID_i() {return PID_k[1];}
+    float getPID_d() {return PID_k[2];}
 
     int getOutput() {
         return output;
@@ -222,14 +222,14 @@ private:
     byte state = 0;
     int start, end, output;
     unsigned long wait, period;
-    int32_t window;
+    float window;
     uint32_t startTime, tmr, debTmr;
-    int32_t thisValue, lastValue = 0;
-    int32_t endValue = 0;
-    int32_t startValue = 0;
-    int32_t B = 0;
-    int32_t t2, t3;
-    int32_t PI_k[2];
-    int32_t PID_k[3];
+    float thisValue, lastValue = 0.0;
+    float endValue = 0.0;
+    float startValue = 0.0;
+    float B = 0.0;
+    float t2, t3;
+    float PI_k[2];
+    float PID_k[3];
 };
 #endif

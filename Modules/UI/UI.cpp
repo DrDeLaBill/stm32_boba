@@ -15,7 +15,6 @@
 #include "display.h"
 #include "settings.h"
 #include "hal_defs.h"
-#include "translate.h"
 
 #include "App.h"
 #include "Callbacks.h"
@@ -54,9 +53,9 @@ MenuItem menuItems[] =
 	{(new surface_kd_callback()),       true,  "PID Kd:",        "0.00"},
 	{(new surface_sampling_callback()), true,  "PID sampling:",  "0 ms"},
 	{(new label_callback())  ,          false, "        GROUND  MODE        "},
-	{(new ground_kp_callback()),        true,  "PID Kp:",        "0.00"},
-	{(new ground_ki_callback()),        true,  "PID Ki:",        "0.00"},
-	{(new ground_kd_callback()),        true,  "PID Kd:",        "0.00"},
+	{(new bigsky_kp_callback()),        true,  "PID Kp:",        "0.00"},
+	{(new bigsky_ki_callback()),        true,  "PID Ki:",        "0.00"},
+	{(new bigsky_kd_callback()),        true,  "PID Kd:",        "0.00"},
 	{(new ground_sampling_callback()),  true,  "PID sampling:",  "0 ms"},
 	{(new label_callback())  ,          false, "        STRING  MODE        "},
 	{(new string_kp_callback()),        true,  "PID Kp:",        "0.00"},
@@ -72,41 +71,20 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 	menuItems,
 	__arr_len(menuItems)
 );
+SENSOR_MODE UI::manual_f1_mode = SENSOR_MODE_SURFACE;
+SENSOR_MODE UI::manual_f3_mode = SENSOR_MODE_STRING;
 
 
 void UI::tick()
 {
 	utl::CodeStopwatch watch("UI2", 100);
 	fsm.proccess();
-
-	// TODO: test
-//	display_set_color(DISPLAY_COLOR_BLACK);
-//	display_text_show(
-//		0,
-//		DISPLAY_HEADER_HEIGHT + 10,
-//		&u8g2_font_10x20_t_cyrillic,
-//		DISPLAY_ALIGN_LEFT,
-//		(char*)T_TEST_CYRILLIC,
-//		strlen((char*)T_TEST_CYRILLIC)
-//	);
-//
-//	display_set_color(DISPLAY_COLOR_BLACK);
-//	display_text_show(
-//		0,
-//		DISPLAY_HEADER_HEIGHT + 60,
-//		&u8g2_font_8x13_t_cyrillic,
-//		DISPLAY_ALIGN_LEFT,
-//		(char*)T_TEST_CYRILLIC,
-//		strlen((char*)T_TEST_CYRILLIC)
-//	);
 }
 
 
 void UI::buttonsTick()
 {
 	utl::CodeStopwatch watch("UI1", 100);
-
-	static uint16_t i = 0;
 
 	for (auto& button : buttons) {
 		button.second.tick();
@@ -118,40 +96,34 @@ void UI::buttonsTick()
 
 void UI::showMode()
 {
-	const char* phrase;
-	switch (App::getMode()) {
-	case APP_MODE_MANUAL:
-		phrase = t(T_manual, settings.language);
+	sFONT* bitmap = NULL;
+	switch (get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		bitmap = &surface_bitmap;
 		break;
-	case APP_MODE_SURFACE:
-		phrase = t(T_surface, settings.language);
+	case SENSOR_MODE_STRING:
+		bitmap = &string_bitmap;
 		break;
-	case APP_MODE_GROUND:
-		phrase = t(T_ground, settings.language);
-		break;
-	case APP_MODE_STRING:
-		phrase = t(T_string, settings.language);
+	case SENSOR_MODE_BIGSKY:
+		bitmap = &bigsky_bitmap;
 		break;
 	default:
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown APP mode");
 #endif
-		phrase = t(T_error, settings.language);
 		fsm.push_event(error_e{});
 		set_error(INTERNAL_ERROR);
-		break;
+		Error_Handler();
+		return;
 	};
 
-	char line[PHRASE_LEN_MAX] = {};
-	snprintf(line, sizeof(line) - 1, "%s", phrase);
-	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_LEFT);
-
+	char line[] = " ";
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
-		u8g2_font_8x13_t_cyrillic.Width,
-		(uint16_t)(DISPLAY_HEADER_HEIGHT + 2 * u8g2_font_8x13_t_cyrillic.Height),
-		&u8g2_font_8x13_t_cyrillic,
-		DISPLAY_ALIGN_LEFT,
+		display_width() / 2,
+		(uint16_t)(DISPLAY_HEADER_HEIGHT + bitmap->Height),
+		bitmap,
+		DISPLAY_ALIGN_CENTER,
 		line,
 		strlen(line)
 	);
@@ -173,79 +145,84 @@ void UI::showAutoFooter()
 	uint16_t w = display_width() / 3;
 	uint16_t h = display_height() - y;
 	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	SENSOR_MODE mode = get_sensor_mode();
+	char line[] = " ";
+
+	if (mode == SENSOR_MODE_SURFACE) {
+		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
+	}
 	if (f1_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f1_color = curr_color;
 	}
-	char linef1[] = "MD1";
 	display_set_background(curr_color);
 	display_set_color(buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&u8g2_font_10x20_t_cyrillic,
+		&surface_bitmap,
 		DISPLAY_ALIGN_CENTER,
-		linef1,
-		strlen(linef1)
+		line,
+		strlen(line)
 	);
 
 
 	w -= 1;
 	x += static_cast<uint16_t>(display_width() / 3 + 1);
 	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (mode == SENSOR_MODE_STRING) {
+		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
+	}
 	if (f2_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f2_color = curr_color;
 	}
-	char linef2[] = "MD2";
 	display_set_background(curr_color);
 	display_set_color(buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&u8g2_font_10x20_t_cyrillic,
+		&string_bitmap,
 		DISPLAY_ALIGN_CENTER,
-		linef2,
-		strlen(linef2)
+		line,
+		strlen(line)
 	);
 
 
 	x += static_cast<uint16_t>(display_width() / 3);
 	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (mode == SENSOR_MODE_BIGSKY) {
+		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
+	}
 	if (f3_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
 		f3_color = curr_color;
 	}
-	char linef3[] = "MD3";
 	display_set_background(curr_color);
 	display_set_color(buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&u8g2_font_10x20_t_cyrillic,
+		&bigsky_bitmap,
 		DISPLAY_ALIGN_CENTER,
-		linef3,
-		strlen(linef3)
+		line,
+		strlen(line)
 	);
 }
 
 void UI::showManualFooter()
 {
+	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
 	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
+	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
 
-	uint16_t x = 0;
+	uint16_t x = static_cast<uint16_t>(display_width() / 3 + 1);
 	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
-	uint16_t w = display_width() / 3;
+	uint16_t w = display_width() / 3 - 1;
 	uint16_t h = display_height() - y;
 	uint16_t halfSection = display_width() / 3 / 2;
-	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	uint16_t curr_color = DISPLAY_COLOR_WHITE;
 
-
-	display_fill_rect(x, y, w, h, curr_color);
-
-
-	w -= 1;
-	x += static_cast<uint16_t>(display_width() / 3 + 1);
 	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f2_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
@@ -263,14 +240,65 @@ void UI::showManualFooter()
 		strlen(linef2)
 	);
 
-	x += static_cast<uint16_t>(display_width() / 3);
+	if (is_status(NO_SENSOR)) {
+		return;
+	}
+
+	x = 0;
+	w = display_width() / 3;
+	manual_f1_mode = SENSOR_MODE_SURFACE;
+	sFONT* bitmap = &surface_bitmap;
+	if (manual_f1_mode == get_sensor_mode()) {
+		manual_f1_mode = SENSOR_MODE_STRING;
+		bitmap = &string_bitmap;
+	}
+	curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f1_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f1_color = curr_color;
+	}
+	char linef1[] = " ";
+	display_set_background(curr_color);
+	display_set_color(buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		bitmap,
+		DISPLAY_ALIGN_CENTER,
+		linef1,
+		strlen(linef1)
+	);
+
+	w -= 1;
+	x = static_cast<uint16_t>(display_width() / 3 * 2 + 1);
+	manual_f3_mode = SENSOR_MODE_STRING;
+	bitmap = &string_bitmap;
+	if (manual_f1_mode == manual_f3_mode || manual_f3_mode == get_sensor_mode()) {
+		manual_f3_mode = SENSOR_MODE_BIGSKY;
+		bitmap = &bigsky_bitmap;
+	}
 	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	display_fill_rect(x, y, w, h, curr_color);
+	if (f3_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f3_color = curr_color;
+	}
+	char linef3[] = " ";
+	display_set_background(curr_color);
+	display_set_color(buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		bitmap,
+		DISPLAY_ALIGN_CENTER,
+		linef3,
+		strlen(linef3)
+	);
 }
 
 void UI::showServiceFooter()
 {
 	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
+	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
 
 	uint16_t halfSection = display_width() / 3 / 2;
 
@@ -300,7 +328,22 @@ void UI::showServiceFooter()
 	display_fill_rect(x, y, w, h, DISPLAY_COLOR_WHITE);
 
 	x += static_cast<uint16_t>(display_width() / 3);
-	display_fill_rect(x, y, w, h, DISPLAY_COLOR_WHITE);
+	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f3_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f3_color = curr_color;
+	}
+	char linef3[] = " ";
+	display_set_background(curr_color);
+	display_set_color(buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		&save_bitmap,
+		DISPLAY_ALIGN_CENTER,
+		linef3,
+		strlen(linef3)
+	);
 }
 
 void UI::showValue()
@@ -341,8 +384,8 @@ void UI::showValue()
 			sizeof(value) - 1,
 			"%s: %03d.%02d",
 			phrase,
-			get_sensor_value() / 100,
-			__abs(get_sensor_value() % 100)
+			get_sensor_average_value() / 100,
+			__abs(get_sensor_average_value() % 100)
 		);
 		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -535,7 +578,7 @@ void UI::_manual_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
-	showMiddle(__abs_dif(settings.last_target, get_sensor_value()) < TRIG_VALUE_LOW);
+	showMiddle(__abs(get_sensor_average_value()) < TRIG_VALUE_LOW);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -547,6 +590,14 @@ void UI::_manual_mode_s::operator ()() const
 	buttons[BTN_UP_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_UP) : reset_status(MANUAL_NEED_VALVE_UP);
 	buttons[BTN_DOWN_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_DOWN) : reset_status(MANUAL_NEED_VALVE_DOWN);
 
+	static bool target_reseted = false;
+	if (buttons[BTN_ENTER_Pin].isHolded()) {
+		settings.last_target = 0;
+		target_reseted = true;
+		set_status(NEED_SAVE_SETTINGS);
+		return;
+	}
+
 	if (clicks.empty()) {
 		return;
 	}
@@ -555,19 +606,27 @@ void UI::_manual_mode_s::operator ()() const
 	switch (click) {
 	case BTN_MODE_Pin:
 		fsm.push_event(change_mode_e{});
-		App::setMode(APP_MODE_SURFACE);
+		App::setAppMode(APP_MODE_AUTO);
 		break;
 	case BTN_ENTER_Pin:
-		settings.last_target = get_sensor_value();
+		if (target_reseted) {
+			target_reseted = false;
+			break;
+		}
+		settings.last_target += get_sensor_average_value();
 		set_status(NEED_SAVE_SETTINGS);
+		break;
+	case BTN_F1_Pin:
+		App::changeSensorMode(manual_f1_mode);
 		break;
 	case BTN_F2_Pin:
 		fsm.push_event(service_e{});
 		break;
+	case BTN_F3_Pin:
+		App::changeSensorMode(manual_f3_mode);
+		break;
 	case BTN_UP_Pin:
 	case BTN_DOWN_Pin:
-	case BTN_F1_Pin:
-	case BTN_F3_Pin:
 		clicks.push_back(click);
 		break;
 	default:
@@ -587,7 +646,7 @@ void UI::_auto_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
-	showMiddle(__abs_dif(settings.last_target, get_sensor_value()) < TRIG_VALUE_LOW);
+	showMiddle(__abs(get_sensor_average_value()) < TRIG_VALUE_LOW);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -603,7 +662,7 @@ void UI::_auto_mode_s::operator ()() const
 	switch (clicks.pop_front()) {
 	case BTN_MODE_Pin:
 		fsm.push_event(change_mode_e{});
-		App::setMode(APP_MODE_MANUAL);
+		App::setAppMode(APP_MODE_MANUAL);
 		break;
 	case BTN_ENTER_Pin:
 		break;
@@ -612,13 +671,13 @@ void UI::_auto_mode_s::operator ()() const
 	case BTN_DOWN_Pin:
 		break;
 	case BTN_F1_Pin:
-		App::setMode(APP_MODE_SURFACE);
+		App::changeSensorMode(SENSOR_MODE_SURFACE);
 		break;
 	case BTN_F2_Pin:
-		App::setMode(APP_MODE_GROUND);
+		App::changeSensorMode(SENSOR_MODE_STRING);
 		break;
 	case BTN_F3_Pin:
-		App::setMode(APP_MODE_STRING);
+		App::changeSensorMode(SENSOR_MODE_BIGSKY);
 		break;
 	default:
 #ifdef DEBUG
@@ -654,7 +713,9 @@ void UI::_service_s::operator ()() const
 
 	if (is_status(NEED_UI_EXIT)) {
 		reset_status(NEED_UI_EXIT);
-		fsm.push_event(service_e{});
+		is_status(NO_SENSOR) ?
+			fsm.push_event(no_sens_e{}) :
+			fsm.push_event(service_e{});
 	}
 
 	serviceMenu->show();
@@ -737,7 +798,6 @@ void UI::manual_start_a::operator ()() const
 	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
 	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
-	const char* phrase = t(T_manual, settings.language);
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,

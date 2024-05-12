@@ -29,9 +29,9 @@ const char T_surface[][TRANSLATE_MAX_LEN] = {
 	"surface",
 	"покрытие"
 };
-const char T_ground[][TRANSLATE_MAX_LEN] = {
-	"ground",
-	"грунт"
+const char T_BIGSKY[][TRANSLATE_MAX_LEN] = {
+	"BIGSKY",
+	"BIGSKY"
 };
 const char T_string[][TRANSLATE_MAX_LEN] = {
 	"string",
