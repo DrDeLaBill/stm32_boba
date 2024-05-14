@@ -141,11 +141,6 @@ class GyverPID {
     }
 
     void reset() {
-		input = 0;
-		output = 0;
-		Kp = 0.0f;
-		Ki = 0.0f;
-		Kd = 0.0f;
 		integral = 0.0f;
     }
 

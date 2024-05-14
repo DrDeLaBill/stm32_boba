@@ -64,6 +64,13 @@ struct language_callback: public IMenuCallback
 };
 
 
+struct max_pid_time_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+};
+
+
 struct surface_kp_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
@@ -93,28 +100,28 @@ struct surface_sampling_callback: public IMenuCallback
 
 
 
-struct bigsky_kp_callback: public IMenuCallback
+struct bigski_kp_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
 };
 
 
-struct bigsky_ki_callback: public IMenuCallback
+struct bigski_ki_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value();
 };
 
 
-struct bigsky_kd_callback: public IMenuCallback
+struct bigski_kd_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value();
 };
 
 
-struct ground_sampling_callback: public IMenuCallback
+struct bigski_sampling_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value();

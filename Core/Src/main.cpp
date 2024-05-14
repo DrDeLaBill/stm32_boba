@@ -235,11 +235,7 @@ void Error_Handler(void)
   /* User can add his own implementation to report the HAL error return state */
     b_assert(__FILE__, __LINE__, "The error handler has been called");
 	set_error(INTERNAL_ERROR);
-#ifdef DEBUG
-	while (1);
-#else
-	NVIC_SystemReset();
-#endif
+	while (1) ui.tick();
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -256,11 +252,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
 	b_assert((char*)file, line, "Wrong parameters value");
 	set_error(INTERNAL_ERROR);
-#ifdef DEBUG
-	while (1);
-#else
-	NVIC_SystemReset();
-#endif
+	while (1) ui.tick();
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

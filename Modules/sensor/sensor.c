@@ -19,15 +19,15 @@
 #define SENSOR_MAX_ERRORS          (100)
 #define SENSOR_CONNECTION_DELAY_MS (3000)
 
-#define SENSOR_FRAME_ID1           (0x02A7)
-#define SENSOR_FRAME_ID2           (0x02A8)
-#define SENSOR_FRAME_ID3           (0x02AB)
+#define SENSOR_FRAME_ID1           (0x02AB)
+#define SENSOR_FRAME_ID2           (0x02A7)
+#define SENSOR_FRAME_ID3           (0x02A8)
 #define SENSOR_DISTANCE_FRAME_ID   (0x02)
 
 #define SENSOR_MODE_NONE           (0)
 
 #define SENSOR_SETTINGS_STD_ID     (0x7ED)
-#define SENSOR_VALUE_STD_ID        (0x2A7)
+#define SENSOR_VALUE_STD_ID        (0)
 
 
 const uint16_t SENSOR_FRAME_IDS[] = {
@@ -38,16 +38,16 @@ const uint16_t SENSOR_FRAME_IDS[] = {
 
 typedef struct _sensor_t {
 	int16_t             value;
-	bool                available;
 	util_old_timer_t    connection_timer;
 } sensor_t;
 
 typedef struct _sensor_state_t {
 	void                (*fsm) (void);
+	bool                enabled;
 	sensor_t            sensors[__arr_len(SENSOR_FRAME_IDS)];
 	SENSOR_MODE         curr_mode;
-	int16_t             curr_target;
 	SENSOR_MODE         need_mode;
+	int16_t             curr_target;
 	uint16_t            need_std_id;
 
 	unsigned            errors;
@@ -60,6 +60,8 @@ typedef struct _sensor_state_t {
 	uint8_t             tx_buffer[SENSOR_DATA_MAX_SIZE];
 	CAN_RxHeaderTypeDef rx_header;
 	uint8_t             rx_buffer[SENSOR_DATA_MAX_SIZE];
+
+	uint8_t             bigski_id;
 } sensor_state_t;
 
 typedef struct _can_frame_t {
@@ -69,6 +71,7 @@ typedef struct _can_frame_t {
 } can_frame_t;
 
 
+void _check_stop();
 void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t* data);
 
 void _fsm_sensor_init();
@@ -81,6 +84,9 @@ void _fsm_sencor_set_mode_string();
 void _fsm_sencor_set_mode_end1();
 void _fsm_sencor_set_mode_end2();
 void _fsm_sencor_set_mode_end3();
+void _fsm_sencor_set_mode_bigski1();
+void _fsm_sencor_set_mode_bigski2();
+void _fsm_sencor_set_mode_bigski3();
 
 void _fsm_sensor_receive_frame();
 void _fsm_sensor_send_frame1();
@@ -105,27 +111,56 @@ static const can_frame_t start_frames[] = {
 	{0x07EC, 0x04, {0x01, 0x0F, 0x00, 0xFF,}},
 };
 
+static const uint8_t BIGSKI_IDS[] = {0x02, 0x00, 0x04};
+
 extern CAN_HandleTypeDef hcan;
 
 sensor_state_t sensor_state = {
-	.fsm = _fsm_sensor_init,
+	.fsm       = _fsm_sensor_init,
+	.curr_mode = SENSOR_MODE_SURFACE,
+	.bigski_id = 0,
 };
 
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-	DWT->CYCCNT           = 0;
+	_check_stop();
 
-	CAN_RxHeaderTypeDef tmp_rx_header;
-	uint8_t             tmp_rx_buffer[SENSOR_DATA_MAX_SIZE];
+	DWT->CYCCNT = 0;
+
+	CAN_RxHeaderTypeDef tmp_rx_header = {0};
+	uint8_t             tmp_rx_buffer[SENSOR_DATA_MAX_SIZE] = {0};
     if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
-    	if (tmp_rx_header.StdId != sensor_state.need_std_id) {
+    	if (sensor_state.need_std_id && tmp_rx_header.StdId != sensor_state.need_std_id) {
     		reset_status(CAN_FAULT);
     		return;
     	}
-    	memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
-    	memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-    	sensor_state.received = true;
+    	bool is_value = false;
+    	int16_t value = ((int16_t)tmp_rx_buffer[1] << 8) | (int16_t)tmp_rx_buffer[2];
+    	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
+    	    if (tmp_rx_header.StdId != SENSOR_FRAME_IDS[i] ||
+				tmp_rx_buffer[0]    != SENSOR_DISTANCE_FRAME_ID
+    		) {
+    	    	continue;
+    		}
+    		sensor_state.sensors[i].value = value;
+    		is_value = true;
+#if SENSOR_BEDUG
+    		printTagLog(
+    			"SNS",
+    			"distance[%X]=%d.%d",
+				(i == 0 ? SENSOR_FRAME_ID1 : i == 1 ? SENSOR_FRAME_ID2 : SENSOR_FRAME_ID3),
+    			value / 100,
+    			__abs(value % 100)
+    		);
+#endif
+    		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
+    	}
+    	if (!is_value) {
+			memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
+			memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
+			sensor_state.received = true;
+    	}
     }
 	reset_status(CAN_FAULT);
 }
@@ -148,40 +183,105 @@ void sensor_tick()
 
 bool sensor_available()
 {
-	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
-		if (sensor_state.sensors[i].available) {
-			return true;
-		}
+	if (get_sensor_mode() != SENSOR_MODE_BIGSKI) {
+		return sensor2A7_available();
 	}
-	return false;
-}
 
-int16_t get_sensor2A7_value()
-{
-	return sensor_state.sensors[0].value;
-}
-
-int16_t get_sensor2A8_value()
-{
-	return sensor_state.sensors[1].value;
+	return sensor2AB_available() || sensor2A7_available() || sensor2A8_available();
 }
 
 int16_t get_sensor2AB_value()
 {
+	return sensor_state.sensors[0].value;
+}
+
+int16_t get_sensor2A7_value()
+{
+	return sensor_state.sensors[1].value;
+}
+
+int16_t get_sensor2A8_value()
+{
 	return sensor_state.sensors[2].value;
 }
 
-int16_t get_sensor_average_value()
+int16_t get_sensor_average()
 {
 	int16_t value = 0;
-	int16_t counter = 0;
 	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
-		if (sensor_state.sensors[i].available) {
-			value += sensor_state.sensors[i].value;
-			counter++;
-		}
+		value += sensor_state.sensors[i].value;
 	}
-	return counter ? value / counter : 0;
+	return value / (int16_t)__arr_len(sensor_state.sensors);
+}
+
+int16_t get_sensor_mode_target()
+{
+	switch (sensor_state.curr_mode) {
+	case SENSOR_MODE_SURFACE:
+		return settings.surface_target;
+	case SENSOR_MODE_STRING:
+		return settings.string_target;
+	case SENSOR_MODE_BIGSKI:
+		return settings.bigski_target[1];
+	default:
+		Error_Handler();
+		return 0;
+	}
+}
+
+void save_sensor_mode_target()
+{
+	switch (get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		settings.surface_target += get_sensor2A7_value();
+		break;
+	case SENSOR_MODE_STRING:
+		settings.string_target += get_sensor2A7_value();
+		break;
+	case SENSOR_MODE_BIGSKI:
+		settings.bigski_target[0] -= get_sensor2AB_value();
+		settings.bigski_target[1] -= get_sensor2A7_value();
+		settings.bigski_target[2] -= get_sensor2A8_value();
+		break;
+	default:
+		Error_Handler();
+		break;
+	}
+}
+
+void reset_sensor_mode_target()
+{
+	switch (get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		settings.surface_target = 0;
+		break;
+	case SENSOR_MODE_STRING:
+		settings.string_target = 0;
+		break;
+	case SENSOR_MODE_BIGSKI:
+		settings.bigski_target[0] = 0;
+		settings.bigski_target[1] = 0;
+		settings.bigski_target[2] = 0;
+		break;
+	default:
+		Error_Handler();
+		break;
+	}
+}
+
+bool sensor2AB_available()
+{
+	return util_old_timer_wait(&sensor_state.sensors[0].connection_timer);
+}
+
+bool sensor2A7_available()
+{
+	return util_old_timer_wait(&sensor_state.sensors[1].connection_timer);
+}
+
+bool sensor2A8_available()
+{
+	return util_old_timer_wait(&sensor_state.sensors[2].connection_timer);
 }
 
 void set_sensor_mode(SENSOR_MODE mode)
@@ -216,6 +316,17 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 }
 
 
+void _check_stop()
+{
+	if (sensor_state.enabled != is_status(WAIT_LOAD)) {
+		is_status(WAIT_LOAD) ?
+			HAL_CAN_DeactivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
+			HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+		sensor_state.enabled = is_status(WAIT_LOAD);
+	}
+}
+
+
 #define    DWT_CYCCNT    *(volatile unsigned long *)0xE0001004
 #define    DWT_CONTROL   *(volatile unsigned long *)0xE0001000
 #define    SCB_DEMCR     *(volatile unsigned long *)0xE000EDFC
@@ -229,7 +340,8 @@ void _fsm_sensor_init()
 
 	sensor_state.need_mode   = SENSOR_MODE_SURFACE;
 	sensor_state.curr_mode   = SENSOR_MODE_SURFACE;
-	sensor_state.curr_target = (int16_t)0xFFFF ^ settings.last_target;
+	sensor_state.curr_target = 0;
+	sensor_state.bigski_id   = 0;
 
 	util_old_timer_start(&sensor_state.timer, 100);
 	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
@@ -238,12 +350,19 @@ void _fsm_sensor_init()
 
 void _fsm_sensor_idle()
 {
+	_check_stop();
+
+	if (is_status(WAIT_LOAD)) {
+		return;
+	}
+
 	if (sensor_state.errors > SENSOR_MAX_ERRORS) {
 		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 		sensor_state.fsm = _fsm_sensor_start;
-	} else if (sensor_state.need_mode != sensor_state.curr_mode ||
-		settings.last_target != sensor_state.curr_target
+	} else if (
+		sensor_state.need_mode   != sensor_state.curr_mode ||
+		sensor_state.curr_target != get_sensor_mode_target()
 	) {
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 		sensor_state.fsm = _fsm_sensor_change_mode;
@@ -259,17 +378,7 @@ void _fsm_sensor_idle()
 		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 	}
 
-	bool status = true;
-	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
-		if (util_old_timer_wait(&sensor_state.sensors[i].connection_timer)) {
-			status = false;
-		} else {
-			sensor_state.sensors[i].available = false;
-		}
-	}
-	if (status) {
-		set_status(NO_SENSOR);
-	}
+	sensor_available() ? reset_status(NO_SENSOR) : set_status(NO_SENSOR);
 }
 
 void _fsm_sensor_start()
@@ -303,7 +412,9 @@ void _fsm_sensor_start()
 void _fsm_sensor_change_mode()
 {
 	switch (sensor_state.need_mode) {
-	case SENSOR_MODE_BIGSKY: // TODO: BIGSKY
+	case SENSOR_MODE_BIGSKI:
+		sensor_state.fsm = _fsm_sencor_set_mode_bigski1;
+		break;
 	case SENSOR_MODE_SURFACE:
 		sensor_state.fsm = _fsm_sencor_set_mode_surface;
 		break;
@@ -320,7 +431,7 @@ void _fsm_sensor_change_mode()
 
 void _fsm_sencor_set_mode_surface()
 {
-	static const can_frame_t surface_request =
+	can_frame_t surface_request =
 		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x02,}};
 
 	_sensor_send_frame(surface_request.std_id, surface_request.dlc, surface_request.data);
@@ -330,7 +441,7 @@ void _fsm_sencor_set_mode_surface()
 
 void _fsm_sencor_set_mode_string()
 {
-	static const can_frame_t string_request =
+	can_frame_t string_request =
 		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x01,}};
 
 	_sensor_send_frame(string_request.std_id, string_request.dlc, string_request.data);
@@ -338,12 +449,34 @@ void _fsm_sencor_set_mode_string()
 	sensor_state.fsm = _fsm_sencor_set_mode_end1;
 }
 
-void _fsm_sencor_set_mode_end1()
+void _fsm_sencor_set_mode_bigski1()
+{
+	int16_t value = settings.bigski_target[sensor_state.bigski_id];
+	can_frame_t request =
+			{0x07EC, 0x06, {0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x05, (uint8_t)(value >> 8), (uint8_t)value}};
+
+	if (sensor_state.bigski_id >= __arr_len(BIGSKI_IDS)) {
+		sensor_state.bigski_id = 0;
+		can_frame_t mode_request =
+				{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x12, 0x00,}};
+		_sensor_send_frame(mode_request.std_id, mode_request.dlc, mode_request.data);
+		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+		sensor_state.fsm = _fsm_sencor_set_mode_bigski3;
+	} else {
+		_sensor_send_frame(request.std_id, request.dlc, request.data);
+		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+		sensor_state.fsm = _fsm_sencor_set_mode_bigski2;
+	}
+}
+
+void _fsm_sencor_set_mode_bigski2()
 {
 	bool recieved = false;
 
 	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
 		recieved = true;
+	} else {
+		sensor_state.received = false;
 	}
 
 	if (!util_old_timer_wait(&sensor_state.timer)) {
@@ -356,7 +489,74 @@ void _fsm_sencor_set_mode_end1()
 		return;
 	}
 
-	static const uint8_t response1[] =
+	uint8_t response[] =
+		{0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x00, 0x05, 0x00,};
+
+	if (memcmp(response, sensor_state.rx_buffer, __arr_len(response))) {
+		sensor_state.fsm = _fsm_sensor_idle;
+		sensor_state.errors++;
+		return;
+	}
+
+	sensor_state.bigski_id++;
+	sensor_state.fsm = _fsm_sencor_set_mode_bigski1;
+}
+
+void _fsm_sencor_set_mode_bigski3()
+{
+	bool recieved = false;
+
+	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+		recieved = true;
+	} else {
+		sensor_state.received = false;
+	}
+
+	if (!util_old_timer_wait(&sensor_state.timer)) {
+		sensor_state.fsm = _fsm_sensor_idle;
+		sensor_state.errors++;
+		return;
+	}
+
+	if (!recieved) {
+		return;
+	}
+
+	uint8_t response[] = {0x01, 0x0F, 0x00, 0x00, 0x12, 0x00,};
+
+	if (memcmp(response, sensor_state.rx_buffer, __arr_len(response))) {
+		sensor_state.fsm = _fsm_sensor_idle;
+		sensor_state.errors++;
+		return;
+	}
+
+	sensor_state.bigski_id   = 0;
+	sensor_state.curr_mode   = sensor_state.need_mode;
+	sensor_state.curr_target = get_sensor_mode_target();
+	sensor_state.fsm         = _fsm_sensor_idle;
+}
+
+void _fsm_sencor_set_mode_end1()
+{
+	bool recieved = false;
+
+	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+		recieved = true;
+	} else {
+		sensor_state.received = false;
+	}
+
+	if (!util_old_timer_wait(&sensor_state.timer)) {
+		sensor_state.fsm = _fsm_sensor_idle;
+		sensor_state.errors++;
+		return;
+	}
+
+	if (!recieved) {
+		return;
+	}
+
+	uint8_t response1[] =
 		{0x01, 0x0F, 0x00, 0x00, 0x19, 0x00,};
 
 	if (memcmp(response1, sensor_state.rx_buffer, __arr_len(response1))) {
@@ -365,7 +565,7 @@ void _fsm_sencor_set_mode_end1()
 		return;
 	}
 
-	int16_t target = -settings.last_target;
+	int16_t target = -get_sensor_mode_target();
 	can_frame_t request2 =
 		{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
 
@@ -380,6 +580,8 @@ void _fsm_sencor_set_mode_end2()
 
 	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
 		recieved = true;
+	} else {
+		sensor_state.received = false;
 	}
 
 	if (!util_old_timer_wait(&sensor_state.timer)) {
@@ -392,7 +594,7 @@ void _fsm_sencor_set_mode_end2()
 		return;
 	}
 
-	static const uint8_t response2[] =
+	uint8_t response2[] =
 		{0x01, 0x0F, 0x00, 0x00, 0x05, 0x00};
 
 	if (memcmp(response2, sensor_state.rx_buffer, __arr_len(response2))) {
@@ -401,7 +603,7 @@ void _fsm_sencor_set_mode_end2()
 		return;
 	}
 
-	static const can_frame_t request3 =
+	can_frame_t request3 =
 		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x03, 0x06}};
 
 	_sensor_send_frame(request3.std_id, request3.dlc, request3.data);
@@ -415,6 +617,8 @@ void _fsm_sencor_set_mode_end3()
 
 	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
 		recieved = true;
+	} else {
+		sensor_state.received = false;
 	}
 
 	if (!util_old_timer_wait(&sensor_state.timer)) {
@@ -427,7 +631,7 @@ void _fsm_sencor_set_mode_end3()
 		return;
 	}
 
-	static const uint8_t response3[] =
+	uint8_t response3[] =
 		{0x01, 0x0F, 0x00, 0x00, 0x03, 0x00};
 
 	if (memcmp(response3, sensor_state.rx_buffer, __arr_len(response3))) {
@@ -437,33 +641,12 @@ void _fsm_sencor_set_mode_end3()
 	}
 
 	sensor_state.curr_mode   = sensor_state.need_mode;
-	sensor_state.curr_target = settings.last_target;
+	sensor_state.curr_target = get_sensor_mode_target();
 	sensor_state.fsm         = _fsm_sensor_idle;
 }
 
 void _fsm_sensor_receive_frame()
 {
-	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
-	    if (sensor_state.rx_header.StdId != SENSOR_FRAME_IDS[i] ||
-			sensor_state.rx_buffer[0]    != SENSOR_DISTANCE_FRAME_ID
-		) {
-	    	continue;
-		}
-	    int16_t value = ((int16_t)sensor_state.rx_buffer[1] << 8) | (int16_t)sensor_state.rx_buffer[2];
-		sensor_state.sensors[i].value = value;
-		sensor_state.sensors[i].available = true;
-#if SENSOR_BEDUG
-		printTagLog(
-			SENSOR_TAG,
-			"distance=%d.%d",
-			value / 100,
-			__abs(value % 100)
-		);
-#endif
-		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
-		reset_status(NO_SENSOR);
-	}
-
 	sensor_state.errors   = 0;
 	sensor_state.received = false;
 	sensor_state.fsm      = _fsm_sensor_idle;

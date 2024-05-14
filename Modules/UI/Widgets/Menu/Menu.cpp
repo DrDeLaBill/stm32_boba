@@ -78,8 +78,8 @@ void Menu::click(uint16_t button)
 			selected = false;
 		} else {
 			set_status(NEED_UI_EXIT);
-			set_status(NEED_LOAD_SETTINGS);
 		}
+		set_status(NEED_LOAD_SETTINGS);
 		items[focused_idx].setSelected(selected);
 		break;
 	case BTN_MODE_Pin:

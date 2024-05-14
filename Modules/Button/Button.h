@@ -10,7 +10,7 @@
 #include "hal_defs.h"
 
 
-#define BUTTON_DEBOUNCE_MS (20)
+#define BUTTON_DEBOUNCE_MS (60)
 
 
 class Button

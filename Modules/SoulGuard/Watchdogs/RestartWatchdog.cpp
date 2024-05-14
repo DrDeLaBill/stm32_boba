@@ -9,12 +9,18 @@
 #include "CodeStopwatch.h"
 
 
+volatile bool DISABLER = false;
+
 bool RestartWatchdog::flagsCleared = false;
 
 
 void RestartWatchdog::check()
 {
 	utl::CodeStopwatch stopwatch(TAG, WATCHDOG_TIMEOUT_MS);
+
+	if (DISABLER) {
+		NVIC_SystemReset();
+	}
 
 	if (flagsCleared) {
 		return;

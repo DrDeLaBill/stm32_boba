@@ -37,6 +37,7 @@ typedef enum _SOUK_STATUS {
 	PUMP_FAULT,
 	RTC_FAULT,
 	CAN_FAULT,
+	NO_BIGSKI,
 
 	NEED_UI_EXIT,
 
@@ -55,6 +56,7 @@ typedef enum _SOUK_STATUS {
 	USB_ERROR,
 	SETTINGS_LOAD_ERROR,
 	APP_MODE_ERROR,
+	VALVE_ERROR,
 
 	/* Device errors end */
 	ERRORS_END,

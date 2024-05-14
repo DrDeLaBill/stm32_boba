@@ -31,20 +31,24 @@ extern "C" {
 #define CF_VERSION  ((uint8_t)0x01)
 
 
-#define SETTINGS_DEFUALT_SURFACE_KP       (1.0f)
-#define SETTINGS_DEFUALT_SURFACE_KI       (0.1f)
+#define SETTINGS_BIGSKI_COUNT             (3)
+
+#define SETTINGS_DEFAULT_PID_MAX          ((uint32_t)1000)
+
+#define SETTINGS_DEFUALT_SURFACE_KP       (0.55f)
+#define SETTINGS_DEFUALT_SURFACE_KI       (0.0f)
 #define SETTINGS_DEFUALT_SURFACE_KD       (0.0f)
-#define SETTINGS_DEFAULT_SURFACE_SAMPLING (500)
+#define SETTINGS_DEFAULT_SURFACE_SAMPLING (50)
 
-#define SETTINGS_DEFUALT_GROUND_KP        (1.0f)
-#define SETTINGS_DEFUALT_GROUND_KI        (0.1f)
+#define SETTINGS_DEFUALT_GROUND_KP        (0.55f)
+#define SETTINGS_DEFUALT_GROUND_KI        (0.0f)
 #define SETTINGS_DEFUALT_GROUND_KD        (0.0f)
-#define SETTINGS_DEFAULT_GROUND_SAMPLING  (500)
+#define SETTINGS_DEFAULT_GROUND_SAMPLING  (50)
 
-#define SETTINGS_DEFUALT_STRING_KP        (1.0f)
-#define SETTINGS_DEFUALT_STRING_KI        (0.1f)
+#define SETTINGS_DEFUALT_STRING_KP        (0.55f)
+#define SETTINGS_DEFUALT_STRING_KI        (0.0f)
 #define SETTINGS_DEFUALT_STRING_KD        (0.0f)
-#define SETTINGS_DEFAULT_STRING_SAMPLING  (500)
+#define SETTINGS_DEFAULT_STRING_SAMPLING  (50)
 
 #define SETTINGS_PID_MULTIPLIER           ((int)100)
 
@@ -57,12 +61,12 @@ typedef enum _SettingsStatus {
 
 typedef struct __attribute__((packed)) _pid_t {
     // PID coefficients
-    float     kp;
-    float     ki;
-    float     kd;
+    float    kp;
+    float    ki;
+    float    kd;
     // PID sampling
-    uint32_t  sampling;
-} pid_t;
+    uint32_t sampling;
+} mode_t;
 
 
 typedef struct __attribute__((packed)) _settings_t  {
@@ -75,20 +79,26 @@ typedef struct __attribute__((packed)) _settings_t  {
     // Configuration version
     uint32_t  cf_id;
 
-    // Last target sensor value
-    int16_t   last_target;
+    // Max PID output time (ms)
+    int16_t   max_pid_time;
 
     // Language
     uint8_t   language;
 
     // Surface mode PID
-    pid_t     surface_pid;
+    mode_t     surface;
+    // Last surface target sensor value
+    int16_t    surface_target;
 
     // String mode PID
-    pid_t     string_pid;
+    mode_t     string;
+    // Last string target sensor value
+    int16_t    string_target;
 
     // Ground mode PID
-    pid_t     bigsky_pid;
+    mode_t     bigski;
+    // Last string target sensor value
+    int16_t    bigski_target[SETTINGS_BIGSKI_COUNT];
 } settings_t;
 
 

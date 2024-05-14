@@ -47,16 +47,17 @@ MenuItem menuItems[] =
 {
 	{(new version_callback()),          false, "Version:",       "v0.0.0"},
 	{(new language_callback()),         true,  "Language:",      "_"},
+	{(new max_pid_time_callback()),     true,  "Max PID time:",  "0 ms"},
 	{(new label_callback())  ,          false, "        SURFACE MODE        "},
 	{(new surface_kp_callback()),       true,  "PID Kp:",        "0.00"},
 	{(new surface_ki_callback()),       true,  "PID Ki:",        "0.00"},
 	{(new surface_kd_callback()),       true,  "PID Kd:",        "0.00"},
 	{(new surface_sampling_callback()), true,  "PID sampling:",  "0 ms"},
 	{(new label_callback())  ,          false, "        GROUND  MODE        "},
-	{(new bigsky_kp_callback()),        true,  "PID Kp:",        "0.00"},
-	{(new bigsky_ki_callback()),        true,  "PID Ki:",        "0.00"},
-	{(new bigsky_kd_callback()),        true,  "PID Kd:",        "0.00"},
-	{(new ground_sampling_callback()),  true,  "PID sampling:",  "0 ms"},
+	{(new bigski_kp_callback()),        true,  "PID Kp:",        "0.00"},
+	{(new bigski_ki_callback()),        true,  "PID Ki:",        "0.00"},
+	{(new bigski_kd_callback()),        true,  "PID Kd:",        "0.00"},
+	{(new bigski_sampling_callback()),  true,  "PID sampling:",  "0 ms"},
 	{(new label_callback())  ,          false, "        STRING  MODE        "},
 	{(new string_kp_callback()),        true,  "PID Kp:",        "0.00"},
 	{(new string_ki_callback()),        true,  "PID Ki:",        "0.00"},
@@ -97,6 +98,14 @@ void UI::buttonsTick()
 void UI::showMode()
 {
 	sFONT* bitmap = NULL;
+	char sensors[PHRASE_LEN_MAX] = "";
+	util_add_char(
+		sensors,
+		sizeof(sensors),
+		' ',
+		display_width() / u8g2_font_8x13_t_cyrillic.Width,
+		ALIGN_MODE_CENTER
+	);
 	switch (get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
 		bitmap = &surface_bitmap;
@@ -104,8 +113,16 @@ void UI::showMode()
 	case SENSOR_MODE_STRING:
 		bitmap = &string_bitmap;
 		break;
-	case SENSOR_MODE_BIGSKY:
-		bitmap = &bigsky_bitmap;
+	case SENSOR_MODE_BIGSKI:
+		bitmap = &bigski_bitmap;
+		snprintf(
+			sensors,
+			sizeof(sensors) - 1,
+			"%c%c%c",
+			sensor2AB_available() ? '1' : '-',
+			sensor2A7_available() ? '2' : '-',
+			sensor2A8_available() ? '3' : '-'
+		);
 		break;
 	default:
 #ifdef DEBUG
@@ -116,6 +133,16 @@ void UI::showMode()
 		Error_Handler();
 		return;
 	};
+
+	display_set_color(DISPLAY_COLOR_BLACK);
+	display_text_show(
+		display_width() / 2,
+		(uint16_t)(DISPLAY_HEADER_HEIGHT + u8g2_font_8x13_t_cyrillic.Height),
+		&u8g2_font_8x13_t_cyrillic,
+		DISPLAY_ALIGN_CENTER,
+		sensors,
+		strlen(sensors)
+	);
 
 	char line[] = " ";
 	display_set_color(DISPLAY_COLOR_BLACK);
@@ -191,7 +218,7 @@ void UI::showAutoFooter()
 
 	x += static_cast<uint16_t>(display_width() / 3);
 	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	if (mode == SENSOR_MODE_BIGSKY) {
+	if (mode == SENSOR_MODE_BIGSKI) {
 		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
 	}
 	if (f3_color != curr_color) {
@@ -203,7 +230,7 @@ void UI::showAutoFooter()
 	display_text_show(
 		x + halfSection,
 		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&bigsky_bitmap,
+		&bigski_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
 		strlen(line)
@@ -274,8 +301,8 @@ void UI::showManualFooter()
 	manual_f3_mode = SENSOR_MODE_STRING;
 	bitmap = &string_bitmap;
 	if (manual_f1_mode == manual_f3_mode || manual_f3_mode == get_sensor_mode()) {
-		manual_f3_mode = SENSOR_MODE_BIGSKY;
-		bitmap = &bigsky_bitmap;
+		manual_f3_mode = SENSOR_MODE_BIGSKI;
+		bitmap = &bigski_bitmap;
 	}
 	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f3_color != curr_color) {
@@ -359,8 +386,8 @@ void UI::showValue()
 			sizeof(target) - 1,
 			"%s: %03d.%02d",
 			phrase,
-			settings.last_target / 100,
-			__abs(settings.last_target % 100)
+			get_sensor_mode_target() / 100,
+			__abs(get_sensor_mode_target() % 100)
 		);
 		util_add_char(target, sizeof(target), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -384,8 +411,8 @@ void UI::showValue()
 			sizeof(value) - 1,
 			"%s: %03d.%02d",
 			phrase,
-			get_sensor_average_value() / 100,
-			__abs(get_sensor_average_value() % 100)
+			App::getValue() / 100,
+			__abs(App::getValue() % 100)
 		);
 		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -578,7 +605,7 @@ void UI::_manual_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
-	showMiddle(__abs(get_sensor_average_value()) < TRIG_VALUE_LOW);
+	showMiddle(__abs(App::getValue()) < TRIG_VALUE_LOW);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -592,7 +619,7 @@ void UI::_manual_mode_s::operator ()() const
 
 	static bool target_reseted = false;
 	if (buttons[BTN_ENTER_Pin].isHolded()) {
-		settings.last_target = 0;
+		reset_sensor_mode_target();
 		target_reseted = true;
 		set_status(NEED_SAVE_SETTINGS);
 		return;
@@ -613,7 +640,7 @@ void UI::_manual_mode_s::operator ()() const
 			target_reseted = false;
 			break;
 		}
-		settings.last_target += get_sensor_average_value();
+		save_sensor_mode_target();
 		set_status(NEED_SAVE_SETTINGS);
 		break;
 	case BTN_F1_Pin:
@@ -646,7 +673,7 @@ void UI::_auto_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
-	showMiddle(__abs(get_sensor_average_value()) < TRIG_VALUE_LOW);
+	showMiddle(__abs(App::getValue()) < TRIG_VALUE_LOW);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -677,7 +704,7 @@ void UI::_auto_mode_s::operator ()() const
 		App::changeSensorMode(SENSOR_MODE_STRING);
 		break;
 	case BTN_F3_Pin:
-		App::changeSensorMode(SENSOR_MODE_BIGSKY);
+		App::changeSensorMode(SENSOR_MODE_BIGSKI);
 		break;
 	default:
 #ifdef DEBUG

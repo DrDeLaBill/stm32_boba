@@ -35,23 +35,26 @@ void settings_reset(settings_t* other)
 	other->fw_id   = FW_VERSION;
 	other->cf_id   = CF_VERSION;
 
-	other->last_target = 0;
-	other->language    = ENGLISH;
+	other->max_pid_time = SETTINGS_DEFAULT_PID_MAX;
+	other->language     = ENGLISH;
 
-	other->surface_pid.kp = SETTINGS_DEFUALT_SURFACE_KP;
-	other->surface_pid.ki = SETTINGS_DEFUALT_SURFACE_KI;
-	other->surface_pid.kd = SETTINGS_DEFUALT_SURFACE_KD;
-	other->surface_pid.sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
+	other->surface.kp = SETTINGS_DEFUALT_SURFACE_KP;
+	other->surface.ki = SETTINGS_DEFUALT_SURFACE_KI;
+	other->surface.kd = SETTINGS_DEFUALT_SURFACE_KD;
+	other->surface.sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
+	other->surface_target = 0;
 
-	other->bigsky_pid.kp = SETTINGS_DEFUALT_GROUND_KP;
-	other->bigsky_pid.ki = SETTINGS_DEFUALT_GROUND_KI;
-	other->bigsky_pid.kd = SETTINGS_DEFUALT_GROUND_KD;
-	other->bigsky_pid.sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
+	other->string.kp = SETTINGS_DEFUALT_STRING_KP;
+	other->string.ki = SETTINGS_DEFUALT_STRING_KI;
+	other->string.kd = SETTINGS_DEFUALT_STRING_KD;
+	other->string.sampling = SETTINGS_DEFAULT_STRING_SAMPLING;
+	other->string_target = 0;
 
-	other->string_pid.kp = SETTINGS_DEFUALT_STRING_KP;
-	other->string_pid.ki = SETTINGS_DEFUALT_STRING_KI;
-	other->string_pid.kd = SETTINGS_DEFUALT_STRING_KD;
-	other->string_pid.sampling = SETTINGS_DEFAULT_STRING_SAMPLING;
+	other->bigski.kp = SETTINGS_DEFUALT_GROUND_KP;
+	other->bigski.ki = SETTINGS_DEFUALT_GROUND_KI;
+	other->bigski.kd = SETTINGS_DEFUALT_GROUND_KD;
+	other->bigski.sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
+	memset((void*)other->bigski_target, 0, sizeof(other->bigski_target));
 }
 
 uint32_t settings_size()
@@ -71,7 +74,9 @@ bool settings_check(settings_t* other)
 	if (other->fw_id != FW_VERSION) {
 		return false;
 	}
-
+	if (!IS_LANGUAGE(other->language)) {
+		return false;
+	}
 	return true;
 }
 
@@ -85,31 +90,36 @@ void settings_show()
 	printPretty("Configuration ID: %lu\n", settings.cf_id);
 
     printPretty("------------------------------------------------\n");
-	printPretty("Last valve target: %ld\n", settings.last_target);
 	printPretty("Language: %s\n", settings.language == RUSSIAN ? "RUSSIAN" : "ENGLISH"); // TODO
+	printPretty("Max PID output time: %lu ms\n", settings.max_pid_time);
     printPretty("------------------SURFACE MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.surface_pid.kp), __abs(((int)(settings.surface_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.surface_pid.ki), __abs(((int)(settings.surface_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.surface_pid.kd), __abs(((int)(settings.surface_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
+		((int)settings.surface.kp), __abs(((int)(settings.surface.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.surface.ki), __abs(((int)(settings.surface.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.surface.kd), __abs(((int)(settings.surface.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.surface_pid.sampling);
-    printPretty("------------------GROUND  MODE------------------\n");
-	printPretty(
-		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.bigsky_pid.kp), __abs(((int)(settings.bigsky_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.bigsky_pid.ki), __abs(((int)(settings.bigsky_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.bigsky_pid.kd), __abs(((int)(settings.bigsky_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
-	);
-	printPretty("PID sampling: %lu ms\n", settings.bigsky_pid.sampling);
+	printPretty("PID sampling: %lu ms\n", settings.surface.sampling);
+	printPretty("Last target: %ld\n", settings.surface_target);
     printPretty("------------------STRING  MODE------------------\n");
 	printPretty(
 		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.string_pid.kp), __abs(((int)(settings.string_pid.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.string_pid.ki), __abs(((int)(settings.string_pid.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.string_pid.kd), __abs(((int)(settings.string_pid.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
+		((int)settings.string.kp), __abs(((int)(settings.string.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.string.ki), __abs(((int)(settings.string.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.string.kd), __abs(((int)(settings.string.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
 	);
-	printPretty("PID sampling: %lu ms\n", settings.string_pid.sampling);
+	printPretty("PID sampling: %lu ms\n", settings.string.sampling);
+	printPretty("Last target: %ld\n", settings.string_target);
+    printPretty("------------------BIGSKI  MODE------------------\n");
+	printPretty(
+		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
+		((int)settings.bigski.kp), __abs(((int)(settings.bigski.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.bigski.ki), __abs(((int)(settings.bigski.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
+		((int)settings.bigski.kd), __abs(((int)(settings.bigski.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
+	);
+	printPretty("PID sampling: %lu ms\n", settings.bigski.sampling);
+	for (unsigned i = 0; i < __arr_len(settings.bigski_target); i++) {
+		printPretty("Last target[%u]: %ld\n", i, settings.bigski_target[i]);
+	}
     printPretty("####################SETTINGS####################\n\n");
 }

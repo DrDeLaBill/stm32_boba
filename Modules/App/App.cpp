@@ -10,27 +10,29 @@
 #include "hal_defs.h"
 
 
-#define APP_PID_MIN   (-1000)
-#define APP_PID_MAX   (1000)
-
-#define VALVE_UP_START()    HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
-#define VALVE_DOWN_START()  HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
-#define VALVE_UP_STOP()     HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
-#define VALVE_DOWN_STOP()   HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
-#define VALVE_STOP()        VALVE_UP_STOP(); VALVE_DOWN_STOP();
-
-
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
 utl::Timer App::samplingTimer(0);
 utl::Timer App::valveTimer(0);
 GyverPID* App::pid;;
 SENSOR_MODE App::sensorMode = SENSOR_MODE_SURFACE;
 APP_MODE App::appMode = APP_MODE_MANUAL;
+int16_t App::value = 0;
 
 
 void App::proccess()
 {
 	fsm.proccess();
+
+	if (get_sensor_mode() == SENSOR_MODE_BIGSKI) {
+		if (sensor2AB_available() && sensor2A7_available() && sensor2A8_available()) {
+			value = get_sensor_average();
+			reset_status(NO_BIGSKI);
+		} else {
+			set_status(NO_BIGSKI);
+		}
+	} else {
+		value = get_sensor2A7_value();
+	}
 }
 
 void App::setAppMode(APP_MODE mode)
@@ -50,6 +52,11 @@ void App::setAppMode(APP_MODE mode)
 	App::appMode = mode;
 }
 
+int16_t App::getValue()
+{
+	return value;
+}
+
 APP_MODE App::getAppMode()
 {
 	return appMode;
@@ -61,30 +68,49 @@ void App::changeSensorMode(SENSOR_MODE mode)
 	sensorMode = mode;
 }
 
+void App::up()
+{
+	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
+	reset_status(AUTO_NEED_VALVE_DOWN);
+	set_status(AUTO_NEED_VALVE_UP);
+}
+
+void App::down()
+{
+	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
+	reset_status(AUTO_NEED_VALVE_UP);
+	set_status(AUTO_NEED_VALVE_DOWN);
+}
+
 void App::stop()
 {
-	fsm.clear_events();
-	VALVE_STOP();
+	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
+	reset_status(AUTO_NEED_VALVE_DOWN);
+	reset_status(AUTO_NEED_VALVE_UP);
 }
 
 void App::_init_s::operator ()()
 {
-	VALVE_STOP();
+	stop();
 
 	if (is_status(WAIT_LOAD)) {
 		return;
 	}
 
 	pid = new GyverPID(
-		settings.surface_pid.kp,
-		settings.surface_pid.ki,
-		settings.surface_pid.kd,
-		settings.surface_pid.sampling
+		settings.surface.kp,
+		settings.surface.ki,
+		settings.surface.kd,
+		settings.surface.sampling
 	);
+	pid->setpoint = 0;
 	pid->setDirection(NORMAL);
-	pid->setLimits(APP_PID_MIN, APP_PID_MAX);
+	pid->setLimits(-settings.max_pid_time, settings.max_pid_time);
 
-	samplingTimer.changeDelay(settings.surface_pid.sampling);
+	samplingTimer.changeDelay(settings.surface.sampling);
 	fsm.push_event(success_e{});
 }
 
@@ -105,6 +131,12 @@ void App::_manual_s::operator ()()
 
 void App::_auto_s::operator ()()
 {
+	static SENSOR_MODE lastMode = SENSOR_MODE_SURFACE;
+	if (lastMode != sensorMode) {
+		lastMode = sensorMode;
+		fsm.push_event(auto_e{});
+	}
+
 	if (!samplingTimer.wait()) {
 		fsm.push_event(pid_timeout_e{});
 	}
@@ -112,7 +144,7 @@ void App::_auto_s::operator ()()
 	if (!valveTimer.wait() && __abs_dif(samplingTimer.end(), getMillis()) > VALVE_MIN_TIME_MS) {
 		reset_status(AUTO_NEED_VALVE_DOWN);
 		reset_status(AUTO_NEED_VALVE_UP);
-		VALVE_STOP();
+		stop();
 	}
 
 	if (has_errors()) {
@@ -144,12 +176,13 @@ void App::_error_s::operator ()()
 {
 	if (!has_errors()) {
 		fsm.push_event(solved_e{});
+		reset_error(VALVE_ERROR);
 	}
 }
 
 void App::manual_start_a::operator ()()
 {
-	VALVE_STOP();
+	stop();
 }
 
 void App::auto_start_a::operator ()()
@@ -162,31 +195,31 @@ void App::auto_start_a::operator ()()
 
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
-		pid->Kp = settings.surface_pid.kp;
-		pid->Ki = settings.surface_pid.ki;
-		pid->Kd = settings.surface_pid.kd;
-		pid->setDt(settings.surface_pid.sampling);
+		pid->Kp = settings.surface.kp;
+		pid->Ki = settings.surface.ki;
+		pid->Kd = settings.surface.kd;
+		pid->setDt(settings.surface.sampling);
 
-		samplingTimer.changeDelay(settings.surface_pid.sampling);
+		samplingTimer.changeDelay(settings.surface.sampling);
 		break;
 	case SENSOR_MODE_STRING:
-		pid->Kp = settings.string_pid.kp;
-		pid->Ki = settings.string_pid.ki;
-		pid->Kd = settings.string_pid.kd;
-		pid->setDt(settings.string_pid.sampling);
+		pid->Kp = settings.string.kp;
+		pid->Ki = settings.string.ki;
+		pid->Kd = settings.string.kd;
+		pid->setDt(settings.string.sampling);
 
-		samplingTimer.changeDelay(settings.string_pid.sampling);
+		samplingTimer.changeDelay(settings.string.sampling);
 		break;
-	case SENSOR_MODE_BIGSKY:
-		pid->Kp = settings.bigsky_pid.kp;
-		pid->Ki = settings.bigsky_pid.ki;
-		pid->Kd = settings.bigsky_pid.kd;
-		pid->setDt(settings.bigsky_pid.sampling);
+	case SENSOR_MODE_BIGSKI:
+		pid->Kp = settings.bigski.kp;
+		pid->Ki = settings.bigski.ki;
+		pid->Kd = settings.bigski.kd;
+		pid->setDt(settings.bigski.sampling);
 
-		samplingTimer.changeDelay(settings.bigsky_pid.sampling);
+		samplingTimer.changeDelay(settings.bigski.sampling);
 		break;
 	default:
-		BEDUG_ASSERT(false, "Unknown button in buffer");
+		BEDUG_ASSERT(false, "Unknown mode");
 		fsm.push_event(error_e{});
 		Error_Handler();
 		break;
@@ -197,61 +230,55 @@ void App::auto_start_a::operator ()()
 
 void App::setup_pid_a::operator ()()
 {
-	int16_t newValue = get_sensor_average_value();
+	pid->setLimits(-settings.max_pid_time, settings.max_pid_time);
 
-	if (__abs_dif(newValue, settings.last_target) < TRIG_VALUE_LOW) {
-		pid->input = settings.last_target;
-	} else {
-		pid->input = newValue;
+	if (get_sensor_mode() == SENSOR_MODE_BIGSKI && is_status(NO_BIGSKI)) {
+		pid->reset();
+		stop();
+		return;
 	}
-	pid->setpoint = 0;
+
+	if (__abs_dif(value, 0) < TRIG_VALUE_LOW) {
+		pid->input = 0;
+	} else {
+		pid->input = value;
+	}
 
 	int16_t pid_ms = pid->getResult();
 	if (__abs(pid_ms) < VALVE_MIN_TIME_MS) {
-		valveTimer.changeDelay(0);
-		reset_status(AUTO_NEED_VALVE_DOWN);
-		reset_status(AUTO_NEED_VALVE_UP);
-		VALVE_STOP();
+		stop();
 	} else if (pid_ms < 0) {
 		valveTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
-		reset_status(AUTO_NEED_VALVE_UP);
-		set_status(AUTO_NEED_VALVE_DOWN);
-		VALVE_UP_STOP();
-		VALVE_DOWN_START();
+		down();
 	} else {
 		valveTimer.changeDelay(static_cast<uint32_t>(pid_ms));
-		set_status(AUTO_NEED_VALVE_UP);
-		reset_status(AUTO_NEED_VALVE_DOWN);
-		VALVE_DOWN_STOP();
-		VALVE_UP_START();
+		up();
 	}
 
 	samplingTimer.start();
 	valveTimer.start();
 
 	if (pid_ms) {
-		printTagLog(TAG, "value: %06d(%06d), new PID: %d ms", pid->input, newValue, pid_ms);
+		printTagLog(TAG, "value: %06d(%06d), new PID: %d ms", pid->input, value, pid_ms);
 	}
 }
 
 void App::move_up_a::operator ()()
 {
-	VALVE_DOWN_STOP();
-	VALVE_UP_START();
+	up();
 }
 
 void App::move_down_a::operator ()()
 {
-	VALVE_UP_STOP();
-	VALVE_DOWN_START();
+	down();
 }
 
 void App::plate_stop_a::operator ()()
 {
-	VALVE_STOP();
+	stop();
 }
 
 void App::error_start_a::operator ()()
 {
-	VALVE_STOP();
+	stop();
 }

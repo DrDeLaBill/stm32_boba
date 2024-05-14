@@ -21,20 +21,20 @@ struct App
 protected:
 	static constexpr char TAG[] = "APP";
 
-	static constexpr uint32_t VALVE_MIN_TIME_MS = 400;
+	static constexpr int16_t VALVE_MIN_TIME_MS = 100;
 	static constexpr int16_t TRIG_VALUE_LOW = 30;
 	static constexpr int16_t TRIG_VALUE_HIGH = 100;
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
-	FSM_CREATE_EVENT(manual_e,      0);
-	FSM_CREATE_EVENT(auto_e,        0);
 	FSM_CREATE_EVENT(pid_timeout_e, 0);
 	FSM_CREATE_EVENT(plate_up_e,    0);
 	FSM_CREATE_EVENT(plate_down_e,  0);
 	FSM_CREATE_EVENT(solved_e,      0);
-	FSM_CREATE_EVENT(plate_stop_e,  1);
-	FSM_CREATE_EVENT(error_e,       2);
+	FSM_CREATE_EVENT(manual_e,      1);
+	FSM_CREATE_EVENT(auto_e,        1);
+	FSM_CREATE_EVENT(plate_stop_e,  2);
+	FSM_CREATE_EVENT(error_e,       3);
 
 	// States:
 	struct _init_s   { void operator()(); };
@@ -70,6 +70,7 @@ protected:
 		fsm::Transition<manual_s, plate_stop_e,  manual_s, plate_stop_a>,
 		fsm::Transition<manual_s, error_e,       error_s,  error_start_a>,
 
+		fsm::Transition<auto_s,   auto_e,        auto_s,   auto_start_a>,
 		fsm::Transition<auto_s,   manual_e,      manual_s, manual_start_a>,
 		fsm::Transition<auto_s,   pid_timeout_e, auto_s,   setup_pid_a>,
 		fsm::Transition<auto_s,   error_e,       error_s,  error_start_a>,
@@ -88,12 +89,19 @@ protected:
 
 	static SENSOR_MODE sensorMode;
 	static APP_MODE appMode;
+	static int16_t value;
 
+	static void up();
+	static void down();
 	static void stop();
+
+	static void updatePID();
 
 
 public:
 	void proccess();
+
+	static int16_t getValue();
 
 	static void setAppMode(APP_MODE mode);
 	static APP_MODE getAppMode();

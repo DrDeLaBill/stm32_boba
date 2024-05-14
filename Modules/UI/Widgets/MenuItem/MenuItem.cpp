@@ -119,6 +119,7 @@ void MenuItem::show()
 
 	memcpy(&line[value_index], callback->value(), strlen(callback->value()));
 	line[value_index + strlen(callback->value())] = 0;
+	util_add_char(line, sizeof(line), ' ', w / font->Width, ALIGN_MODE_LEFT);
 
 	uint16_t curr_color = DISPLAY_COLOR_WHITE;
 	if (selected) {
