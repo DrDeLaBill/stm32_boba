@@ -214,9 +214,9 @@ int16_t get_sensor_average()
 	return value / (int16_t)__arr_len(sensor_state.sensors);
 }
 
-int16_t get_sensor_mode_target()
+int16_t get_sensor_mode_target(SENSOR_MODE mode)
 {
-	switch (sensor_state.curr_mode) {
+	switch (mode) {
 	case SENSOR_MODE_SURFACE:
 		return settings.surface_target;
 	case SENSOR_MODE_STRING:
@@ -239,9 +239,9 @@ void save_sensor_mode_target()
 		settings.string_target += get_sensor2A7_value();
 		break;
 	case SENSOR_MODE_BIGSKI:
-		settings.bigski_target[0] -= get_sensor2AB_value();
-		settings.bigski_target[1] -= get_sensor2A7_value();
-		settings.bigski_target[2] -= get_sensor2A8_value();
+		settings.bigski_target[0] += get_sensor2AB_value();
+		settings.bigski_target[1] += get_sensor2A7_value();
+		settings.bigski_target[2] += get_sensor2A8_value();
 		break;
 	default:
 		Error_Handler();
@@ -362,7 +362,7 @@ void _fsm_sensor_idle()
 		sensor_state.fsm = _fsm_sensor_start;
 	} else if (
 		sensor_state.need_mode   != sensor_state.curr_mode ||
-		sensor_state.curr_target != get_sensor_mode_target()
+		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode)
 	) {
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 		sensor_state.fsm = _fsm_sensor_change_mode;
@@ -451,7 +451,7 @@ void _fsm_sencor_set_mode_string()
 
 void _fsm_sencor_set_mode_bigski1()
 {
-	int16_t value = settings.bigski_target[sensor_state.bigski_id];
+	int16_t value = -settings.bigski_target[sensor_state.bigski_id];
 	can_frame_t request =
 			{0x07EC, 0x06, {0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x05, (uint8_t)(value >> 8), (uint8_t)value}};
 
@@ -532,7 +532,7 @@ void _fsm_sencor_set_mode_bigski3()
 
 	sensor_state.bigski_id   = 0;
 	sensor_state.curr_mode   = sensor_state.need_mode;
-	sensor_state.curr_target = get_sensor_mode_target();
+	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
 	sensor_state.fsm         = _fsm_sensor_idle;
 }
 
@@ -565,7 +565,7 @@ void _fsm_sencor_set_mode_end1()
 		return;
 	}
 
-	int16_t target = -get_sensor_mode_target();
+	int16_t target = -get_sensor_mode_target(sensor_state.need_mode);
 	can_frame_t request2 =
 		{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
 
@@ -641,7 +641,7 @@ void _fsm_sencor_set_mode_end3()
 	}
 
 	sensor_state.curr_mode   = sensor_state.need_mode;
-	sensor_state.curr_target = get_sensor_mode_target();
+	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
 	sensor_state.fsm         = _fsm_sensor_idle;
 }
 

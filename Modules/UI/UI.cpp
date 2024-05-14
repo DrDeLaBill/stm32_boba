@@ -386,8 +386,8 @@ void UI::showValue()
 			sizeof(target) - 1,
 			"%s: %03d.%02d",
 			phrase,
-			get_sensor_mode_target() / 100,
-			__abs(get_sensor_mode_target() % 100)
+			get_sensor_mode_target(get_sensor_mode()) / 100,
+			__abs(get_sensor_mode_target(get_sensor_mode()) % 100)
 		);
 		util_add_char(target, sizeof(target), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 

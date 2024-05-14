@@ -35,7 +35,7 @@ int16_t get_sensor2A8_value();
 int16_t get_sensor2AB_value();
 int16_t get_sensor_average();
 
-int16_t get_sensor_mode_target();
+int16_t get_sensor_mode_target(SENSOR_MODE mode);
 void save_sensor_mode_target();
 void reset_sensor_mode_target();
 
