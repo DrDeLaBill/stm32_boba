@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "sensor.h"
 #include "bmacro.h"
+#include "gstring.h"
 #include "display.h"
 #include "settings.h"
 #include "hal_defs.h"

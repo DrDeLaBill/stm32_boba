@@ -2,6 +2,8 @@
 
 #include "MenuItem.h"
 
+#include "gstring.h"
+
 
 MenuItem::MenuItem():
 	x(0), y(0), w(0), font(&Font12), focused(false), selected(false), label(""), value(""),
