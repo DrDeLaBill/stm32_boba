@@ -38,6 +38,7 @@ public:
 
 };
 
+
 struct RestartWatchdog
 {
 public:
@@ -52,6 +53,17 @@ private:
 	static constexpr char TAG[] = "RSTw";
 	static bool flagsCleared;
 
+};
+
+
+struct MemoryWatchdog
+{
+private:
+	static utl::Timer timer;
+	static uint8_t errors;
+
+public:
+	void check();
 };
 
 
@@ -98,10 +110,4 @@ public:
 
 	void check();
 
-};
-
-
-struct SensorWatchdog
-{
-	void check();
 };

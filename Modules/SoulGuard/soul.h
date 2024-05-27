@@ -21,6 +21,8 @@ typedef enum _SOUK_STATUS {
 	STATUSES_START = 0,
 
 	WAIT_LOAD,
+	MEMORY_READ_FAULT,
+	MEMORY_WRITE_FAULT,
 	NEED_MEASURE,
 	NEED_STANDBY,
 	SETTINGS_INITIALIZED,
@@ -34,6 +36,10 @@ typedef enum _SOUK_STATUS {
 	MODBUS_FAULT,
 	PUMP_FAULT,
 	RTC_FAULT,
+	CAN_FAULT,
+	NO_BIGSKI,
+
+	NEED_UI_EXIT,
 
 	/* Device statuses end */
 	STATUSES_END,
@@ -41,7 +47,6 @@ typedef enum _SOUK_STATUS {
 	/* Device errors start */
 	ERRORS_START,
 
-	SETTINGS_LOAD_ERROR,
 	INTERNAL_ERROR,
 	MEMORY_ERROR,
 	POWER_ERROR,
@@ -49,6 +54,9 @@ typedef enum _SOUK_STATUS {
 	LOAD_ERROR,
 	RAM_ERROR,
 	USB_ERROR,
+	SETTINGS_LOAD_ERROR,
+	APP_MODE_ERROR,
+	VALVE_ERROR,
 
 	/* Device errors end */
 	ERRORS_END,
@@ -59,7 +67,7 @@ typedef enum _SOUK_STATUS {
 
 
 typedef struct _soul_t {
-	uint8_t errors[__div_up(SOUL_STATUSES_END - 1, BITS_IN_BYTE)];
+	uint8_t statuses[__div_up(SOUL_STATUSES_END - 1, BITS_IN_BYTE)];
 } soul_t;
 
 
@@ -68,12 +76,13 @@ bool has_errors();
 bool is_error(SOUL_STATUS error);
 void set_error(SOUL_STATUS error);
 void reset_error(SOUL_STATUS error);
+unsigned get_first_error();
 
 bool is_status(SOUL_STATUS status);
 void set_status(SOUL_STATUS status);
 void reset_status(SOUL_STATUS status);
 
-void restart_i2c_errata();
+void soul_hard_fault();
 
 
 #ifdef __cplusplus

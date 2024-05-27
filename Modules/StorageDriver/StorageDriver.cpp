@@ -26,7 +26,7 @@ uint32_t StorageDriver::lastAddress = 0;
 
 
 StorageStatus StorageDriver::read(uint32_t address, uint8_t *data, uint32_t len) {
-	if (is_error(POWER_ERROR)) {
+	if (is_error(POWER_ERROR) || is_status(MEMORY_ERROR)) {
 
 #if STORAGE_DRIVER_BEDUG
 		printTagLog(TAG, "Error power", address);
@@ -59,14 +59,18 @@ StorageStatus StorageDriver::read(uint32_t address, uint8_t *data, uint32_t len)
 	}
 
 #endif
-	BEDUG_ASSERT((status != EEPROM_ERROR_BUSY), "Storage is busy");
 	if (hasError && !timer.wait()) {
-    	set_error(MEMORY_ERROR);
+		set_status(MEMORY_READ_FAULT);
 	}
 	if (!hasError && status != EEPROM_OK) {
 		hasError = true;
 		timer.start();
 	}
+#if STORAGE_DRIVER_BEDUG
+    if (status != EEPROM_OK) {
+		printTagLog(TAG, "Read %lu address error=%u", address, status);
+    }
+#endif
     if (status == EEPROM_ERROR_BUSY) {
         return STORAGE_BUSY;
     }
@@ -92,13 +96,13 @@ StorageStatus StorageDriver::read(uint32_t address, uint8_t *data, uint32_t len)
 #endif
 
 	hasError = false;
-	reset_error(MEMORY_ERROR);
+	reset_status(MEMORY_READ_FAULT);
     return STORAGE_OK;
 }
 ;
 
 StorageStatus StorageDriver::write(uint32_t address, uint8_t *data, uint32_t len) {
-	if (is_error(POWER_ERROR)) {
+	if (is_error(POWER_ERROR) || is_status(MEMORY_ERROR)) {
 
 #if STORAGE_DRIVER_BEDUG
 		printTagLog(TAG, "Error power", address);
@@ -121,14 +125,18 @@ StorageStatus StorageDriver::write(uint32_t address, uint8_t *data, uint32_t len
 
 #endif
 
-	BEDUG_ASSERT((status != EEPROM_ERROR_BUSY), "Storage is busy");
 	if (hasError && !timer.wait()) {
-    	set_error(MEMORY_ERROR);
+    	set_status(MEMORY_WRITE_FAULT);
 	}
 	if (!hasError && status != EEPROM_OK) {
 		hasError = true;
 		timer.start();
 	}
+#if STORAGE_DRIVER_BEDUG
+    if (status != EEPROM_OK) {
+		printTagLog(TAG, "Write %lu address error=%u", address, status);
+    }
+#endif
     if (status == EEPROM_ERROR_BUSY) {
         return STORAGE_BUSY;
     }
@@ -144,6 +152,6 @@ StorageStatus StorageDriver::write(uint32_t address, uint8_t *data, uint32_t len
 #endif
 
 	hasError = false;
-	reset_error(MEMORY_ERROR);
+	reset_status(MEMORY_WRITE_FAULT);
     return STORAGE_OK;
 }

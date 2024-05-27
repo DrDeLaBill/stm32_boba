@@ -19,8 +19,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "can.h"
+#include "crc.h"
 #include "i2c.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -31,7 +33,7 @@
 #include "bmacro.h"
 #include "at24cm01.h"
 
-#include "UI.h"
+#include "App.h"
 #include "SoulGuard.h"
 #include "StorageAT.h"
 #include "StorageDriver.h"
@@ -59,6 +61,9 @@ static constexpr char MAIN_TAG[] = "MAIN";
 
 StorageDriver storageDriver;
 StorageAT* storage;
+
+UI ui;
+App app;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,22 +109,20 @@ int main(void)
   MX_I2C2_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_CRC_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
 	// TODO: RAM analyzer & crystal check & clock check & modbus check & reload controller
 	SoulGuard<
 		RestartWatchdog,
-		StackWatchdog
-	> hardwareSoulGuard;
-	SoulGuard<
-		SettingsWatchdog,
-		SensorWatchdog
-	> softwareSoulGuard;
+		StackWatchdog,
+		MemoryWatchdog,
+		SettingsWatchdog
+	> soulGuard;
 
 	set_status(WAIT_LOAD);
-	set_error(STACK_ERROR);
-	set_status(NO_SENSOR);
 
 	gprint("\n\n\n");
 	printTagLog(MAIN_TAG, "The device is loading");
@@ -128,38 +131,30 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	while (has_errors()) hardwareSoulGuard.defend();
-
     storage = new StorageAT(
 		eeprom_get_size() / STORAGE_PAGE_SIZE,
 		&storageDriver
 	);
 
-    while (is_status(WAIT_LOAD)) {
-    	hardwareSoulGuard.defend();
-    	softwareSoulGuard.defend();
-    }
+    // Buttons TIM start
+    HAL_TIM_Base_Start_IT(&BTN_TIM);
 
     printTagLog(MAIN_TAG, "The device has been loaded");
-
-    UI ui;
-
-    sensor_init();
 
 	while (1)
 	{
 		utl::CodeStopwatch stopwatch(MAIN_TAG, GENERAL_TIMEOUT_MS);
 
-		hardwareSoulGuard.defend();
-		softwareSoulGuard.defend();
+		soulGuard.defend();
+
+		app.proccess();
+		ui.tick();
 
 		if (has_errors() || is_status(WAIT_LOAD)) {
 			continue;
 		}
 
 		sensor_tick();
-
-		ui.tick();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -173,18 +168,19 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -199,7 +195,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -220,6 +216,13 @@ int _write(int, uint8_t *ptr, int len) {
     return 0;
 }
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim->Instance == BTN_TIM.Instance) {
+    	ui.buttonsTick();
+    }
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -232,11 +235,7 @@ void Error_Handler(void)
   /* User can add his own implementation to report the HAL error return state */
     b_assert(__FILE__, __LINE__, "The error handler has been called");
 	set_error(INTERNAL_ERROR);
-#ifdef DEBUG
-	while (1);
-#else
-	NVIC_SystemReset();
-#endif
+	while (1) ui.tick();
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -251,13 +250,9 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-    b_assert((char*)file, line, "The error handler has been called");
+	b_assert((char*)file, line, "Wrong parameters value");
 	set_error(INTERNAL_ERROR);
-#ifdef DEBUG
-	while (1);
-#else
-	NVIC_SystemReset();
-#endif
+	while (1) ui.tick();
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
