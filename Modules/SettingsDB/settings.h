@@ -59,14 +59,14 @@ typedef enum _SettingsStatus {
 } SettingsStatus;
 
 
-typedef struct __attribute__((packed)) _pid_t {
+typedef struct __attribute__((packed)) _d_mode_t {
     // PID coefficients
     float    kp;
     float    ki;
     float    kd;
     // PID sampling
     uint32_t sampling;
-} mode_t;
+} d_mode_t;
 
 
 typedef struct __attribute__((packed)) _settings_t  {
@@ -86,17 +86,17 @@ typedef struct __attribute__((packed)) _settings_t  {
     uint8_t   language;
 
     // Surface mode PID
-    mode_t     surface;
+    d_mode_t   surface;
     // Last surface target sensor value
     int16_t    surface_target;
 
     // String mode PID
-    mode_t     string;
+    d_mode_t   string;
     // Last string target sensor value
     int16_t    string_target;
 
     // Ground mode PID
-    mode_t     bigski;
+    d_mode_t   bigski;
     // Last string target sensor value
     int16_t    bigski_target[SETTINGS_BIGSKI_COUNT];
 } settings_t;
