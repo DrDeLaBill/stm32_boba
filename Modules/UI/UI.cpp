@@ -439,52 +439,64 @@ void UI::showLoading()
 
 void UI::showDirection()
 {
-	if (get_sensor_mode() != SENSOR_MODE_STRING) {
-		return;
-	}
-
-	static int16_t direction = 0xFF;
+	static int8_t direction = 0xFF;
 	if (direction == get_sensor_direction()) {
 		return;
 	}
 	direction = get_sensor_direction();
 
-	sFONT* font = &u8g2_font_inr24_t_cyrillic;
-	char empty_line[TRANSLATE_MAX_LEN] = "";
-	util_add_char(
-		empty_line,
-		sizeof(empty_line),
-		' ',
-		display_width() / font->Width,
-		ALIGN_MODE_LEFT
-	);
 
+	uint16_t y = static_cast<uint16_t>(
+		DISPLAY_HEADER_HEIGHT +
+		DISPLAY_CONTENT_HEIGHT -
+		DEFAULT_MARGIN -
+		left_bitmap.Height
+	);
+	display_fill_rect(0, y, display_width(), left_bitmap.Height, DISPLAY_COLOR_WHITE);
+
+
+	sFONT* font = &u8g2_font_10x20_t_cyrillic;
+	char direction_line[TRANSLATE_MAX_LEN] = "";
 	sFONT* bitmap = nullptr;
-	const char* direction_line = nullptr;
 	uint16_t color = DISPLAY_COLOR_WHITE;
 	switch (direction) {
 	case STR_FORCE_LEFT:
-		direction_line = t(T_LEFT, settings.language);
+		memcpy(
+			direction_line,
+			t(T_LEFT, settings.language),
+			__min(strlen(t(T_LEFT, settings.language)), sizeof(direction_line))
+		);
 		bitmap = &left_bitmap;
 		color = DISPLAY_COLOR_RED;
 		break;
 	case STR_LEFT:
-		direction_line = t(T_LEFT, settings.language);
+		memcpy(
+			direction_line,
+			t(T_LEFT, settings.language),
+			__min(strlen(t(T_LEFT, settings.language)), sizeof(direction_line))
+		);
 		bitmap = &left_bitmap;
 		color = DISPLAY_COLOR_BLACK;
 		break;
 	case STR_FORCE_RIGHT:
-		direction_line = t(T_RIGHT, settings.language);
+		memcpy(
+			direction_line,
+			t(T_RIGHT, settings.language),
+			__min(strlen(t(T_RIGHT, settings.language)), sizeof(direction_line))
+		);
 		bitmap = &right_bitmap;
 		color = DISPLAY_COLOR_RED;
 		break;
 	case STR_RIGHT:
-		direction_line = t(T_RIGHT, settings.language);
+		memcpy(
+			direction_line,
+			t(T_RIGHT, settings.language),
+			__min(strlen(t(T_RIGHT, settings.language)), sizeof(direction_line))
+		);
 		bitmap = &right_bitmap;
 		color = DISPLAY_COLOR_BLACK;
 		break;
 	case STR_MIDDLE:
-		direction_line = empty_line;
 		bitmap = &left_bitmap;
 		break;
 	default:
@@ -497,14 +509,19 @@ void UI::showDirection()
 		return;
 	};
 
-	uint16_t x = DEFAULT_MARGIN;
-	uint16_t y = static_cast<uint16_t>(
-		DISPLAY_HEADER_HEIGHT +
-		DISPLAY_CONTENT_HEIGHT -
-		DEFAULT_MARGIN -
-		bitmap->Height
-	);
+	if (get_sensor_mode() != SENSOR_MODE_STRING) {
+		color = DISPLAY_COLOR_WHITE;
+	}
 
+	uint16_t text_len = (uint16_t)(strlen(direction_line) * font->Width);
+	uint16_t full_len = text_len + bitmap->Width;
+
+	uint16_t x = 0;
+	if (direction == STR_FORCE_LEFT || direction == STR_LEFT) {
+		x = display_width() / 2 - full_len / 2;
+	} else {
+		x = (uint16_t)(display_width() / 2 + full_len / 2 - bitmap->Width);
+	}
 	char bitmap_line[] = " ";
 	display_set_color(color);
 	display_text_show(
@@ -516,8 +533,13 @@ void UI::showDirection()
 		strlen(bitmap_line)
 	);
 
-	x += (uint16_t)(bitmap->Width + DEFAULT_MARGIN);
-	y -= (uint16_t)(bitmap->Height / 2 + (bitmap->Height / 2 - font->Height / 2));
+
+	if (direction == STR_FORCE_LEFT || direction == STR_LEFT) {
+		x += bitmap->Width;
+	} else {
+		x -= text_len;
+	}
+	y += (uint16_t)(bitmap->Height / 2 - font->Height / 2);
 	display_set_color(color);
 	display_text_show(
 		x,
@@ -532,12 +554,12 @@ void UI::showDirection()
 void UI::showUp(bool flag)
 {
 	extern const BITMAPSTRUCT bmp_up_15x15;
-	extern const BITMAPSTRUCT bmp_down_15x15;
 
 	uint16_t x = DEFAULT_MARGIN;
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
-		(DISPLAY_HEADER_HEIGHT + u8g2_font_8x13_t_cyrillic.Height)
+		bmp_up_15x15.infoHeader.biHeight +
+		u8g2_font_8x13_t_cyrillic.Height
 	);
 
 	if (flag) {
@@ -556,9 +578,10 @@ void UI::showDown(bool flag)
 	uint16_t x = DEFAULT_MARGIN;
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
-		(DISPLAY_HEADER_HEIGHT + u8g2_font_8x13_t_cyrillic.Height) +
+		u8g2_font_8x13_t_cyrillic.Height +
 		bmp_up_15x15.infoHeader.biHeight +
-		DEFAULT_MARGIN
+		DEFAULT_MARGIN +
+		bmp_down_15x15.infoHeader.biHeight
 	);
 
 	if (flag) {
