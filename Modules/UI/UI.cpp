@@ -46,24 +46,14 @@ utl::Timer UI::timer(SECOND_MS);
 fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 MenuItem menuItems[] =
 {
-	{(new version_callback()),          false, "Version:",       "v0.0.0"},
-	{(new language_callback()),         true,  "Language:",      "_"},
-	{(new max_pid_time_callback()),     true,  "Max PID time:",  "0 ms"},
-	{(new label_callback())  ,          false, "        SURFACE MODE        "},
-	{(new surface_kp_callback()),       true,  "PID Kp:",        "0.00"},
-	{(new surface_ki_callback()),       true,  "PID Ki:",        "0.00"},
-	{(new surface_kd_callback()),       true,  "PID Kd:",        "0.00"},
-	{(new surface_sampling_callback()), true,  "PID sampling:",  "0 ms"},
-	{(new label_callback())  ,          false, "        GROUND  MODE        "},
-	{(new bigski_kp_callback()),        true,  "PID Kp:",        "0.00"},
-	{(new bigski_ki_callback()),        true,  "PID Ki:",        "0.00"},
-	{(new bigski_kd_callback()),        true,  "PID Kd:",        "0.00"},
-	{(new bigski_sampling_callback()),  true,  "PID sampling:",  "0 ms"},
-	{(new label_callback())  ,          false, "        STRING  MODE        "},
-	{(new string_kp_callback()),        true,  "PID Kp:",        "0.00"},
-	{(new string_ki_callback()),        true,  "PID Ki:",        "0.00"},
-	{(new string_kd_callback()),        true,  "PID Kd:",        "0.00"},
-	{(new string_sampling_callback()),  true,  "PID sampling:",  "0 ms"}
+	{(new version_callback()),          false, "Version:",    "v0.0.0"},
+	{(new language_callback()),         true,  "Language:",    "_"},
+	{(new label_callback())  ,          false, "SURFACE MODE"},
+	{(new surface_snstv_callback()),    true,  "Sensitivity:", "0.00"},
+	{(new label_callback())  ,          false, "GROUND  MODE"},
+	{(new bigski_snstv_callback()),     true,  "Sensitivity:", "0.00"},
+	{(new label_callback())  ,          false, "STRING  MODE"},
+	{(new string_snstv_callback()),     true,  "Sensitivity:", "0.00"},
 };
 std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 	0,
@@ -447,6 +437,98 @@ void UI::showLoading()
 	);
 }
 
+void UI::showDirection()
+{
+	if (get_sensor_mode() != SENSOR_MODE_STRING) {
+		return;
+	}
+
+	static int16_t direction = 0xFF;
+	if (direction == get_sensor_direction()) {
+		return;
+	}
+	direction = get_sensor_direction();
+
+	sFONT* font = &u8g2_font_inr24_t_cyrillic;
+	char empty_line[TRANSLATE_MAX_LEN] = "";
+	util_add_char(
+		empty_line,
+		sizeof(empty_line),
+		' ',
+		display_width() / font->Width,
+		ALIGN_MODE_LEFT
+	);
+
+	sFONT* bitmap = nullptr;
+	const char* direction_line = nullptr;
+	uint16_t color = DISPLAY_COLOR_WHITE;
+	switch (direction) {
+	case STR_FORCE_LEFT:
+		direction_line = t(T_LEFT, settings.language);
+		bitmap = &left_bitmap;
+		color = DISPLAY_COLOR_RED;
+		break;
+	case STR_LEFT:
+		direction_line = t(T_LEFT, settings.language);
+		bitmap = &left_bitmap;
+		color = DISPLAY_COLOR_BLACK;
+		break;
+	case STR_FORCE_RIGHT:
+		direction_line = t(T_RIGHT, settings.language);
+		bitmap = &right_bitmap;
+		color = DISPLAY_COLOR_RED;
+		break;
+	case STR_RIGHT:
+		direction_line = t(T_RIGHT, settings.language);
+		bitmap = &right_bitmap;
+		color = DISPLAY_COLOR_BLACK;
+		break;
+	case STR_MIDDLE:
+		direction_line = empty_line;
+		bitmap = &left_bitmap;
+		break;
+	default:
+#ifdef DEBUG
+		BEDUG_ASSERT(false, "Unknown STRING mode direction");
+#endif
+		fsm.push_event(error_e{});
+		set_error(INTERNAL_ERROR);
+		Error_Handler();
+		return;
+	};
+
+	uint16_t x = DEFAULT_MARGIN;
+	uint16_t y = static_cast<uint16_t>(
+		DISPLAY_HEADER_HEIGHT +
+		DISPLAY_CONTENT_HEIGHT -
+		DEFAULT_MARGIN -
+		bitmap->Height
+	);
+
+	char bitmap_line[] = " ";
+	display_set_color(color);
+	display_text_show(
+		x,
+		y,
+		bitmap,
+		DISPLAY_ALIGN_LEFT,
+		bitmap_line,
+		strlen(bitmap_line)
+	);
+
+	x += (uint16_t)(bitmap->Width + DEFAULT_MARGIN);
+	y -= (uint16_t)(bitmap->Height / 2 + (bitmap->Height / 2 - font->Height / 2));
+	display_set_color(color);
+	display_text_show(
+		x,
+		y,
+		font,
+		DISPLAY_ALIGN_LEFT,
+		direction_line,
+		strlen(direction_line)
+	);
+}
+
 void UI::showUp(bool flag)
 {
 	extern const BITMAPSTRUCT bmp_up_15x15;
@@ -455,11 +537,7 @@ void UI::showUp(bool flag)
 	uint16_t x = DEFAULT_MARGIN;
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
-		DISPLAY_CONTENT_HEIGHT -
-		DEFAULT_MARGIN -
-		bmp_down_15x15.infoHeader.biHeight -
-		DEFAULT_MARGIN -
-		bmp_up_15x15.infoHeader.biHeight
+		(DISPLAY_HEADER_HEIGHT + u8g2_font_8x13_t_cyrillic.Height)
 	);
 
 	if (flag) {
@@ -472,15 +550,16 @@ void UI::showUp(bool flag)
 
 void UI::showDown(bool flag)
 {
+	extern const BITMAPSTRUCT bmp_up_15x15;
 	extern const BITMAPSTRUCT bmp_down_15x15;
 
 	uint16_t x = DEFAULT_MARGIN;
-	uint16_t y =
+	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
-		DISPLAY_CONTENT_HEIGHT -
-		DEFAULT_MARGIN -
-		static_cast<uint16_t>(bmp_down_15x15.infoHeader.biHeight)
-	;
+		(DISPLAY_HEADER_HEIGHT + u8g2_font_8x13_t_cyrillic.Height) +
+		bmp_up_15x15.infoHeader.biHeight +
+		DEFAULT_MARGIN
+	);
 
 	if (flag) {
 		display_draw_bitmap(x, y, &bmp_down_15x15);
@@ -608,6 +687,10 @@ void UI::_manual_mode_s::operator ()() const
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
 	showMiddle(__abs(App::getValue()) < TRIG_VALUE_LOW);
 
+	if (get_sensor_mode() == SENSOR_MODE_STRING) {
+		showDirection();
+	}
+
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
 	}
@@ -675,6 +758,10 @@ void UI::_auto_mode_s::operator ()() const
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
 	showMiddle(__abs(App::getValue()) < TRIG_VALUE_LOW);
+
+	if (get_sensor_mode() == SENSOR_MODE_STRING) {
+		showDirection();
+	}
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});

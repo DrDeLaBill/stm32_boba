@@ -6,12 +6,52 @@
 #include <stdbool.h>
 
 #include "log.h"
+#include "soul.h"
 #include "utils.h"
 #include "hal_defs.h"
 #include "translate.h"
 
 
 static const char SETTINGS_TAG[] = "STNG";
+
+const uint8_t SENSITIVITY[SETTINGS_BANDS_COUNT] = {
+	1,
+	2,
+	3,
+	4,
+	5,
+	6,
+	7,
+	8,
+	9,
+	10
+};
+
+const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
+	50,
+	40,
+	36,
+	34,
+	30,
+	24,
+	20,
+	16,
+	12,
+	10
+};
+
+const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
+	180,
+	160,
+	140,
+	120,
+	100,
+	80,
+	60,
+	50,
+	40,
+	30
+};
 
 
 settings_t settings = { 0 };
@@ -25,6 +65,9 @@ settings_t* settings_get()
 void settings_set(settings_t* other)
 {
 	memcpy((uint8_t*)&settings, (uint8_t*)other, sizeof(settings));
+	if (!settings_check(&settings)) {
+		settings_repair(&settings);
+	}
 }
 
 void settings_reset(settings_t* other)
@@ -35,25 +78,15 @@ void settings_reset(settings_t* other)
 	other->fw_id   = FW_VERSION;
 	other->cf_id   = CF_VERSION;
 
-	other->max_pid_time = SETTINGS_DEFAULT_PID_MAX;
 	other->language     = ENGLISH;
 
-	other->surface.kp = SETTINGS_DEFUALT_SURFACE_KP;
-	other->surface.ki = SETTINGS_DEFUALT_SURFACE_KI;
-	other->surface.kd = SETTINGS_DEFUALT_SURFACE_KD;
-	other->surface.sampling = SETTINGS_DEFAULT_SURFACE_SAMPLING;
+	other->surface_snstv = SENSITIVITY[0];
 	other->surface_target = 0;
 
-	other->string.kp = SETTINGS_DEFUALT_STRING_KP;
-	other->string.ki = SETTINGS_DEFUALT_STRING_KI;
-	other->string.kd = SETTINGS_DEFUALT_STRING_KD;
-	other->string.sampling = SETTINGS_DEFAULT_STRING_SAMPLING;
+	other->string_snstv = SENSITIVITY[0];
 	other->string_target = 0;
 
-	other->bigski.kp = SETTINGS_DEFUALT_GROUND_KP;
-	other->bigski.ki = SETTINGS_DEFUALT_GROUND_KI;
-	other->bigski.kd = SETTINGS_DEFUALT_GROUND_KD;
-	other->bigski.sampling = SETTINGS_DEFAULT_GROUND_SAMPLING;
+	other->bigski_snstv = SENSITIVITY[0];
 	memset((void*)other->bigski_target, 0, sizeof(other->bigski_target));
 }
 
@@ -77,7 +110,29 @@ bool settings_check(settings_t* other)
 	if (!IS_LANGUAGE(other->language)) {
 		return false;
 	}
+	uint16_t s_min = SENSITIVITY[0];
+	uint16_t s_max = SENSITIVITY[__arr_len(SENSITIVITY)-1];
+	if (s_min < settings.surface_snstv || settings.surface_snstv > s_max) {
+		return false;
+	}
+	if (s_min < settings.string_snstv || settings.string_snstv > s_max) {
+		return false;
+	}
+	if (s_min < settings.bigski_snstv || settings.bigski_snstv > s_max) {
+		return false;
+	}
 	return true;
+}
+
+void settings_repair(settings_t* other)
+{
+	set_status(NEED_SAVE_SETTINGS);
+
+	if (other->fw_id != FW_VERSION) {
+		other->fw_id = FW_VERSION;
+	}
+
+	settings_reset(other);
 }
 
 void settings_show()
@@ -91,33 +146,20 @@ void settings_show()
 
     printPretty("------------------------------------------------\n");
 	printPretty("Language: %s\n", settings.language == RUSSIAN ? "RUSSIAN" : "ENGLISH"); // TODO
-	printPretty("Max PID output time: %lu ms\n", settings.max_pid_time);
     printPretty("------------------SURFACE MODE------------------\n");
-	printPretty(
-		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.surface.kp), __abs(((int)(settings.surface.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.surface.ki), __abs(((int)(settings.surface.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.surface.kd), __abs(((int)(settings.surface.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
-	);
-	printPretty("PID sampling: %lu ms\n", settings.surface.sampling);
+	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.surface_snstv]);
+	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.surface_snstv]);
+	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.surface_snstv]);
 	printPretty("Last target: %ld\n", settings.surface_target);
     printPretty("------------------STRING  MODE------------------\n");
-	printPretty(
-		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.string.kp), __abs(((int)(settings.string.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.string.ki), __abs(((int)(settings.string.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.string.kd), __abs(((int)(settings.string.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
-	);
-	printPretty("PID sampling: %lu ms\n", settings.string.sampling);
+	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.string_snstv]);
+	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.string_snstv]);
+	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.string_snstv]);
 	printPretty("Last target: %ld\n", settings.string_target);
     printPretty("------------------BIGSKI  MODE------------------\n");
-	printPretty(
-		"PID coefficients: Kp=%ld.%ld, Ki=%ld.%ld, Kd=%ld.%ld\n",
-		((int)settings.bigski.kp), __abs(((int)(settings.bigski.kp * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.bigski.ki), __abs(((int)(settings.bigski.ki * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER),
-		((int)settings.bigski.kd), __abs(((int)(settings.bigski.kd * SETTINGS_PID_MULTIPLIER)) % SETTINGS_PID_MULTIPLIER)
-	);
-	printPretty("PID sampling: %lu ms\n", settings.bigski.sampling);
+	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.bigski_snstv]);
+	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.bigski_snstv]);
+	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.bigski_snstv]);
 	for (unsigned i = 0; i < __arr_len(settings.bigski_target); i++) {
 		printPretty("Last target[%u]: %ld\n", i, settings.bigski_target[i]);
 	}

@@ -9,7 +9,11 @@
 #include "display.h"
 
 
-#define IS_SPECIAL_BUTTON(button) (button == BTN_F3_Pin || button == BTN_F1_Pin)
+#define IS_SPECIAL_BUTTON(button) ( \
+								   button == BTN_F3_Pin ||  \
+								   button == BTN_ENTER_Pin ||  \
+								   button == BTN_F1_Pin \
+								  )
 
 
 Menu::Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t count):

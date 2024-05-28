@@ -6,7 +6,6 @@
 
 #include "UI.h"
 #include "Timer.h"
-#include "GyverPID.h"
 #include "FiniteStateMachine.h"
 
 
@@ -21,13 +20,12 @@ struct App
 protected:
 	static constexpr char TAG[] = "APP";
 
-	static constexpr int16_t VALVE_MIN_TIME_MS = 100;
-	static constexpr int16_t TRIG_VALUE_LOW = 30;
-	static constexpr int16_t TRIG_VALUE_HIGH = 100;
+	static constexpr uint32_t SAMPLE_PWM_MS = 1000;
+	static constexpr uint32_t WORK_COEFFICIENT = SAMPLE_PWM_MS;
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
-	FSM_CREATE_EVENT(pid_timeout_e, 0);
+	FSM_CREATE_EVENT(timeout_e,     0);
 	FSM_CREATE_EVENT(plate_up_e,    0);
 	FSM_CREATE_EVENT(plate_down_e,  0);
 	FSM_CREATE_EVENT(solved_e,      0);
@@ -54,7 +52,7 @@ protected:
 	// Actions:
 	struct manual_start_a  { void operator()(); };
 	struct auto_start_a    { void operator()(); };
-	struct setup_pid_a     { void operator()(); };
+	struct setup_move_a    { void operator()(); };
 	struct move_up_a       { void operator()(); };
 	struct move_down_a     { void operator()(); };
 	struct plate_stop_a    { void operator()(); };
@@ -72,7 +70,7 @@ protected:
 
 		fsm::Transition<auto_s,   auto_e,        auto_s,   auto_start_a>,
 		fsm::Transition<auto_s,   manual_e,      manual_s, manual_start_a>,
-		fsm::Transition<auto_s,   pid_timeout_e, auto_s,   setup_pid_a>,
+		fsm::Transition<auto_s,   timeout_e,     auto_s,   setup_move_a>,
 		fsm::Transition<auto_s,   error_e,       error_s,  error_start_a>,
 
 		fsm::Transition<up_s,     plate_stop_e,  manual_s, plate_stop_a>,
@@ -83,9 +81,10 @@ protected:
 	>;
 
 	static fsm::FiniteStateMachine<fsm_table> fsm;
-	static utl::Timer samplingTimer;
-	static utl::Timer valveTimer;
-	static GyverPID* pid;
+	static uint16_t deadBand;
+	static uint16_t propBand;
+	static utl::Timer sampleTimer;
+	static utl::Timer workTimer;
 
 	static SENSOR_MODE sensorMode;
 	static APP_MODE appMode;

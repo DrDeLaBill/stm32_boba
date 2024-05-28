@@ -39,6 +39,7 @@ const uint16_t SENSOR_FRAME_IDS[] = {
 typedef struct _sensor_t {
 	int16_t             value;
 	util_old_timer_t    connection_timer;
+	STRING_DIRECTION    direction;
 } sensor_t;
 
 typedef struct _sensor_state_t {
@@ -136,22 +137,22 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     		return;
     	}
     	bool is_value = false;
-    	int16_t value = ((int16_t)tmp_rx_buffer[1] << 8) | (int16_t)tmp_rx_buffer[2];
     	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
     	    if (tmp_rx_header.StdId != SENSOR_FRAME_IDS[i] ||
 				tmp_rx_buffer[0]    != SENSOR_DISTANCE_FRAME_ID
     		) {
     	    	continue;
     		}
-    		sensor_state.sensors[i].value = value;
+    		sensor_state.sensors[i].value     = ((int16_t)tmp_rx_buffer[1] << 8) | (int16_t)tmp_rx_buffer[2];
+    		sensor_state.sensors[i].direction = tmp_rx_buffer[3];
     		is_value = true;
 #if SENSOR_BEDUG
     		printTagLog(
     			"SNS",
     			"distance[%X]=%d.%d",
 				(i == 0 ? SENSOR_FRAME_ID1 : i == 1 ? SENSOR_FRAME_ID2 : SENSOR_FRAME_ID3),
-    			value / 100,
-    			__abs(value % 100)
+				sensor_state.sensors[i].value / 100,
+    			__abs(sensor_state.sensors[i].value % 100)
     		);
 #endif
     		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
@@ -297,6 +298,14 @@ void set_sensor_mode(SENSOR_MODE mode)
 SENSOR_MODE get_sensor_mode()
 {
 	return sensor_state.curr_mode;
+}
+
+STRING_DIRECTION get_sensor_direction()
+{
+	if (get_sensor_mode() == SENSOR_MODE_STRING) {
+		return sensor_state.sensors[1].direction;
+	}
+	return STR_MIDDLE;
 }
 
 

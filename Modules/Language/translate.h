@@ -38,6 +38,8 @@ extern const char T_VALUE[][TRANSLATE_MAX_LEN];
 extern const char T_LOADING[][TRANSLATE_MAX_LEN];
 extern const char T_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_service[][TRANSLATE_MAX_LEN];
+extern const char T_LEFT[][TRANSLATE_MAX_LEN];
+extern const char T_RIGHT[][TRANSLATE_MAX_LEN];
 
 
 const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang);

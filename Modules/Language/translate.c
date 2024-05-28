@@ -61,6 +61,14 @@ const char T_service[][TRANSLATE_MAX_LEN] = {
 	"service",
 	"сервисный"
 };
+const char T_LEFT[][TRANSLATE_MAX_LEN] = {
+	"LEFT",
+	"ВЛЕВО"
+};
+const char T_RIGHT[][TRANSLATE_MAX_LEN] = {
+	"RIGHT",
+	"ВПРАВО"
+};
 
 
 const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang)

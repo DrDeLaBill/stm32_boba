@@ -52,6 +52,8 @@ extern sFONT save_bitmap;
 extern sFONT surface_bitmap;
 extern sFONT string_bitmap;
 extern sFONT bigski_bitmap;
+extern sFONT left_bitmap;
+extern sFONT right_bitmap;
 
 
 void display_init();

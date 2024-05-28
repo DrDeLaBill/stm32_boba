@@ -64,96 +64,24 @@ struct language_callback: public IMenuCallback
 };
 
 
-struct max_pid_time_callback: public IMenuCallback
+struct surface_snstv_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
 };
 
 
-struct surface_kp_callback: public IMenuCallback
+struct string_snstv_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
 };
 
 
-struct surface_ki_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-struct surface_kd_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-struct surface_sampling_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-
-struct bigski_kp_callback: public IMenuCallback
+struct bigski_snstv_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
-};
-
-
-struct bigski_ki_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-struct bigski_kd_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-struct bigski_sampling_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-
-struct string_kp_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value() override;
-};
-
-
-struct string_ki_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-struct string_kd_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
-};
-
-
-struct string_sampling_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value();
 };
 
 

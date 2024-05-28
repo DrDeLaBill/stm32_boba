@@ -13,11 +13,12 @@ extern "C" {
 #include <stdbool.h>
 
 #include "main.h"
+#include "utils.h"
 
 
-#define DEVICE_VER1 (0)
-#define DEVICE_VER2 (1)
-#define DEVICE_VER3 (0)
+#define DEVICE_MAJOR (0)
+#define DEVICE_MINOR (0)
+#define DEVICE_PATCH (1)
 /*
  * Device types:
  * 0x0001 - Dispenser
@@ -31,42 +32,19 @@ extern "C" {
 #define CF_VERSION  ((uint8_t)0x01)
 
 
-#define SETTINGS_BIGSKI_COUNT             (3)
+#define SETTINGS_BIGSKI_COUNT (3)
+#define SETTINGS_BANDS_COUNT  (10)
 
-#define SETTINGS_DEFAULT_PID_MAX          ((uint32_t)1000)
 
-#define SETTINGS_DEFUALT_SURFACE_KP       (0.55f)
-#define SETTINGS_DEFUALT_SURFACE_KI       (0.0f)
-#define SETTINGS_DEFUALT_SURFACE_KD       (0.0f)
-#define SETTINGS_DEFAULT_SURFACE_SAMPLING (50)
-
-#define SETTINGS_DEFUALT_GROUND_KP        (0.55f)
-#define SETTINGS_DEFUALT_GROUND_KI        (0.0f)
-#define SETTINGS_DEFUALT_GROUND_KD        (0.0f)
-#define SETTINGS_DEFAULT_GROUND_SAMPLING  (50)
-
-#define SETTINGS_DEFUALT_STRING_KP        (0.55f)
-#define SETTINGS_DEFUALT_STRING_KI        (0.0f)
-#define SETTINGS_DEFUALT_STRING_KD        (0.0f)
-#define SETTINGS_DEFAULT_STRING_SAMPLING  (50)
-
-#define SETTINGS_PID_MULTIPLIER           ((int)100)
+extern const uint8_t  SENSITIVITY[SETTINGS_BANDS_COUNT];
+extern const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)];
+extern const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)];
 
 
 typedef enum _SettingsStatus {
     SETTINGS_OK = 0,
     SETTINGS_ERROR
 } SettingsStatus;
-
-
-typedef struct __attribute__((packed)) _d_mode_t {
-    // PID coefficients
-    float    kp;
-    float    ki;
-    float    kd;
-    // PID sampling
-    uint32_t sampling;
-} d_mode_t;
 
 
 typedef struct __attribute__((packed)) _settings_t  {
@@ -79,26 +57,23 @@ typedef struct __attribute__((packed)) _settings_t  {
     // Configuration version
     uint32_t  cf_id;
 
-    // Max PID output time (ms)
-    int16_t   max_pid_time;
-
     // Language
     uint8_t   language;
 
-    // Surface mode PID
-    d_mode_t   surface;
+    // Surface mode sensitivity
+    uint8_t   surface_snstv;
     // Last surface target sensor value
-    int16_t    surface_target;
+    int16_t   surface_target;
 
-    // String mode PID
-    d_mode_t   string;
+    // String mode sensitivity
+    uint8_t   string_snstv;
     // Last string target sensor value
-    int16_t    string_target;
+    int16_t   string_target;
 
-    // Ground mode PID
-    d_mode_t   bigski;
+    // Ground mode sensitivity
+    uint8_t   bigski_snstv;
     // Last string target sensor value
-    int16_t    bigski_target[SETTINGS_BIGSKI_COUNT];
+    int16_t   bigski_target[SETTINGS_BIGSKI_COUNT];
 } settings_t;
 
 
@@ -115,6 +90,7 @@ void settings_reset(settings_t* other);
 uint32_t settings_size();
 
 bool settings_check(settings_t* other);
+void settings_repair(settings_t* other);
 
 void settings_show();
 

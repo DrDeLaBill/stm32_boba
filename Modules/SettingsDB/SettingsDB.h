@@ -18,7 +18,7 @@ private:
     uint8_t* settings;
 
     static constexpr char PREFIX[] = "STG";
-    static constexpr char TAG[] = "SGDB";
+    static constexpr char TAG[] = "STG";
 
 public:
     SettingsDB(uint8_t* settings, uint32_t size);

@@ -11,9 +11,10 @@
 
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
-utl::Timer App::samplingTimer(0);
-utl::Timer App::valveTimer(0);
-GyverPID* App::pid;;
+uint16_t App::deadBand = 0;
+uint16_t App::propBand = 0;
+utl::Timer App::sampleTimer(App::SAMPLE_PWM_MS);
+utl::Timer App::workTimer(0);
 SENSOR_MODE App::sensorMode = SENSOR_MODE_SURFACE;
 APP_MODE App::appMode = APP_MODE_MANUAL;
 int16_t App::value = 0;
@@ -100,17 +101,6 @@ void App::_init_s::operator ()()
 		return;
 	}
 
-	pid = new GyverPID(
-		settings.surface.kp,
-		settings.surface.ki,
-		settings.surface.kd,
-		settings.surface.sampling
-	);
-	pid->setpoint = 0;
-	pid->setDirection(NORMAL);
-	pid->setLimits(-settings.max_pid_time, settings.max_pid_time);
-
-	samplingTimer.changeDelay(settings.surface.sampling);
 	fsm.push_event(success_e{});
 }
 
@@ -137,14 +127,12 @@ void App::_auto_s::operator ()()
 		fsm.push_event(auto_e{});
 	}
 
-	if (!samplingTimer.wait()) {
-		fsm.push_event(pid_timeout_e{});
+	if (!workTimer.wait()) {
+		stop();
 	}
 
-	if (!valveTimer.wait() && __abs_dif(samplingTimer.end(), getMillis()) > VALVE_MIN_TIME_MS) {
-		reset_status(AUTO_NEED_VALVE_DOWN);
-		reset_status(AUTO_NEED_VALVE_UP);
-		stop();
+	if (!sampleTimer.wait()) {
+		fsm.push_event(timeout_e{});
 	}
 
 	if (has_errors()) {
@@ -191,32 +179,18 @@ void App::auto_start_a::operator ()()
 		return;
 	}
 
-	pid->reset();
-
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
-		pid->Kp = settings.surface.kp;
-		pid->Ki = settings.surface.ki;
-		pid->Kd = settings.surface.kd;
-		pid->setDt(settings.surface.sampling);
-
-		samplingTimer.changeDelay(settings.surface.sampling);
+		deadBand = DEAD_BANDS_MMx10[settings.surface_snstv];
+		propBand = PROP_BANDS_MMx10[settings.surface_snstv];
 		break;
 	case SENSOR_MODE_STRING:
-		pid->Kp = settings.string.kp;
-		pid->Ki = settings.string.ki;
-		pid->Kd = settings.string.kd;
-		pid->setDt(settings.string.sampling);
-
-		samplingTimer.changeDelay(settings.string.sampling);
+		deadBand = DEAD_BANDS_MMx10[settings.string_snstv];
+		propBand = PROP_BANDS_MMx10[settings.string_snstv];
 		break;
 	case SENSOR_MODE_BIGSKI:
-		pid->Kp = settings.bigski.kp;
-		pid->Ki = settings.bigski.ki;
-		pid->Kd = settings.bigski.kd;
-		pid->setDt(settings.bigski.sampling);
-
-		samplingTimer.changeDelay(settings.bigski.sampling);
+		deadBand = DEAD_BANDS_MMx10[settings.bigski_snstv];
+		propBand = PROP_BANDS_MMx10[settings.bigski_snstv];
 		break;
 	default:
 		BEDUG_ASSERT(false, "Unknown mode");
@@ -224,43 +198,42 @@ void App::auto_start_a::operator ()()
 		Error_Handler();
 		break;
 	}
-
-	samplingTimer.reset();
 }
 
-void App::setup_pid_a::operator ()()
+void App::setup_move_a::operator ()()
 {
-	pid->setLimits(-settings.max_pid_time, settings.max_pid_time);
-
 	if (get_sensor_mode() == SENSOR_MODE_BIGSKI && is_status(NO_BIGSKI)) {
-		pid->reset();
 		stop();
 		return;
 	}
 
-	if (__abs_dif(value, 0) < TRIG_VALUE_LOW) {
-		pid->input = 0;
-	} else {
-		pid->input = value;
-	}
-
-	int16_t pid_ms = pid->getResult();
-	if (__abs(pid_ms) < VALVE_MIN_TIME_MS) {
+	if (__abs(getValue()) < deadBand) {
 		stop();
-	} else if (pid_ms < 0) {
-		valveTimer.changeDelay(static_cast<uint32_t>(__abs(pid_ms)));
-		down();
-	} else {
-		valveTimer.changeDelay(static_cast<uint32_t>(pid_ms));
-		up();
+		return;
 	}
 
-	samplingTimer.start();
-	valveTimer.start();
-
-	if (pid_ms) {
-		printTagLog(TAG, "value: %06d(%06d), new PID: %d ms", pid->input, value, pid_ms);
+	if (__abs(getValue()) > propBand) {
+		getValue() > 0 ? down() : up();
+		return;
 	}
+
+	if (sampleTimer.wait()) {
+		return;
+	}
+
+	if (workTimer.wait()) {
+		return;
+	}
+
+	uint32_t propPercent = (__abs_dif(propBand, getValue()) * 100) / propBand;
+	uint32_t timeMs = WORK_COEFFICIENT * propPercent / 100;
+
+	workTimer.changeDelay(timeMs);
+
+	getValue() > 0 ? down() : up();
+
+	sampleTimer.start();
+	workTimer.start();
 }
 
 void App::move_up_a::operator ()()
