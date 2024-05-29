@@ -59,10 +59,16 @@ private:
 struct MemoryWatchdog
 {
 private:
-	static utl::Timer timer;
-	static uint8_t errors;
+	static constexpr uint32_t TIMEOUT_MS = 15000;
+
+	utl::Timer errorTimer;
+	utl::Timer timer;
+	uint8_t errors;
+	bool timerStarted;
 
 public:
+	MemoryWatchdog();
+
 	void check();
 };
 

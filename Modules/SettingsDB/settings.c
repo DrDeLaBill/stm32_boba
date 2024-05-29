@@ -80,13 +80,13 @@ void settings_reset(settings_t* other)
 
 	other->language     = ENGLISH;
 
-	other->surface_snstv = SENSITIVITY[0];
+	other->surface_snstv = 0;
 	other->surface_target = 0;
 
-	other->string_snstv = SENSITIVITY[0];
+	other->string_snstv = 0;
 	other->string_target = 0;
 
-	other->bigski_snstv = SENSITIVITY[0];
+	other->bigski_snstv = 0;
 	memset((void*)other->bigski_target, 0, sizeof(other->bigski_target));
 }
 
@@ -110,15 +110,15 @@ bool settings_check(settings_t* other)
 	if (!IS_LANGUAGE(other->language)) {
 		return false;
 	}
-	uint16_t s_min = SENSITIVITY[0];
-	uint16_t s_max = SENSITIVITY[__arr_len(SENSITIVITY)-1];
-	if (s_min < settings.surface_snstv || settings.surface_snstv > s_max) {
+	uint16_t s_min = 0;
+	uint16_t s_max = __arr_len(SENSITIVITY) - 1;
+	if (s_min > settings.surface_snstv || settings.surface_snstv > s_max) {
 		return false;
 	}
-	if (s_min < settings.string_snstv || settings.string_snstv > s_max) {
+	if (s_min > settings.string_snstv || settings.string_snstv > s_max) {
 		return false;
 	}
-	if (s_min < settings.bigski_snstv || settings.bigski_snstv > s_max) {
+	if (s_min > settings.bigski_snstv || settings.bigski_snstv > s_max) {
 		return false;
 	}
 	return true;
@@ -126,13 +126,17 @@ bool settings_check(settings_t* other)
 
 void settings_repair(settings_t* other)
 {
+	printTagLog(SETTINGS_TAG, "Repair settings");
+
 	set_status(NEED_SAVE_SETTINGS);
 
 	if (other->fw_id != FW_VERSION) {
 		other->fw_id = FW_VERSION;
 	}
 
-	settings_reset(other);
+	if (!settings_check(other)) {
+		settings_reset(other);
+	}
 }
 
 void settings_show()
@@ -150,18 +154,18 @@ void settings_show()
 	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.surface_snstv]);
 	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.surface_snstv]);
 	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.surface_snstv]);
-	printPretty("Last target: %ld\n", settings.surface_target);
+	printPretty("Last target: %d\n", settings.surface_target);
     printPretty("------------------STRING  MODE------------------\n");
 	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.string_snstv]);
 	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.string_snstv]);
 	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.string_snstv]);
-	printPretty("Last target: %ld\n", settings.string_target);
+	printPretty("Last target: %d\n", settings.string_target);
     printPretty("------------------BIGSKI  MODE------------------\n");
 	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.bigski_snstv]);
 	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.bigski_snstv]);
 	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.bigski_snstv]);
 	for (unsigned i = 0; i < __arr_len(settings.bigski_target); i++) {
-		printPretty("Last target[%u]: %ld\n", i, settings.bigski_target[i]);
+		printPretty("Last target[%u]: %d\n", i, settings.bigski_target[i]);
 	}
     printPretty("####################SETTINGS####################\n\n");
 }

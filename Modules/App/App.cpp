@@ -69,6 +69,23 @@ void App::changeSensorMode(SENSOR_MODE mode)
 	sensorMode = mode;
 }
 
+uint16_t App::getDeadBand()
+{
+	switch(get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		return DEAD_BANDS_MMx10[settings.surface_snstv];
+	case SENSOR_MODE_STRING:
+		return DEAD_BANDS_MMx10[settings.string_snstv];
+	case SENSOR_MODE_BIGSKI:
+		return DEAD_BANDS_MMx10[settings.bigski_snstv];
+	default:
+		BEDUG_ASSERT(false, "Unknown mode");
+		fsm.push_event(error_e{});
+		Error_Handler();
+		return 0;
+	}
+}
+
 void App::up()
 {
 	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
@@ -175,10 +192,6 @@ void App::manual_start_a::operator ()()
 
 void App::auto_start_a::operator ()()
 {
-	if (sensorMode == get_sensor_mode()) {
-		return;
-	}
-
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
 		deadBand = DEAD_BANDS_MMx10[settings.surface_snstv];
@@ -225,10 +238,16 @@ void App::setup_move_a::operator ()()
 		return;
 	}
 
-	uint32_t propPercent = (__abs_dif(propBand, getValue()) * 100) / propBand;
-	uint32_t timeMs = WORK_COEFFICIENT * propPercent / 100;
+	if (!propBand) {
+		BEDUG_ASSERT(false, "Prop band error");
+		fsm.push_event(error_e{});
+		return;
+	}
 
-	workTimer.changeDelay(timeMs);
+	uint32_t k_percent = (__abs_dif(propBand, __abs(getValue())) * 100) / propBand;
+	uint32_t time_ms = VALVE_MIN_TIME_MS + (k_percent * (SAMPLE_PWM_MS - VALVE_MIN_TIME_MS)) / 100;
+
+	workTimer.changeDelay(time_ms);
 
 	getValue() > 0 ? down() : up();
 

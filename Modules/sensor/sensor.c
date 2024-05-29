@@ -300,6 +300,11 @@ SENSOR_MODE get_sensor_mode()
 	return sensor_state.curr_mode;
 }
 
+SENSOR_MODE get_sensor_target_mode()
+{
+	return sensor_state.need_mode;
+}
+
 STRING_DIRECTION get_sensor_direction()
 {
 	if (get_sensor_mode() == SENSOR_MODE_STRING) {

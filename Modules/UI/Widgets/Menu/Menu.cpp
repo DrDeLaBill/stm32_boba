@@ -52,12 +52,13 @@ void Menu::click(uint16_t button)
 
 	switch (button) {
 	case BTN_ENTER_Pin:
-	case BTN_F3_Pin:
-		if (selected) {
-			set_status(NEED_SAVE_SETTINGS);
-		}
 		selected = !selected;
 		items[focused_idx].setSelected(selected);
+		break;
+	case BTN_F3_Pin:
+		items[focused_idx].setSelected(false);
+		set_status(NEED_SAVE_SETTINGS);
+		set_status(NEED_UI_EXIT);
 		break;
 	case BTN_UP_Pin:
 		do {
@@ -82,8 +83,8 @@ void Menu::click(uint16_t button)
 			selected = false;
 		} else {
 			set_status(NEED_UI_EXIT);
+			set_status(NEED_LOAD_SETTINGS);
 		}
-		set_status(NEED_LOAD_SETTINGS);
 		items[focused_idx].setSelected(selected);
 		break;
 	case BTN_MODE_Pin:

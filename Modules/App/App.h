@@ -20,8 +20,8 @@ struct App
 protected:
 	static constexpr char TAG[] = "APP";
 
-	static constexpr uint32_t SAMPLE_PWM_MS = 1000;
-	static constexpr uint32_t WORK_COEFFICIENT = SAMPLE_PWM_MS;
+	static constexpr uint32_t SAMPLE_PWM_MS = 1100;
+	static constexpr uint32_t VALVE_MIN_TIME_MS = 100;
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
@@ -106,6 +106,8 @@ public:
 	static APP_MODE getAppMode();
 
 	static void changeSensorMode(SENSOR_MODE mode);
+
+	static uint16_t getDeadBand();
 
 };
 

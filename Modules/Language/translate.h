@@ -11,6 +11,8 @@ extern "C" {
 
 #include <stdint.h>
 
+#include "soul.h"
+
 
 typedef enum _language_t {
 	ENGLISH = 0,
@@ -40,9 +42,19 @@ extern const char T_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_service[][TRANSLATE_MAX_LEN];
 extern const char T_LEFT[][TRANSLATE_MAX_LEN];
 extern const char T_RIGHT[][TRANSLATE_MAX_LEN];
+extern const char T_MEMORY_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_POWER_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_STACK_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_LOAD_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_RAM_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_SETTINGS_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_APP_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_VALVE_ERROR[][TRANSLATE_MAX_LEN];
 
 
 const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang);
+
+const char* get_string_error(SOUL_STATUS error, uint8_t lang);
 
 
 #ifdef __cplusplus

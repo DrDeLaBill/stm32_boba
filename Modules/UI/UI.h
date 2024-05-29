@@ -32,9 +32,6 @@ private:
 protected:
 	static constexpr uint16_t DEFAULT_MARGIN = 10;
 
-	static constexpr int16_t TRIG_VALUE_LOW = 30;
-	static constexpr int16_t TRIG_VALUE_HIGH = 30;
-
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
 	FSM_CREATE_EVENT(sens_found_e,  0);
@@ -88,8 +85,7 @@ protected:
 		fsm::Transition<manual_mode_s, service_e,     service_s,     service_start_a>,
 		fsm::Transition<manual_mode_s, error_e,       error_s,       error_a>,
 
-		fsm::Transition<service_s,     service_e,     manual_mode_s, manual_start_a>,
-		fsm::Transition<service_s,     no_sens_e,     no_sens_s,     no_sens_start_a>,
+		fsm::Transition<service_s,     service_e,     load_s,        load_start_a>,
 
 		fsm::Transition<auto_mode_s,   change_mode_e, manual_mode_s, manual_start_a>,
 		fsm::Transition<auto_mode_s,   no_sens_e,     no_sens_s,     no_sens_start_a>,
@@ -113,7 +109,7 @@ protected:
 	static void showServiceFooter();
 	static void showValue();
 	static void showLoading();
-	static void showDirection();
+	static void showDirection(bool flag = true);
 
 
 public:

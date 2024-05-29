@@ -49,11 +49,11 @@ void surface_snstv_callback::click(uint16_t button)
 	uint8_t tmp = settings.surface_snstv;
 	callback_click<uint8_t>(&tmp, 1, button);
 	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_UP_Pin) {
-		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
+		tmp = SENSITIVITY[0];
 		return;
 	}
 	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_DOWN_Pin) {
-		tmp = SENSITIVITY[0];
+		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
 		return;
 	}
 	settings.surface_snstv = tmp;
@@ -71,11 +71,11 @@ void string_snstv_callback::click(uint16_t button)
 	uint8_t tmp = settings.string_snstv;
 	callback_click<uint8_t>(&tmp, 1, button);
 	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_UP_Pin) {
-		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
+		tmp = SENSITIVITY[0];
 		return;
 	}
 	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_DOWN_Pin) {
-		tmp = SENSITIVITY[0];
+		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
 		return;
 	}
 	settings.string_snstv = tmp;
@@ -93,11 +93,11 @@ void bigski_snstv_callback::click(uint16_t button)
 	uint8_t tmp = settings.bigski_snstv;
 	callback_click<uint8_t>(&tmp, 1, button);
 	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_UP_Pin) {
-		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
+		tmp = SENSITIVITY[0];
 		return;
 	}
 	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_DOWN_Pin) {
-		tmp = SENSITIVITY[0];
+		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
 		return;
 	}
 	settings.bigski_snstv = tmp;

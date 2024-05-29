@@ -46,7 +46,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define TEST_ERRORS (0)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -118,11 +118,13 @@ int main(void)
 	SoulGuard<
 		RestartWatchdog,
 		StackWatchdog,
+#if !TEST_ERRORS
 		MemoryWatchdog,
+#endif
 		SettingsWatchdog
 	> soulGuard;
 
-	set_status(WAIT_LOAD);
+//	set_status(WAIT_LOAD);
 
 	gprint("\n\n\n");
 	printTagLog(MAIN_TAG, "The device is loading");
@@ -141,9 +143,26 @@ int main(void)
 
     printTagLog(MAIN_TAG, "The device has been loaded");
 
+#if TEST_ERRORS
+    utl::Timer timer(1000);
+    SOUL_STATUS error = ERRORS_START;
+#endif
 	while (1)
 	{
-		utl::CodeStopwatch stopwatch(MAIN_TAG, GENERAL_TIMEOUT_MS);
+		utl::CodeStopwatch stopwatch(MAIN_TAG, 3 * GENERAL_TIMEOUT_MS);
+
+#if TEST_ERRORS
+		if (!timer.wait()) {
+			timer.start();
+			reset_error(error);
+			static unsigned* ptr = (unsigned*)&error;
+			(*ptr) += 1;
+			if (error == ERRORS_END) {
+				error = INTERNAL_ERROR;
+			}
+			set_error(error);
+		}
+#endif
 
 		soulGuard.defend();
 

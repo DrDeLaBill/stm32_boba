@@ -12,9 +12,9 @@
 #define ERRORS_MAX (5)
 
 
-utl::Timer MemoryWatchdog::timer(SECOND_MS);
-uint8_t MemoryWatchdog::errors = 0;
-
+MemoryWatchdog::MemoryWatchdog():
+	errorTimer(TIMEOUT_MS), timer(SECOND_MS), errors(0), timerStarted(false)
+	{}
 
 void MemoryWatchdog::check()
 {
@@ -25,7 +25,10 @@ void MemoryWatchdog::check()
 
 	uint8_t data = 0;
 	eeprom_status_t status = EEPROM_OK;
-	if (is_status(MEMORY_READ_FAULT) || is_status(MEMORY_WRITE_FAULT)) {
+	if (is_status(MEMORY_READ_FAULT) ||
+		is_status(MEMORY_WRITE_FAULT) ||
+		is_error(MEMORY_ERROR)
+	) {
 		uint32_t address = static_cast<uint32_t>(rand()) % eeprom_get_size();
 
 		status = eeprom_read(address, &data, sizeof(data));
@@ -37,6 +40,7 @@ void MemoryWatchdog::check()
 		}
 		if (status == EEPROM_OK) {
 			reset_status(MEMORY_WRITE_FAULT);
+			timerStarted = false;
 			errors = 0;
 		} else {
 			errors++;
@@ -44,4 +48,13 @@ void MemoryWatchdog::check()
 	}
 
 	(errors > ERRORS_MAX) ? set_error(MEMORY_ERROR) : reset_error(MEMORY_ERROR);
+
+	if (!timerStarted && is_error(MEMORY_ERROR)) {
+		timerStarted = true;
+		errorTimer.start();
+	}
+
+	if (timerStarted && !errorTimer.wait()) {
+		NVIC_SystemReset();
+	}
 }

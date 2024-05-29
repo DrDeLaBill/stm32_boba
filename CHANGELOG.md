@@ -1,6 +1,12 @@
 Calculation method update
 
 - The hydraulic cylinder works with software PWM (PID removed)
-- Sensitivity setting added
+- Sensitivity setting added (dead band - prop band)
 - Service menu update
 - Left/right directions added to UI
+- Change mode in "BIGSKI" state with "no sensor" status added
+- Small UI fixes
+- Valve min work time added
+- Reload device with the memory error
+- Save settings fix
+- Decoding of errors added

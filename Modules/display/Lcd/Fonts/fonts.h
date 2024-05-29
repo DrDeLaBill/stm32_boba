@@ -79,7 +79,6 @@ extern sFONT Font12;
 extern sFONT Font8;
 extern sFONT u8g2_font_8x13_t_cyrillic;
 extern sFONT u8g2_font_10x20_t_cyrillic;
-extern sFONT u8g2_font_inr24_t_cyrillic;
 /**
   * @}
   */ 

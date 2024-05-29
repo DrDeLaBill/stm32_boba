@@ -54,6 +54,7 @@ bool sensor2A8_available();
 
 void set_sensor_mode(SENSOR_MODE mode);
 SENSOR_MODE get_sensor_mode();
+SENSOR_MODE get_sensor_target_mode();
 
 STRING_DIRECTION get_sensor_direction();
 
