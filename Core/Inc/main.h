@@ -124,6 +124,10 @@ extern SPI_HandleTypeDef         hspi1;
 extern TIM_HandleTypeDef         htim4;
 #define BTN_TIM                  (htim4)
 
+// App
+extern TIM_HandleTypeDef         htim3;
+#define APP_TIM                  (htim3)
+
 
 /* USER CODE END Private defines */
 

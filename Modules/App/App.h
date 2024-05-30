@@ -127,7 +127,8 @@ public:
 
 	void proccess();
 
-	static int16_t getValue();
+	static int16_t getRealValue();
+	static int16_t getActualValue();
 
 	static void setAppMode(APP_MODE mode);
 	static APP_MODE getAppMode();

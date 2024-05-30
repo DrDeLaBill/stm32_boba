@@ -55,7 +55,12 @@ void App::setAppMode(APP_MODE mode)
 	App::appMode = mode;
 }
 
-int16_t App::getValue()
+int16_t App::getRealValue()
+{
+	return value_buffer.front();
+}
+
+int16_t App::getActualValue()
 {
 	return value_buffer.back();
 }
@@ -114,12 +119,12 @@ void App::stop()
 
 bool App::isOnDeadBand()
 {
-	return __abs(getValue()) <= deadBand;
+	return __abs(getActualValue()) <= deadBand;
 }
 
 bool App::isOnPropBand()
 {
-	return __abs(getValue()) > deadBand && __abs(getValue()) <= propBand;
+	return __abs(getActualValue()) > deadBand && __abs(getActualValue()) <= propBand;
 }
 
 int16_t App::getCurrentSensorValue()
@@ -163,7 +168,7 @@ void App::_auto_s::operator ()()
 		fsm.push_event(error_e{});
 	}
 
-	if (getValue() == SENSOR_VALUE_ERR) {
+	if (getActualValue() == SENSOR_VALUE_ERR) {
 		stop();
 		return;
 	}
@@ -187,7 +192,7 @@ void App::_auto_s::operator ()()
 
 	if (!isOnPropBand()) {
 		position = ON_PROP_BAND;
-		getValue() > 0 ? down() : up();
+		getActualValue() > 0 ? down() : up();
 		return;
 	}
 
@@ -218,12 +223,20 @@ void App::_auto_s::operator ()()
 		return;
 	}
 
-	uint32_t k_percent = (__abs_dif(propBand, __abs(getValue())) * 100) / propBand;
-	uint32_t time_ms = VALVE_MIN_TIME_MS + (k_percent * (SAMPLE_PWM_MS - VALVE_MIN_TIME_MS)) / 100;
+	uint32_t k_percent = (__abs_dif(propBand, __abs(getActualValue())) * 100) / propBand;
+	uint32_t time_ms = (k_percent * SAMPLE_PWM_MS) / 100;
+
+	if (!time_ms) {
+		return;
+	}
+
+	if (time_ms < VALVE_MIN_TIME_MS) {
+		time_ms = VALVE_MIN_TIME_MS;
+	}
 
 	workTimer.changeDelay(time_ms);
 
-	getValue() > 0 ? down() : up();
+	getActualValue() > 0 ? down() : up();
 
 	sampleTimer.start();
 	workTimer.start();
@@ -260,6 +273,10 @@ void App::_error_s::operator ()()
 void App::manual_start_a::operator ()()
 {
 	stop();
+
+	int16_t lastValue = value_buffer.front();
+	value_buffer.clear();
+	value_buffer.push_front(lastValue);
 }
 
 void App::auto_start_a::operator ()()

@@ -72,12 +72,12 @@ char* surface_snstv_callback::label()  { return (char*)t(T_Sensitivity, settings
 void surface_delay_callback::click(uint16_t button)
 {
 	uint8_t tmp = settings.surface_delay;
+	if (tmp == 0 && button == BTN_DOWN_Pin) {
+		return;
+	}
 	callback_click<uint8_t>(&tmp, 1, button);
 	if (tmp >= SETTINGS_WORK_DELAY_MAX_S && button == BTN_UP_Pin) {
 		tmp = SETTINGS_WORK_DELAY_MAX_S;
-	}
-	if (tmp == 0 && button == BTN_DOWN_Pin) {
-		return;
 	}
 	settings.surface_delay = tmp;
 }
@@ -123,12 +123,12 @@ char* string_snstv_callback::label()  { return (char*)t(T_Sensitivity, settings.
 void string_delay_callback::click(uint16_t button)
 {
 	uint8_t tmp = settings.string_delay;
+	if (tmp == 0 && button == BTN_DOWN_Pin) {
+		return;
+	}
 	callback_click<uint8_t>(&tmp, 1, button);
 	if (tmp >= SETTINGS_WORK_DELAY_MAX_S && button == BTN_UP_Pin) {
 		tmp = SETTINGS_WORK_DELAY_MAX_S;
-	}
-	if (tmp == 0 && button == BTN_DOWN_Pin) {
-		return;
 	}
 	settings.string_delay = tmp;
 }
@@ -174,12 +174,12 @@ char* bigski_snstv_callback::label()  { return (char*)t(T_Sensitivity, settings.
 void bigski_delay_callback::click(uint16_t button)
 {
 	uint8_t tmp = settings.bigski_delay;
+	if (tmp == 0 && button == BTN_DOWN_Pin) {
+		return;
+	}
 	callback_click<uint8_t>(&tmp, 1, button);
 	if (tmp >= SETTINGS_WORK_DELAY_MAX_S && button == BTN_UP_Pin) {
 		tmp = SETTINGS_WORK_DELAY_MAX_S;
-	}
-	if (tmp == 0 && button == BTN_DOWN_Pin) {
-		return;
 	}
 	settings.bigski_delay = tmp;
 }

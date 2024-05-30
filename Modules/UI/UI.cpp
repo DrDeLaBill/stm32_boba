@@ -421,7 +421,7 @@ void UI::showValue()
 		offset_y = display_height() / 2;
 		char value[PHRASE_LEN_MAX] = {};
 		const char* phrase = t(T_VALUE, settings.language);
-		if (App::getValue() == App::SENSOR_VALUE_ERR) {
+		if (App::getRealValue() == App::SENSOR_VALUE_ERR) {
 			snprintf(
 				value,
 				sizeof(value) - 1,
@@ -435,8 +435,8 @@ void UI::showValue()
 				sizeof(value) - 1,
 				"%s: %d.%02d",
 				phrase,
-				App::getValue() / 100,
-				__abs(App::getValue() % 100)
+				App::getRealValue() / 100,
+				__abs(App::getRealValue() % 100)
 			);
 		}
 		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
@@ -749,7 +749,7 @@ void UI::_manual_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
-	showMiddle(__abs(App::getValue()) < App::getDeadBand());
+	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
 	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
 	if (is_status(NO_SENSOR)) {
@@ -781,7 +781,7 @@ void UI::_manual_mode_s::operator ()() const
 		App::setAppMode(APP_MODE_AUTO);
 		break;
 	case BTN_ENTER_Pin:
-		if (App::getValue() == std::numeric_limits<int16_t>::max()) {
+		if (App::getRealValue() == std::numeric_limits<int16_t>::max()) {
 			break;
 		}
 		if (target_reseted) {
@@ -821,7 +821,7 @@ void UI::_auto_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
-	showMiddle(__abs(App::getValue()) < App::getDeadBand());
+	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
 	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
 	if (is_status(NO_SENSOR)) {

@@ -111,6 +111,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_CRC_Init();
   MX_TIM4_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
@@ -141,6 +142,9 @@ int main(void)
     // Buttons TIM start
     HAL_TIM_Base_Start_IT(&BTN_TIM);
 
+    // App TIM start
+    HAL_TIM_Base_Start_IT(&APP_TIM);
+
     printTagLog(MAIN_TAG, "The device has been loaded");
 
 #if TEST_ERRORS
@@ -166,7 +170,6 @@ int main(void)
 
 		soulGuard.defend();
 
-		app.proccess();
 		ui.tick();
 
 		if (has_errors() || is_status(WAIT_LOAD)) {
@@ -239,6 +242,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if(htim->Instance == BTN_TIM.Instance) {
     	ui.buttonsTick();
+    } else if (htim->Instance == APP_TIM.Instance) {
+    	app.proccess();
     }
 }
 
