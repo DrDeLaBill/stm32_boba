@@ -151,6 +151,25 @@ void UI::showMode()
 void UI::showHeader()
 {}
 
+void UI::showServiceHeader()
+{
+	char line[PHRASE_LEN_MAX] = {};
+	const char* phrase1 = t(T_service, settings.language);
+	const char* phrase2 = t(T_mode, settings.language);
+	snprintf(line, sizeof(line), "%s %s", phrase1, phrase2);
+	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+
+	display_set_color(DISPLAY_COLOR_BLACK);
+	display_text_show(
+		display_width() / 2,
+		DISPLAY_HEADER_HEIGHT / 2,
+		&u8g2_font_10x20_t_cyrillic,
+		DISPLAY_ALIGN_CENTER,
+		line,
+		strlen(line)
+	);
+}
+
 void UI::showAutoFooter()
 {
 	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
@@ -846,6 +865,7 @@ void UI::_auto_mode_s::operator ()() const
 
 void UI::_service_s::operator ()() const
 {
+	showServiceHeader();
 	showServiceFooter();
 
 	auto button = buttons.find(BTN_UP_Pin);
@@ -1013,22 +1033,6 @@ void UI::service_start_a::operator ()() const
 
 	display_clear_content();
 	display_sections_show();
-
-	char line[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_service, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
-	snprintf(line, sizeof(line), "%s %s", phrase1, phrase2);
-	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
-
-	display_set_color(DISPLAY_COLOR_BLACK);
-	display_text_show(
-		display_width() / 2,
-		DISPLAY_HEADER_HEIGHT / 2,
-		&u8g2_font_10x20_t_cyrillic,
-		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line)
-	);
 
 	serviceMenu->reset();
 }

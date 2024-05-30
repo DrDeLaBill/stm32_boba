@@ -31,9 +31,10 @@ private:
 
 	uint16_t start_idx;
 	uint16_t focused_idx;
+	uint16_t last_focused_idx;
 	uint16_t real_start_idx;
 	bool selected;
-	bool needRefresh;
+	bool needInit;
 
 	utl::Timer timer;
 

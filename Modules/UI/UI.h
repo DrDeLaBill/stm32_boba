@@ -104,13 +104,13 @@ protected:
 
 	static void showMode();
 	static void showHeader();
+	static void showServiceHeader();
 	static void showAutoFooter();
 	static void showManualFooter();
 	static void showServiceFooter();
 	static void showValue();
 	static void showLoading();
 	static void showDirection(bool flag = true);
-
 
 public:
 	static constexpr char TAG[] = "UI";

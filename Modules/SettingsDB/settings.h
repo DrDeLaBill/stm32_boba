@@ -17,8 +17,8 @@ extern "C" {
 
 
 #define DEVICE_MAJOR (0)
-#define DEVICE_MINOR (0)
-#define DEVICE_PATCH (1)
+#define DEVICE_MINOR (1)
+#define DEVICE_PATCH (0)
 /*
  * Device types:
  * 0x0001 - Dispenser
