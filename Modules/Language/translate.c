@@ -32,13 +32,25 @@ const char T_surface[][TRANSLATE_MAX_LEN] = {
 	"surface",
 	"ÔÓÍ˚ÚËÂ"
 };
-const char T_BIGSKY[][TRANSLATE_MAX_LEN] = {
-	"BIGSKY",
-	"BIGSKY"
-};
 const char T_string[][TRANSLATE_MAX_LEN] = {
 	"string",
 	"ÒÚÛÌ‡"
+};
+const char T_BIGSKI[][TRANSLATE_MAX_LEN] = {
+	"BIGSKI",
+	"BIGSKI"
+};
+const char T_SURFACE_MODE[][TRANSLATE_MAX_LEN] = {
+	"SURFACE MODE",
+	"–≈∆»Ã œŒ –€“»≈"
+};
+const char T_STRING_MODE[][TRANSLATE_MAX_LEN] = {
+	"STRING MODE",
+	"–≈∆»Ã —“–”Õ€"
+};
+const char T_BIGSKI_MODE[][TRANSLATE_MAX_LEN] = {
+	"BIGSKI MODE",
+	"BIGSKI –≈∆»Ã"
 };
 const char T_error[][TRANSLATE_MAX_LEN] = {
 	"error",
@@ -72,6 +84,37 @@ const char T_RIGHT[][TRANSLATE_MAX_LEN] = {
 	"RIGHT",
 	"¬œ–¿¬Œ"
 };
+const char T_sec[][TRANSLATE_MAX_LEN] = {
+	"sec",
+	"ÒÂÍ"
+};
+const char T_Version[][TRANSLATE_MAX_LEN] = {
+	"Version",
+	"¬ÂÒËˇ"
+};
+const char T_Sensitivity[][TRANSLATE_MAX_LEN] = {
+	"Sensitivity",
+	"◊Û‚ÒÚ‚ËÚÂÎ¸ÌÓÒÚ¸"
+};
+const char T_Delay[][TRANSLATE_MAX_LEN] = {
+	"Delay",
+	"«‡‰ÂÊÍ‡"
+};
+const char T_Language[][TRANSLATE_MAX_LEN] = {
+	"Language",
+	"ﬂÁ˚Í"
+};
+const char T_UPDATING_SETTINGS[][TRANSLATE_MAX_LEN] = {
+	"UPDATING SETTINGS",
+	"Œ¡ÕŒ¬À≈Õ»≈ Õ¿—“–Œ≈ "
+};
+const char T_RESETING_CHANGES[][TRANSLATE_MAX_LEN] = {
+	"RESETING CHANGES",
+	"—¡–Œ— »«Ã≈Õ≈Õ»…"
+};
+
+
+
 const char T_UNKNOWN_ERROR[][TRANSLATE_MAX_LEN] = {
 	"UNKNOWN ERROR",
 	"Õ≈»«¬≈—“Õ¿ﬂ Œÿ»¡ ¿"
@@ -100,9 +143,9 @@ const char T_RAM_ERROR[][TRANSLATE_MAX_LEN] = {
 	"RAM ERROR",
 	"Œÿ»¡ ¿ Œ«”"
 };
-const char T_SETTINGS_ERROR[][TRANSLATE_MAX_LEN] = {
-	"SETTINGS ERROR",
-	"Œÿ»¡ ¿ Õ¿—“–Œ≈ "
+const char T_SETTINGS_LOAD_ERROR[][TRANSLATE_MAX_LEN] = {
+	"SETTINGS LOAD ERROR",
+	"Œÿ»¡ ¿ «¿√–”« » Õ¿—“–Œ≈ "
 };
 const char T_APP_ERROR[][TRANSLATE_MAX_LEN] = {
 	"APPLICATION ERROR",
@@ -123,64 +166,33 @@ const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang)
 
 const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 {
-	static char error_line[2*TRANSLATE_MAX_LEN + 2] = "";
-	memset(error_line, 0, sizeof(error_line));
-	snprintf(
-		error_line,
-		sizeof(error_line) - 1,
-		"%s",
-		t(T_UNKNOWN_ERROR, lang)
-	);
-
 	if (error <= ERRORS_START && error >= ERRORS_END) {
-		return error_line;
+		return t(T_UNKNOWN_ERROR, lang);
 	};
 
-	const char* error_ptr = NULL;
 	switch (error)
 	{
 	case INTERNAL_ERROR:
-		error_ptr = T_INTERNAL_ERROR;
-		break;
+		return t(T_INTERNAL_ERROR, lang);
 	case MEMORY_ERROR:
-		error_ptr = T_MEMORY_ERROR;
-		break;
+		return t(T_MEMORY_ERROR, lang);
 	case POWER_ERROR:
-		error_ptr = T_POWER_ERROR;
-		break;
+		return t(T_POWER_ERROR, lang);
 	case STACK_ERROR:
-		error_ptr = T_STACK_ERROR;
-		break;
+		return t(T_STACK_ERROR, lang);
 	case LOAD_ERROR:
-		error_ptr = T_LOAD_ERROR;
-		break;
+		return t(T_LOAD_ERROR, lang);
 	case RAM_ERROR:
-		error_ptr = T_RAM_ERROR;
-		break;
+		return t(T_RAM_ERROR, lang);
 	case USB_ERROR:
-		error_ptr = T_UNKNOWN_ERROR;
-		break;
+		return t(T_UNKNOWN_ERROR, lang);
 	case SETTINGS_LOAD_ERROR:
-		error_ptr = T_LOAD_ERROR;
-		break;
+		return t(T_SETTINGS_LOAD_ERROR, lang);
 	case APP_MODE_ERROR:
-		error_ptr = T_APP_ERROR;
-		break;
+		return t(T_APP_ERROR, lang);
 	case VALVE_ERROR:
-		error_ptr = T_VALVE_ERROR;
-		break;
+		return t(T_VALVE_ERROR, lang);
 	default:
-		error_ptr = T_UNKNOWN_ERROR;
-		break;
+		return t(T_UNKNOWN_ERROR, lang);
 	};
-
-	memset(error_line, 0, sizeof(error_line));
-	snprintf(
-		error_line,
-		sizeof(error_line) - 1,
-		"%s",
-		t(error_ptr, lang)
-	);
-
-	return error_line;
 }

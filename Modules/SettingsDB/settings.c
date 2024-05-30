@@ -14,6 +14,7 @@
 
 static const char SETTINGS_TAG[] = "STNG";
 
+
 const uint8_t SENSITIVITY[SETTINGS_BANDS_COUNT] = {
 	1,
 	2,
@@ -25,6 +26,19 @@ const uint8_t SENSITIVITY[SETTINGS_BANDS_COUNT] = {
 	8,
 	9,
 	10
+};
+
+const uint32_t SENSITIVITY_DELAY_MS[__arr_len(SENSITIVITY)] = {
+	500,
+	450,
+	400,
+	350,
+	300,
+	350,
+	300,
+	250,
+	200,
+	150,
 };
 
 const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
@@ -80,13 +94,16 @@ void settings_reset(settings_t* other)
 
 	other->language     = ENGLISH;
 
-	other->surface_snstv = 0;
+	other->surface_snstv  = 0;
+	other->surface_delay  = SETTNNGS_WORK_DELAY_DEFAULT_S;
 	other->surface_target = 0;
 
-	other->string_snstv = 0;
+	other->string_snstv  = 0;
+	other->string_delay  = SETTNNGS_WORK_DELAY_DEFAULT_S;
 	other->string_target = 0;
 
 	other->bigski_snstv = 0;
+	other->bigski_delay = SETTNNGS_WORK_DELAY_DEFAULT_S;
 	memset((void*)other->bigski_target, 0, sizeof(other->bigski_target));
 }
 
@@ -154,16 +171,22 @@ void settings_show()
 	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.surface_snstv]);
 	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.surface_snstv]);
 	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.surface_snstv]);
+	printPretty("Sensitivity delay: %lu ms\n", SENSITIVITY_DELAY_MS[settings.surface_snstv]);
+	printPretty("Work delay: %u s\n", settings.surface_delay);
 	printPretty("Last target: %d\n", settings.surface_target);
     printPretty("------------------STRING  MODE------------------\n");
 	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.string_snstv]);
 	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.string_snstv]);
 	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.string_snstv]);
+	printPretty("Sensitivity delay: %lu ms\n", SENSITIVITY_DELAY_MS[settings.string_snstv]);
+	printPretty("Work delay: %u s\n", settings.string_delay);
 	printPretty("Last target: %d\n", settings.string_target);
     printPretty("------------------BIGSKI  MODE------------------\n");
 	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.bigski_snstv]);
 	printPretty("Dead band: %u\n", DEAD_BANDS_MMx10[settings.bigski_snstv]);
 	printPretty("Prop band: %u\n", PROP_BANDS_MMx10[settings.bigski_snstv]);
+	printPretty("Sensitivity delay: %lu ms\n", SENSITIVITY_DELAY_MS[settings.bigski_snstv]);
+	printPretty("Work delay: %u s\n", settings.bigski_delay);
 	for (unsigned i = 0; i < __arr_len(settings.bigski_target); i++) {
 		printPretty("Last target[%u]: %d\n", i, settings.bigski_target[i]);
 	}

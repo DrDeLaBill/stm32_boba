@@ -3,7 +3,6 @@
 #include "UI.h"
 
 #include <cstdio>
-#include <limits>
 #include <cstring>
 
 #include "bmp.h"
@@ -47,14 +46,17 @@ utl::Timer UI::timer(SECOND_MS);
 fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 MenuItem menuItems[] =
 {
-	{(new version_callback()),          false, "Version:",    "v0.0.0"},
-	{(new language_callback()),         true,  "Language:",    "_"},
-	{(new label_callback())  ,          false, "SURFACE MODE"},
-	{(new surface_snstv_callback()),    true,  "Sensitivity:", "1"},
-	{(new label_callback())  ,          false, "STRING  MODE"},
-	{(new string_snstv_callback()),     true,  "Sensitivity:", "1"},
-	{(new label_callback())  ,          false, "BIGSKI  MODE"},
-	{(new bigski_snstv_callback()),     true,  "Sensitivity:", "1"},
+	{(new version_callback()),          false},
+	{(new language_callback()),         true},
+	{(new surface_label_callback()),    false},
+	{(new surface_snstv_callback()),    true},
+	{(new surface_delay_callback()),    true},
+	{(new string_label_callback()),     false},
+	{(new string_snstv_callback()),     true},
+	{(new string_delay_callback()),     true},
+	{(new bigski_label_callback()),     false},
+	{(new bigski_snstv_callback()),     true},
+	{(new bigski_delay_callback()),     true},
 };
 std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 	0,
@@ -66,6 +68,8 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 );
 SENSOR_MODE UI::manual_f1_mode = SENSOR_MODE_SURFACE;
 SENSOR_MODE UI::manual_f3_mode = SENSOR_MODE_STRING;
+
+const char (*UI::loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
 
 
 void UI::tick()
@@ -417,7 +421,7 @@ void UI::showValue()
 		offset_y = display_height() / 2;
 		char value[PHRASE_LEN_MAX] = {};
 		const char* phrase = t(T_VALUE, settings.language);
-		if (App::getValue() == std::numeric_limits<int16_t>::max()) {
+		if (App::getValue() == App::SENSOR_VALUE_ERR) {
 			snprintf(
 				value,
 				sizeof(value) - 1,
@@ -452,8 +456,7 @@ void UI::showValue()
 void UI::showLoading()
 {
 	char line[PHRASE_LEN_MAX] = {};
-	const char* phrase = t(T_LOADING, settings.language);
-	snprintf(line, sizeof(line) - 1, "%s", phrase);
+	snprintf(line, sizeof(line) - 1, "%s", t(loadStr, settings.language));
 	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
 	display_set_color(DISPLAY_COLOR_BLACK);
@@ -885,9 +888,23 @@ void UI::_service_s::operator ()() const
 		serviceMenu->click(clicks.pop_front());
 	}
 
-	if (is_status(NEED_UI_EXIT)) {
-		reset_status(NEED_UI_EXIT);
-		fsm.push_event(service_e{});
+	if (is_status(NEED_SERVICE_SAVE)) {
+		loadStr = T_UPDATING_SETTINGS;
+	}
+
+	if (is_status(NEED_SERVICE_BACK)) {
+		loadStr = T_RESETING_CHANGES;
+	}
+
+	if (is_status(NEED_SERVICE_SAVE) || is_status(NEED_SERVICE_BACK)) {
+		reset_status(NEED_SERVICE_SAVE);
+		reset_status(NEED_SERVICE_BACK);
+		fsm.push_event(success_e{});
+	}
+
+	if (is_status(NEED_SERVICE_UPDATE)) {
+		reset_status(NEED_SERVICE_UPDATE);
+		serviceMenu->update();
 	}
 
 	serviceMenu->show();
@@ -916,7 +933,7 @@ void UI::_error_s::operator ()() const
 			strlen(line)
 		);
 
-		y += u8g2_font_10x20_t_cyrillic.Height + DEFAULT_MARGIN;
+		y += (uint16_t)(u8g2_font_10x20_t_cyrillic.Height + DEFAULT_MARGIN);
 		snprintf(line, sizeof(line) - 1, "%s", get_string_error((SOUL_STATUS)error, settings.language));
 		util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 		display_set_color(DISPLAY_COLOR_BLACK);
@@ -930,6 +947,7 @@ void UI::_error_s::operator ()() const
 			strlen(line)
 		);
 	} else {
+		loadStr = T_LOADING;
 		fsm.push_event(success_e{});
 	}
 }
@@ -952,7 +970,6 @@ void UI::load_start_a::operator ()() const
 	timer.changeDelay(LOADING_DELAY_MS);
 
 	showHeader();
-	showLoading();
 }
 
 void UI::no_sens_start_a::operator ()() const

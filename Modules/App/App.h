@@ -4,8 +4,13 @@
 #define _APP_H_
 
 
+#include <limits>
+
+#include "settings.h"
+
 #include "UI.h"
 #include "Timer.h"
+#include "CircleBuffer.h"
 #include "FiniteStateMachine.h"
 
 
@@ -22,6 +27,7 @@ protected:
 
 	static constexpr uint32_t SAMPLE_PWM_MS = 1100;
 	static constexpr uint32_t VALVE_MIN_TIME_MS = 100;
+	static constexpr uint32_t WORK_DELAY_BUFFER_MS = 100;
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
@@ -52,7 +58,6 @@ protected:
 	// Actions:
 	struct manual_start_a  { void operator()(); };
 	struct auto_start_a    { void operator()(); };
-	struct setup_move_a    { void operator()(); };
 	struct move_up_a       { void operator()(); };
 	struct move_down_a     { void operator()(); };
 	struct plate_stop_a    { void operator()(); };
@@ -70,7 +75,6 @@ protected:
 
 		fsm::Transition<auto_s,   auto_e,        auto_s,   auto_start_a>,
 		fsm::Transition<auto_s,   manual_e,      manual_s, manual_start_a>,
-		fsm::Transition<auto_s,   timeout_e,     auto_s,   setup_move_a>,
 		fsm::Transition<auto_s,   error_e,       error_s,  error_start_a>,
 
 		fsm::Transition<up_s,     plate_stop_e,  manual_s, plate_stop_a>,
@@ -80,24 +84,47 @@ protected:
 		fsm::Transition<error_s,  solved_e,      manual_s, manual_start_a>
 	>;
 
+	enum SENSOR_POSITION {
+		ON_INIT,
+		ON_DEAD_BAND,
+		ON_PROP_BAND,
+		OUT_OF_PROP_BAND
+	};
+
 	static fsm::FiniteStateMachine<fsm_table> fsm;
 	static uint16_t deadBand;
 	static uint16_t propBand;
 	static utl::Timer sampleTimer;
+	static utl::Timer sensDelayTimer;
 	static utl::Timer workTimer;
 
 	static SENSOR_MODE sensorMode;
 	static APP_MODE appMode;
-	static int16_t value;
+	static SENSOR_POSITION position;
+
+	static constexpr unsigned NEEDED_SIZE = SETTINGS_WORK_DELAY_MAX_S * (SECOND_MS / WORK_DELAY_BUFFER_MS);
+	static constexpr unsigned BUFFER_SIZE = 512;
+	static_assert(BUFFER_SIZE >= NEEDED_SIZE);
+	using buffer_t = utl::circle_buffer<BUFFER_SIZE, int16_t>;
+	static buffer_t value_buffer;
 
 	static void up();
 	static void down();
 	static void stop();
 
-	static void updatePID();
+	static bool isOnDeadBand();
+	static bool isOnPropBand();
 
+private:
+	utl::Timer measureTimer;
+
+	int16_t getCurrentSensorValue();
 
 public:
+	static constexpr int16_t SENSOR_VALUE_ERR = std::numeric_limits<int16_t>::max();
+
+	App();
+
 	void proccess();
 
 	static int16_t getValue();

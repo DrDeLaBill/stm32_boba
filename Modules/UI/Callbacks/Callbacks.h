@@ -47,13 +47,7 @@ struct version_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
-};
-
-
-struct label_callback: public IMenuCallback
-{
-	void click(uint16_t button) override;
-	char* value() override;
+	char* label() override;
 };
 
 
@@ -61,27 +55,67 @@ struct language_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
+	char* label() override;
 };
 
 
+struct surface_label_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+	char* label() override;
+};
 struct surface_snstv_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
+	char* label() override;
+};
+struct surface_delay_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+	char* label() override;
 };
 
 
+struct string_label_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+	char* label() override;
+};
 struct string_snstv_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
+	char* label() override;
+};
+struct string_delay_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+	char* label() override;
 };
 
 
+struct bigski_label_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+	char* label() override;
+};
 struct bigski_snstv_callback: public IMenuCallback
 {
 	void click(uint16_t button) override;
 	char* value() override;
+	char* label() override;
+};
+struct bigski_delay_callback: public IMenuCallback
+{
+	void click(uint16_t button) override;
+	char* value() override;
+	char* label() override;
 };
 
 

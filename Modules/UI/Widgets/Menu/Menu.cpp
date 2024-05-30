@@ -21,7 +21,8 @@
 Menu::Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t count):
 	x(x), y(y + 1), w(w), h(h - 1), items(), count(count),
 	start_idx(0), focused_idx(0), last_focused_idx(std::numeric_limits<uint16_t>::max()),
-	real_start_idx(0), selected(false), needInit(true), timer(HOLD_TIMEOUT_MS)
+	real_start_idx(0), selected(false), needInit(true), timer(HOLD_TIMEOUT_MS),
+	needUpdateSelected(false), needUpdateAll(false)
 {
 	this->items = std::make_unique<MenuItem[]>(count);
 	for (uint16_t i = 0; i < count; i++) {
@@ -50,18 +51,20 @@ void Menu::click(uint16_t button)
 {
 	if (selected && !IS_SPECIAL_BUTTON(button)) {
 		items[focused_idx].click(button);
+		needUpdateSelected = true;
 		return;
 	}
 
 	switch (button) {
 	case BTN_ENTER_Pin:
 		selected = !selected;
+		needUpdateSelected = true;
 		items[focused_idx].setSelected(selected);
 		break;
 	case BTN_F3_Pin:
 		items[focused_idx].setSelected(false);
 		set_status(NEED_SAVE_SETTINGS);
-		set_status(NEED_UI_EXIT);
+		set_status(NEED_SERVICE_SAVE);
 		break;
 	case BTN_UP_Pin:
 		do {
@@ -81,9 +84,10 @@ void Menu::click(uint16_t button)
 		break;
 	case BTN_F1_Pin:
 		if (selected) {
+			needUpdateSelected = true;
 			selected = false;
 		} else {
-			set_status(NEED_UI_EXIT);
+			set_status(NEED_SERVICE_BACK);
 			set_status(NEED_LOAD_SETTINGS);
 		}
 		items[focused_idx].setSelected(selected);
@@ -121,9 +125,21 @@ void Menu::holdDown()
 	timer.start();
 }
 
+void Menu::update()
+{
+	needUpdateAll = true;
+}
+
 void Menu::show()
 {
-	if (focused_idx == last_focused_idx) {
+	if (needUpdateSelected && focused_idx == last_focused_idx) {
+		needUpdateSelected = false;
+		items[focused_idx].setNeedUpdate(true);
+		items[focused_idx].show();
+		items[focused_idx].setNeedUpdate(false);
+	}
+
+	if (!needUpdateAll && focused_idx == last_focused_idx) {
 		return;
 	}
 
@@ -152,8 +168,9 @@ void Menu::show()
 	}
 	if (focused_idx == real_start_idx) {
 		start_idx = 0;
+		need_scroll = true;
 	}
-	if (needInit) {
+	if (needInit || needUpdateAll) {
 		need_scroll = true;
 	}
 
@@ -201,6 +218,8 @@ void Menu::show()
 		display_fill_rect(new_x, new_y, SCROLL_WIDTH, SCROLL_HEIGHT, DISPLAY_COLOR_LIGHT_GRAY2);
 		last_focused_idx = focused_idx;
 	}
+
+	needUpdateAll = false;
 }
 
 unsigned Menu::itemsCount()

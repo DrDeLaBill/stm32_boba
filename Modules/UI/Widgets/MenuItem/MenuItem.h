@@ -15,6 +15,7 @@ struct IMenuCallback
 {
 	virtual void click(uint16_t) = 0;
 	virtual char* value() = 0;
+	virtual char* label() = 0;
 };
 
 
@@ -35,9 +36,6 @@ private:
 	bool focused;
 	bool selected;
 
-	char label[LABEL_MAX_LEN];
-	char value[VALUE_MAX_LEN];
-
 	uint16_t background;
 
 	IMenuCallback* callback;
@@ -49,7 +47,7 @@ public:
 
 	MenuItem();
 	MenuItem(const MenuItem& other);
-	MenuItem(IMenuCallback* callback, const bool selectable = true, const char* label = "", const char* value = "", sFONT* font = &Font12);
+	MenuItem(IMenuCallback* callback, const bool selectable = true, sFONT* font = &u8g2_font_8x13_t_cyrillic);
 	~MenuItem();
 
 	MenuItem& operator=(const MenuItem& other);
@@ -58,7 +56,6 @@ public:
 	void setY(const uint16_t y);
 	void setWidth(const uint16_t w);
 	void setFont(sFONT* font);
-	void setLabel(const char* label, const unsigned length);
 	void setFocused(bool focused);
 	void setSelected(bool selected);
 	void setCallback(IMenuCallback& callback);

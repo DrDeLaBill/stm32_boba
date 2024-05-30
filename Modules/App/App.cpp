@@ -14,26 +14,28 @@ fsm::FiniteStateMachine<App::fsm_table> App::fsm;
 uint16_t App::deadBand = 0;
 uint16_t App::propBand = 0;
 utl::Timer App::sampleTimer(App::SAMPLE_PWM_MS);
+utl::Timer App::sensDelayTimer(0);
 utl::Timer App::workTimer(0);
 SENSOR_MODE App::sensorMode = SENSOR_MODE_SURFACE;
 APP_MODE App::appMode = APP_MODE_MANUAL;
-int16_t App::value = 0;
+App::SENSOR_POSITION App::position = App::ON_INIT;
+App::buffer_t App::value_buffer;
 
+
+
+App::App(): measureTimer(0) {}
 
 void App::proccess()
 {
 	fsm.proccess();
 
-	if (get_sensor_mode() == SENSOR_MODE_BIGSKI) {
-		if (sensor2AB_available() && sensor2A7_available() && sensor2A8_available()) {
-			value = get_sensor_average();
-			reset_status(NO_BIGSKI);
-		} else {
-			set_status(NO_BIGSKI);
-		}
-	} else {
-		value = get_sensor2A7_value();
+	if (measureTimer.wait()) {
+		return;
 	}
+	measureTimer.start();
+
+	value_buffer.pop_back();
+	value_buffer.push_front(getCurrentSensorValue());
 }
 
 void App::setAppMode(APP_MODE mode)
@@ -55,7 +57,7 @@ void App::setAppMode(APP_MODE mode)
 
 int16_t App::getValue()
 {
-	return value;
+	return value_buffer.back();
 }
 
 APP_MODE App::getAppMode()
@@ -110,6 +112,25 @@ void App::stop()
 	reset_status(AUTO_NEED_VALVE_UP);
 }
 
+bool App::isOnDeadBand()
+{
+	return __abs(getValue()) <= deadBand;
+}
+
+bool App::isOnPropBand()
+{
+	return __abs(getValue()) > deadBand && __abs(getValue()) <= propBand;
+}
+
+int16_t App::getCurrentSensorValue()
+{
+	if (get_sensor_mode() == SENSOR_MODE_BIGSKI) {
+		return get_sensor_average();
+	}
+
+	return get_sensor2A7_value();
+}
+
 void App::_init_s::operator ()()
 {
 	stop();
@@ -138,23 +159,74 @@ void App::_manual_s::operator ()()
 
 void App::_auto_s::operator ()()
 {
+	if (has_errors()) {
+		fsm.push_event(error_e{});
+	}
+
+	if (getValue() == SENSOR_VALUE_ERR) {
+		stop();
+		return;
+	}
+
 	static SENSOR_MODE lastMode = SENSOR_MODE_SURFACE;
 	if (lastMode != sensorMode) {
 		lastMode = sensorMode;
 		fsm.push_event(auto_e{});
 	}
 
-	if (!workTimer.wait()) {
+	if (get_sensor_mode() == SENSOR_MODE_BIGSKI && is_status(NO_BIGSKI)) {
+		stop();
+		return;
+	}
+
+	if (isOnDeadBand()) {
+		position = ON_DEAD_BAND;
+		stop();
+		return;
+	}
+
+	if (!isOnPropBand()) {
+		position = ON_PROP_BAND;
+		getValue() > 0 ? down() : up();
+		return;
+	}
+
+	if (position != ON_PROP_BAND) {
+		position = ON_PROP_BAND;
+		sensDelayTimer.start();
+		sampleTimer.reset();
+		workTimer.reset();
+	}
+
+	if (sensDelayTimer.wait()) {
+		return;
+	}
+
+	if (workTimer.wait()) {
+		return;
+	} else {
 		stop();
 	}
 
-	if (!sampleTimer.wait()) {
-		fsm.push_event(timeout_e{});
+	if (sampleTimer.wait()) {
+		return;
 	}
 
-	if (has_errors()) {
+	if (!propBand) {
+		BEDUG_ASSERT(false, "Prop band error");
 		fsm.push_event(error_e{});
+		return;
 	}
+
+	uint32_t k_percent = (__abs_dif(propBand, __abs(getValue())) * 100) / propBand;
+	uint32_t time_ms = VALVE_MIN_TIME_MS + (k_percent * (SAMPLE_PWM_MS - VALVE_MIN_TIME_MS)) / 100;
+
+	workTimer.changeDelay(time_ms);
+
+	getValue() > 0 ? down() : up();
+
+	sampleTimer.start();
+	workTimer.start();
 }
 
 void App::_up_s::operator ()()
@@ -192,67 +264,41 @@ void App::manual_start_a::operator ()()
 
 void App::auto_start_a::operator ()()
 {
+	uint32_t measureCount = 0;
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
 		deadBand = DEAD_BANDS_MMx10[settings.surface_snstv];
 		propBand = PROP_BANDS_MMx10[settings.surface_snstv];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.surface_snstv]);
+		measureCount = settings.surface_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_STRING:
 		deadBand = DEAD_BANDS_MMx10[settings.string_snstv];
 		propBand = PROP_BANDS_MMx10[settings.string_snstv];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.string_snstv]);
+		measureCount = settings.string_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_BIGSKI:
 		deadBand = DEAD_BANDS_MMx10[settings.bigski_snstv];
 		propBand = PROP_BANDS_MMx10[settings.bigski_snstv];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.bigski_snstv]);
+		measureCount = settings.bigski_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	default:
 		BEDUG_ASSERT(false, "Unknown mode");
 		fsm.push_event(error_e{});
 		Error_Handler();
-		break;
-	}
-}
-
-void App::setup_move_a::operator ()()
-{
-	if (get_sensor_mode() == SENSOR_MODE_BIGSKI && is_status(NO_BIGSKI)) {
-		stop();
 		return;
 	}
 
-	if (__abs(getValue()) < deadBand) {
-		stop();
-		return;
+	if (!measureCount) {
+		measureCount = 1;
 	}
-
-	if (__abs(getValue()) > propBand) {
-		getValue() > 0 ? down() : up();
-		return;
+	int16_t lastValue = value_buffer.front();
+	value_buffer.clear();
+	for (unsigned i = 0; i < measureCount; i++) {
+		value_buffer.push_front(lastValue);
 	}
-
-	if (sampleTimer.wait()) {
-		return;
-	}
-
-	if (workTimer.wait()) {
-		return;
-	}
-
-	if (!propBand) {
-		BEDUG_ASSERT(false, "Prop band error");
-		fsm.push_event(error_e{});
-		return;
-	}
-
-	uint32_t k_percent = (__abs_dif(propBand, __abs(getValue())) * 100) / propBand;
-	uint32_t time_ms = VALVE_MIN_TIME_MS + (k_percent * (SAMPLE_PWM_MS - VALVE_MIN_TIME_MS)) / 100;
-
-	workTimer.changeDelay(time_ms);
-
-	getValue() > 0 ? down() : up();
-
-	sampleTimer.start();
-	workTimer.start();
 }
 
 void App::move_up_a::operator ()()

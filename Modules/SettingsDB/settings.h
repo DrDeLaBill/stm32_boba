@@ -32,11 +32,14 @@ extern "C" {
 #define CF_VERSION  ((uint8_t)0x01)
 
 
-#define SETTINGS_BIGSKI_COUNT (3)
-#define SETTINGS_BANDS_COUNT  (10)
+#define SETTINGS_BIGSKI_COUNT          (3)
+#define SETTINGS_BANDS_COUNT           (10)
+#define SETTNNGS_WORK_DELAY_DEFAULT_S  (0)
+#define SETTINGS_WORK_DELAY_MAX_S      (40)
 
 
 extern const uint8_t  SENSITIVITY[SETTINGS_BANDS_COUNT];
+extern const uint32_t SENSITIVITY_DELAY_MS[__arr_len(SENSITIVITY)];
 extern const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)];
 extern const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)];
 
@@ -62,17 +65,23 @@ typedef struct __attribute__((packed)) _settings_t  {
 
     // Surface mode sensitivity
     uint8_t   surface_snstv;
+    // Surface mode work delay in ms
+    uint8_t   surface_delay;
     // Last surface target sensor value
     int16_t   surface_target;
 
     // String mode sensitivity
     uint8_t   string_snstv;
+    // String mode work delay in ms
+    uint8_t   string_delay;
     // Last string target sensor value
     int16_t   string_target;
 
-    // Ground mode sensitivity
+    // BIGSKI mode sensitivity
     uint8_t   bigski_snstv;
-    // Last string target sensor value
+    // BIGSKI mode work delay in ms
+    uint8_t   bigski_delay;
+    // Last BIGSKI target sensor value
     int16_t   bigski_target[SETTINGS_BIGSKI_COUNT];
 } settings_t;
 

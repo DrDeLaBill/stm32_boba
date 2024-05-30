@@ -6,7 +6,7 @@
 
 
 MenuItem::MenuItem():
-	x(0), y(0), w(0), font(&Font12), focused(false), selected(false), label(""), value(""),
+	x(0), y(0), w(0), font(&Font12), focused(false), selected(false),
 	background(DISPLAY_COLOR_BLACK), selectable(true), needUpdate(false)
 {}
 
@@ -15,13 +15,10 @@ MenuItem::MenuItem(const MenuItem& other)
 	*this = other;
 }
 
-MenuItem::MenuItem(IMenuCallback* callback, const bool selectable, const char* label, const char* value, sFONT* font):
-	x(0), y(0), w(0), font(font), focused(false), selected(false), label(""), value(""),
+MenuItem::MenuItem(IMenuCallback* callback, const bool selectable, sFONT* font):
+	x(0), y(0), w(0), font(font), focused(false), selected(false),
 	background(DISPLAY_COLOR_BLACK), callback(callback), selectable(selectable), needUpdate(false)
-{
-	memcpy(this->label, label, __min(strlen(label), sizeof(this->label)));
-	memcpy(this->value, value, __min(strlen(value), sizeof(this->value)));
-}
+{}
 
 MenuItem::~MenuItem()
 {}
@@ -32,8 +29,6 @@ MenuItem& MenuItem::operator=(const MenuItem& other)
 	y = other.y;
 	font = other.font;
 	focused = other.focused;
-	memcpy(label, other.label, sizeof(label));
-	memcpy(value, other.value, sizeof(value));
 	background = other.background;
 	callback = other.callback;
 	selectable = other.selectable;
@@ -58,11 +53,6 @@ void MenuItem::setWidth(const uint16_t w)
 void MenuItem::setFont(sFONT* font)
 {
 	this->font = font;
-}
-
-void MenuItem::setLabel(const char* label, const unsigned length)
-{
-	memcpy(this->label, label, __min(length, sizeof(this->label) - 1));
 }
 
 void MenuItem::setFocused(bool focused)
@@ -117,11 +107,17 @@ void MenuItem::show()
 	memset(line, ' ', sizeof(line));
 	line[sizeof(line) - 1] = 0;
 
-	memcpy(line, label, strlen(label));
+	memcpy(line, callback->label(), strlen(callback->label()));
 
 	memcpy(&line[value_index], callback->value(), strlen(callback->value()));
 	line[value_index + strlen(callback->value())] = 0;
-	util_add_char(line, sizeof(line), ' ', w / font->Width, ALIGN_MODE_LEFT);
+	util_add_char(
+		line,
+		sizeof(line),
+		' ',
+		w / font->Width,
+		(selectable || strlen(callback->value())) ? ALIGN_MODE_LEFT : ALIGN_MODE_CENTER
+	);
 
 	uint16_t curr_color = DISPLAY_COLOR_WHITE;
 	if (selected) {
