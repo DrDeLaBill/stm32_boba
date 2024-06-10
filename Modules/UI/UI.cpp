@@ -102,7 +102,7 @@ void UI::showMode()
 		display_width() / u8g2_font_8x13_t_cyrillic.Width,
 		ALIGN_MODE_CENTER
 	);
-	switch (get_sensor_mode()) {
+	switch (get_sensor_target_mode()) {
 	case SENSOR_MODE_SURFACE:
 		bitmap = &surface_bitmap;
 		break;
@@ -281,10 +281,6 @@ void UI::showManualFooter()
 		linef2,
 		strlen(linef2)
 	);
-
-	if (is_status(NO_SENSOR) && get_sensor_target_mode() != SENSOR_MODE_BIGSKI) {
-		return;
-	}
 
 	x = 0;
 	w = display_width() / 3;
@@ -686,6 +682,7 @@ void UI::_load_s::operator ()() const
 
 void UI::_no_sens_s::operator ()() const
 {
+	showMode();
 	showHeader();
 	showManualFooter();
 

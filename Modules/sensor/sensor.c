@@ -112,7 +112,7 @@ static const can_frame_t start_frames[] = {
 	{0x07EC, 0x04, {0x01, 0x0F, 0x00, 0xFF,}},
 };
 
-static const uint8_t BIGSKI_IDS[] = {0x02, 0x00, 0x04};
+static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
 
 extern CAN_HandleTypeDef hcan;
 
@@ -132,10 +132,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	CAN_RxHeaderTypeDef tmp_rx_header = {0};
 	uint8_t             tmp_rx_buffer[SENSOR_DATA_MAX_SIZE] = {0};
     if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
-    	if (sensor_state.need_std_id && tmp_rx_header.StdId != sensor_state.need_std_id) {
-    		reset_status(CAN_FAULT);
-    		return;
-    	}
     	bool is_value = false;
     	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
     	    if (tmp_rx_header.StdId != SENSOR_FRAME_IDS[i] ||
@@ -157,11 +153,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 #endif
     		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
     	}
-    	if (!is_value) {
-			memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
-			memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-			sensor_state.received = true;
+    	if (is_value ||
+			!sensor_state.need_std_id ||
+			(tmp_rx_header.StdId != sensor_state.need_std_id)
+		) {
+    		reset_status(CAN_FAULT);
+    		return;
     	}
+		memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
+		memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
+		sensor_state.received = true;
     }
 	reset_status(CAN_FAULT);
 }
@@ -394,7 +395,7 @@ void _fsm_sensor_idle()
 
 	sensor_available() ? reset_status(NO_SENSOR) : set_status(NO_SENSOR);
 
-	if (get_sensor_mode() == SENSOR_MODE_BIGSKI && is_status(NO_SENSOR)) {
+	if (get_sensor_target_mode() == SENSOR_MODE_BIGSKI && is_status(NO_SENSOR)) {
 		set_status(NO_BIGSKI);
 	} else {
 		reset_status(NO_BIGSKI);
