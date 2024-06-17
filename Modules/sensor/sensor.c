@@ -393,7 +393,12 @@ void _fsm_sensor_idle()
 		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 	}
 
-	sensor_available() ? reset_status(NO_SENSOR) : set_status(NO_SENSOR);
+	if (sensor_available()) {
+		reset_status(NO_SENSOR);
+	} else {
+		set_status(NO_SENSOR);
+		sensor_state.errors = SENSOR_MAX_ERRORS + 1;
+	}
 
 	if (get_sensor_target_mode() == SENSOR_MODE_BIGSKI && is_status(NO_SENSOR)) {
 		set_status(NO_BIGSKI);
