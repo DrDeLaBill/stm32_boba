@@ -69,6 +69,10 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 SENSOR_MODE UI::manual_f1_mode = SENSOR_MODE_SURFACE;
 SENSOR_MODE UI::manual_f3_mode = SENSOR_MODE_STRING;
 
+uint16_t UI::f1_color = DISPLAY_COLOR_WHITE;
+uint16_t UI::f2_color = DISPLAY_COLOR_WHITE;
+uint16_t UI::f3_color = DISPLAY_COLOR_WHITE;
+
 const char (*UI::loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
 
 
@@ -176,10 +180,6 @@ void UI::showServiceHeader()
 
 void UI::showAutoFooter()
 {
-	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
-
 	uint16_t halfSection = display_width() / 3 / 2;
 
 	uint16_t x = 0;
@@ -187,7 +187,7 @@ void UI::showAutoFooter()
 	uint16_t w = display_width() / 3;
 	uint16_t h = display_height() - y;
 	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	SENSOR_MODE mode = get_sensor_mode();
+	SENSOR_MODE mode = get_sensor_target_mode();
 	char line[] = " ";
 
 	if (mode == SENSOR_MODE_SURFACE) {
@@ -254,10 +254,6 @@ void UI::showAutoFooter()
 
 void UI::showManualFooter()
 {
-	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
-
 	uint16_t x = static_cast<uint16_t>(display_width() / 3 + 1);
 	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
 	uint16_t w = display_width() / 3 - 1;
@@ -335,9 +331,6 @@ void UI::showManualFooter()
 
 void UI::showServiceFooter()
 {
-	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
-
 	uint16_t halfSection = display_width() / 3 / 2;
 
 	uint16_t x = 0;
@@ -821,7 +814,9 @@ void UI::_auto_mode_s::operator ()() const
 	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
 	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
-	if (is_status(NO_SENSOR)) {
+	if (App::getAppMode() == APP_MODE_MANUAL ||
+		is_status(NO_SENSOR)
+	) {
 		fsm.push_event(no_sens_e{});
 	}
 	if (has_errors()) {
@@ -971,6 +966,10 @@ void UI::load_start_a::operator ()() const
 
 void UI::no_sens_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 
@@ -984,6 +983,10 @@ void UI::no_sens_start_a::operator ()() const
 
 void UI::manual_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 
@@ -1014,6 +1017,10 @@ void UI::manual_start_a::operator ()() const
 
 void UI::auto_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 
@@ -1042,6 +1049,10 @@ void UI::auto_start_a::operator ()() const
 
 void UI::service_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 

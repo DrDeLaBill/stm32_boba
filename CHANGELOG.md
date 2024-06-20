@@ -8,4 +8,4 @@
 - Reload device with the memory error
 - Save settings fix
 - Decoding of errors added
-- Auto mode switching fix
+- The auto mode switching fix

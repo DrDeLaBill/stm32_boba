@@ -104,6 +104,10 @@ protected:
 	static SENSOR_MODE manual_f1_mode;
 	static SENSOR_MODE manual_f3_mode;
 
+	static uint16_t f1_color;
+	static uint16_t f2_color;
+	static uint16_t f3_color;
+
 	static void showMode();
 	static void showHeader();
 	static void showServiceHeader();

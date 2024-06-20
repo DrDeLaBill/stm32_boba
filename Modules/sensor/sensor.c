@@ -17,7 +17,7 @@
 #define SENSOR_COMMAND_DELAY_MS    (15)
 #define SENSOR_CAN_DELAY_MS        (100)
 #define SENSOR_MAX_ERRORS          (100)
-#define SENSOR_CONNECTION_DELAY_MS (200)
+#define SENSOR_CONNECTION_DELAY_MS (300)
 
 #define SENSOR_FRAME_ID1           (0x02AB)
 #define SENSOR_FRAME_ID2           (0x02A7)
