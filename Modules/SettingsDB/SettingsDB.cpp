@@ -3,9 +3,9 @@
 #include <cstring>
 #include <algorithm>
 
-#include "log.h"
+#include "glog.h"
 #include "soul.h"
-#include "utils.h"
+#include "gutils.h"
 #include "settings.h"
 
 #include "StorageAT.h"

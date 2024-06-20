@@ -5,9 +5,9 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "log.h"
+#include "glog.h"
 #include "soul.h"
-#include "utils.h"
+#include "gutils.h"
 #include "hal_defs.h"
 #include "translate.h"
 
@@ -42,7 +42,7 @@ const uint32_t SENSITIVITY_DELAY_MS[__arr_len(SENSITIVITY)] = {
 };
 
 const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
-	50,
+	100, // 50,
 	40,
 	36,
 	34,
@@ -55,7 +55,7 @@ const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
 };
 
 const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
-	180,
+	360, // 180,
 	160,
 	140,
 	120,

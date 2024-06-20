@@ -4,10 +4,10 @@
 
 #include <string.h>
 
-#include "log.h"
+#include "glog.h"
 #include "main.h"
 #include "soul.h"
-#include "utils.h"
+#include "gutils.h"
 #include "hal_defs.h"
 #include "settings.h"
 
@@ -17,7 +17,7 @@
 #define SENSOR_COMMAND_DELAY_MS    (15)
 #define SENSOR_CAN_DELAY_MS        (100)
 #define SENSOR_MAX_ERRORS          (100)
-#define SENSOR_CONNECTION_DELAY_MS (3000)
+#define SENSOR_CONNECTION_DELAY_MS (200)
 
 #define SENSOR_FRAME_ID1           (0x02AB)
 #define SENSOR_FRAME_ID2           (0x02A7)
@@ -45,6 +45,7 @@ typedef struct _sensor_t {
 typedef struct _sensor_state_t {
 	void                (*fsm) (void);
 	bool                enabled;
+	bool                no_sensor;
 	sensor_t            sensors[__arr_len(SENSOR_FRAME_IDS)];
 	SENSOR_MODE         curr_mode;
 	SENSOR_MODE         need_mode;
@@ -105,11 +106,6 @@ static const can_frame_t start_frames[] = {
 	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x19,}},
 	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x15,}},
 	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x16,}},
-	{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x05, 0xF2, 0xDD,}},
-	{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x17, 0x0C, 0xFE,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x23, 0x00,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x22, 0x01,}},
-	{0x07EC, 0x04, {0x01, 0x0F, 0x00, 0xFF,}},
 };
 
 static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
@@ -377,11 +373,15 @@ void _fsm_sensor_idle()
 		sensor_state.fsm = _fsm_sensor_start;
 	} else if (
 		sensor_state.need_mode   != sensor_state.curr_mode ||
-		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode)
+		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode) ||
+		sensor_state.no_sensor   != sensor_available()
 	) {
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 		sensor_state.fsm = _fsm_sensor_change_mode;
-	} else if (!util_old_timer_wait(&(sensor_state.frame_timer))) {
+	} else if (
+		sensor_available() &&
+		!util_old_timer_wait(&(sensor_state.frame_timer))
+	) {
 		util_old_timer_start(&sensor_state.frame_timer, SENSOR_FRAME_DELAY_MS);
 		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 		sensor_state.fsm = _fsm_sensor_send_frame1;
@@ -394,16 +394,14 @@ void _fsm_sensor_idle()
 	}
 
 	if (sensor_available()) {
+		sensor_state.no_sensor = false;
 		reset_status(NO_SENSOR);
-	} else {
-		set_status(NO_SENSOR);
-		sensor_state.errors = SENSOR_MAX_ERRORS + 1;
-	}
-
-	if (get_sensor_target_mode() == SENSOR_MODE_BIGSKI && is_status(NO_SENSOR)) {
-		set_status(NO_BIGSKI);
-	} else {
 		reset_status(NO_BIGSKI);
+	} else {
+		sensor_state.errors = SENSOR_MAX_ERRORS + 1;
+		sensor_state.no_sensor = true;
+		set_status(NO_SENSOR);
+		set_status(NO_BIGSKI);
 	}
 }
 
@@ -419,8 +417,9 @@ void _fsm_sensor_start()
 	}
 
 	if (counter >= __arr_len(start_frames)) {
-		sensor_state.errors = 0;
-		sensor_state.fsm    = _fsm_sensor_idle;
+		sensor_state.no_sensor = true;
+		sensor_state.errors    = 0;
+		sensor_state.fsm       = _fsm_sensor_idle;
 		counter = 0;
 		return;
 	}

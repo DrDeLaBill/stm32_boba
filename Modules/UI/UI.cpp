@@ -6,10 +6,10 @@
 #include <cstring>
 
 #include "bmp.h"
-#include "log.h"
+#include "glog.h"
 #include "soul.h"
 #include "main.h"
-#include "utils.h"
+#include "gutils.h"
 #include "sensor.h"
 #include "bmacro.h"
 #include "gstring.h"
@@ -158,8 +158,8 @@ void UI::showHeader()
 void UI::showServiceHeader()
 {
 	char line[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_service, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
+	const char* phrase1 = t(T_SERVICE, settings.language);
+	const char* phrase2 = t(T_MODE, settings.language);
 	snprintf(line, sizeof(line), "%s %s", phrase1, phrase2);
 	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -395,10 +395,10 @@ void UI::showValue()
 		snprintf(
 			target,
 			sizeof(target) - 1,
-			"%s: %d.%02d",
+			"%s: %d.%d",
 			phrase,
 			get_sensor_mode_target(get_sensor_mode()) / 100,
-			__abs(get_sensor_mode_target(get_sensor_mode()) % 100)
+			__abs(get_sensor_mode_target(get_sensor_mode()) % 100) / 10
 		);
 		util_add_char(target, sizeof(target), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -429,10 +429,10 @@ void UI::showValue()
 			snprintf(
 				value,
 				sizeof(value) - 1,
-				"%s: %d.%02d",
+				"%s: %d.%d",
 				phrase,
 				App::getRealValue() / 100,
-				__abs(App::getRealValue() % 100)
+				__abs(App::getRealValue() % 100) / 10
 			);
 		}
 		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
@@ -994,8 +994,8 @@ void UI::manual_start_a::operator ()() const
 
 
 	char mode[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_manual, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
+	const char* phrase1 = t(T_MANUAL, settings.language);
+	const char* phrase2 = t(T_MODE, settings.language);
 	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
 	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -1022,8 +1022,8 @@ void UI::auto_start_a::operator ()() const
 	display_sections_show();
 
 	char mode[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_auto, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
+	const char* phrase1 = t(T_AUTO, settings.language);
+	const char* phrase2 = t(T_MODE, settings.language);
 	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
 	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 

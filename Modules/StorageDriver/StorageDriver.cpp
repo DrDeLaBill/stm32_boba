@@ -2,7 +2,7 @@
 
 #include "StorageDriver.h"
 
-#include "log.h"
+#include "glog.h"
 #include "soul.h"
 #include "bmacro.h"
 #include "at24cm01.h"

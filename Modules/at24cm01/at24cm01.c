@@ -7,9 +7,9 @@
 
 #include "hal_defs.h"
 
-#include "log.h"
+#include "glog.h"
 #include "main.h"
-#include "utils.h"
+#include "gutils.h"
 
 
 #define EEPROM_TIMER_DELAY_MS ((uint16_t)1000)

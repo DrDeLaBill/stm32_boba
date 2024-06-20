@@ -16,17 +16,17 @@ const char T_NO_SENSOR[][TRANSLATE_MAX_LEN] = {
 	"NO SENSOR",
 	"НЕТ ДАТЧИКА"
 };
-const char T_mode[][TRANSLATE_MAX_LEN] = {
-	"mode",
-	"режим"
+const char T_MODE[][TRANSLATE_MAX_LEN] = {
+	"MODE",
+	"РЕЖИМ"
 };
-const char T_manual[][TRANSLATE_MAX_LEN] = {
-	"manual",
-	"ручной"
+const char T_MANUAL[][TRANSLATE_MAX_LEN] = {
+	"MANUAL",
+	"РУЧНОЙ"
 };
-const char T_auto[][TRANSLATE_MAX_LEN] = {
-	"auto",
-	"авто"
+const char T_AUTO[][TRANSLATE_MAX_LEN] = {
+	"AUTO",
+	"АВТО"
 };
 const char T_surface[][TRANSLATE_MAX_LEN] = {
 	"surface",
@@ -72,9 +72,9 @@ const char T_ERROR[][TRANSLATE_MAX_LEN] = {
 	"ERROR",
 	"ОШИБКА"
 };
-const char T_service[][TRANSLATE_MAX_LEN] = {
-	"service",
-	"сервисный"
+const char T_SERVICE[][TRANSLATE_MAX_LEN] = {
+	"SERVICE",
+	"СЕРВИСНЫЙ"
 };
 const char T_LEFT[][TRANSLATE_MAX_LEN] = {
 	"LEFT",
@@ -162,7 +162,7 @@ const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang)
 	assert_param(IS_LANGUAGE(lang));
 
 	return (const char*)phrase[lang];
-};
+}
 
 const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 {

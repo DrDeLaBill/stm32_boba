@@ -2,7 +2,7 @@
 
 #include "App.h"
 
-#include "log.h"
+#include "glog.h"
 #include "main.h"
 #include "soul.h"
 #include "sensor.h"
@@ -179,7 +179,8 @@ void App::_auto_s::operator ()()
 		fsm.push_event(auto_e{});
 	}
 
-	if (get_sensor_mode() == SENSOR_MODE_BIGSKI && is_status(NO_BIGSKI)) {
+	if (!sensor2A7_available()) {
+		setAppMode(APP_MODE_MANUAL);
 		stop();
 		return;
 	}

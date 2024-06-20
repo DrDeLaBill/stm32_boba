@@ -20,7 +20,7 @@ typedef enum _language_t {
 } language_t;
 
 
-#define TRANSLATE_MAX_LEN (20)
+#define TRANSLATE_MAX_LEN (25)
 #define IS_LANGUAGE(LANG) ((LANG) == ENGLISH || (LANG) == RUSSIAN)
 
 
@@ -28,9 +28,9 @@ extern const char T_TEST_CYRILLIC[];
 
 
 extern const char T_NO_SENSOR[][TRANSLATE_MAX_LEN];
-extern const char T_mode[][TRANSLATE_MAX_LEN];
-extern const char T_manual[][TRANSLATE_MAX_LEN];
-extern const char T_auto[][TRANSLATE_MAX_LEN];
+extern const char T_MODE[][TRANSLATE_MAX_LEN];
+extern const char T_MANUAL[][TRANSLATE_MAX_LEN];
+extern const char T_AUTO[][TRANSLATE_MAX_LEN];
 extern const char T_surface[][TRANSLATE_MAX_LEN];
 extern const char T_string[][TRANSLATE_MAX_LEN];
 extern const char T_BIGSKI[][TRANSLATE_MAX_LEN];
@@ -42,7 +42,7 @@ extern const char T_TARGET[][TRANSLATE_MAX_LEN];
 extern const char T_VALUE[][TRANSLATE_MAX_LEN];
 extern const char T_LOADING[][TRANSLATE_MAX_LEN];
 extern const char T_ERROR[][TRANSLATE_MAX_LEN];
-extern const char T_service[][TRANSLATE_MAX_LEN];
+extern const char T_SERVICE[][TRANSLATE_MAX_LEN];
 extern const char T_LEFT[][TRANSLATE_MAX_LEN];
 extern const char T_RIGHT[][TRANSLATE_MAX_LEN];
 extern const char T_sec[][TRANSLATE_MAX_LEN];

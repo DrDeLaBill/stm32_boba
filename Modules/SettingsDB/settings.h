@@ -13,7 +13,7 @@ extern "C" {
 #include <stdbool.h>
 
 #include "main.h"
-#include "utils.h"
+#include "gutils.h"
 
 
 #define DEVICE_MAJOR (0)
