@@ -22,6 +22,7 @@
 #include "CodeStopwatch.h"
 
 
+#define DEFAULT_SCALE      (1)
 #define LOAD_POINT_COUNT   (3)
 #define PHRASE_LEN_MAX     (40)
 
@@ -141,7 +142,8 @@ void UI::showMode()
 		&u8g2_font_8x13_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		sensors,
-		strlen(sensors)
+		strlen(sensors),
+		DEFAULT_SCALE
 	);
 
 	char line[] = " ";
@@ -152,7 +154,8 @@ void UI::showMode()
 		bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 }
 
@@ -174,7 +177,8 @@ void UI::showServiceHeader()
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 }
 
@@ -205,7 +209,8 @@ void UI::showAutoFooter()
 		&surface_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 
 
@@ -227,7 +232,8 @@ void UI::showAutoFooter()
 		&string_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 
 
@@ -248,7 +254,8 @@ void UI::showAutoFooter()
 		&bigski_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 }
 
@@ -275,7 +282,8 @@ void UI::showManualFooter()
 		&settings_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef2,
-		strlen(linef2)
+		strlen(linef2),
+		DEFAULT_SCALE
 	);
 
 	x = 0;
@@ -300,7 +308,8 @@ void UI::showManualFooter()
 		bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef1,
-		strlen(linef1)
+		strlen(linef1),
+		DEFAULT_SCALE
 	);
 
 	w -= 1;
@@ -325,7 +334,8 @@ void UI::showManualFooter()
 		bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef3,
-		strlen(linef3)
+		strlen(linef3),
+		DEFAULT_SCALE
 	);
 }
 
@@ -351,7 +361,8 @@ void UI::showServiceFooter()
 		&back_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef1,
-		strlen(linef1)
+		strlen(linef1),
+		DEFAULT_SCALE
 	);
 
 	w -= 1;
@@ -373,7 +384,8 @@ void UI::showServiceFooter()
 		&save_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef3,
-		strlen(linef3)
+		strlen(linef3),
+		DEFAULT_SCALE
 	);
 }
 
@@ -402,7 +414,8 @@ void UI::showValue()
 			&u8g2_font_8x13_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			target,
-			strlen(target)
+			strlen(target),
+			DEFAULT_SCALE
 		);
 	}
 
@@ -437,7 +450,8 @@ void UI::showValue()
 			&u8g2_font_10x20_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			value,
-			strlen(value)
+			strlen(value),
+			2
 		);
 	}
 }
@@ -455,7 +469,8 @@ void UI::showLoading()
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 }
 
@@ -553,7 +568,8 @@ void UI::showDirection(bool flag)
 		bitmap,
 		DISPLAY_ALIGN_LEFT,
 		bitmap_line,
-		strlen(bitmap_line)
+		strlen(bitmap_line),
+		DEFAULT_SCALE
 	);
 
 
@@ -570,7 +586,8 @@ void UI::showDirection(bool flag)
 		font,
 		DISPLAY_ALIGN_LEFT,
 		direction_line,
-		strlen(direction_line)
+		strlen(direction_line),
+		DEFAULT_SCALE
 	);
 }
 
@@ -644,7 +661,8 @@ void UI::_init_s::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 
 	fsm.push_event(success_e{});
@@ -682,7 +700,9 @@ void UI::_no_sens_s::operator ()() const
 	char line[PHRASE_LEN_MAX] = {};
 	const char* phrase = t(T_NO_SENSOR, settings.language);
 	snprintf(line, sizeof(line) - 1, "%s", phrase);
-	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+	uint32_t scale = 2;
+	size_t width = display_width() / (u8g2_font_10x20_t_cyrillic.Width * scale);
+	util_add_char(line, sizeof(line), ' ', width, ALIGN_MODE_CENTER);
 
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
@@ -691,7 +711,8 @@ void UI::_no_sens_s::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		scale
 	);
 
 	if (!is_status(NO_SENSOR)) {
@@ -922,7 +943,8 @@ void UI::_error_s::operator ()() const
 			&u8g2_font_10x20_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			line,
-			strlen(line)
+			strlen(line),
+			DEFAULT_SCALE
 		);
 
 		y += (uint16_t)(u8g2_font_10x20_t_cyrillic.Height + DEFAULT_MARGIN);
@@ -936,7 +958,8 @@ void UI::_error_s::operator ()() const
 			&u8g2_font_8x13_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			line,
-			strlen(line)
+			strlen(line),
+			DEFAULT_SCALE
 		);
 	} else {
 		loadStr = T_LOADING;
@@ -1009,7 +1032,8 @@ void UI::manual_start_a::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		mode,
-		strlen(mode)
+		strlen(mode),
+		DEFAULT_SCALE
 	);
 
 	showHeader();
@@ -1041,7 +1065,8 @@ void UI::auto_start_a::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		mode,
-		strlen(mode)
+		strlen(mode),
+		DEFAULT_SCALE
 	);
 
 	showHeader();

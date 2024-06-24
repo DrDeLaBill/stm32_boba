@@ -133,7 +133,7 @@ void MenuItem::show()
 	uint16_t max_len = (uint16_t)((w - 2 * MARGIN) / font->Width);
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_set_background(background);
-	display_text_show(x + MARGIN, y + MARGIN, font, DISPLAY_ALIGN_LEFT, line, __min(max_len, strlen(line)));
+	display_text_show(x + MARGIN, y + MARGIN, font, DISPLAY_ALIGN_LEFT, line, __min(max_len, strlen(line)), 1);
 }
 
 void MenuItem::hide()

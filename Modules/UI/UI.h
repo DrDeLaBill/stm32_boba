@@ -123,7 +123,6 @@ public:
 
 	static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
 	static std::unordered_map<uint16_t, Button> buttons;
-//	static std::pair<uint16_t, Button> buttons[BUTTONS_COUNT];
 
 	static void showUp(bool flag = false);
 	static void showDown(bool flag = false);
