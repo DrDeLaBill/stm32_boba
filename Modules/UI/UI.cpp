@@ -420,7 +420,7 @@ void UI::showValue()
 	}
 
 	{
-		offset_y = display_height() / 2;
+		offset_y = display_height() / 2 + DEFAULT_MARGIN;
 		char value[PHRASE_LEN_MAX] = {};
 		const char* phrase = t(T_VALUE, settings.language);
 		if (App::getRealValue() == App::SENSOR_VALUE_ERR) {
