@@ -422,13 +422,12 @@ void UI::showValue()
 	{
 		offset_y = display_height() / 2 + DEFAULT_MARGIN;
 		char value[PHRASE_LEN_MAX] = {};
-		const char* phrase = t(T_VALUE, settings.language);
+		uint32_t scale = 2;
 		if (App::getRealValue() == App::SENSOR_VALUE_ERR) {
 			snprintf(
 				value,
 				sizeof(value) - 1,
-				"%s: %s",
-				phrase,
+				"%s",
 				t(T_ERROR, settings.language)
 			);
 		} else {
@@ -436,22 +435,22 @@ void UI::showValue()
 				value,
 				sizeof(value) - 1,
 				"%s: %d.%d",
-				phrase,
+				t(T_VALUE, settings.language),
 				App::getRealValue() / 100,
 				__abs(App::getRealValue() % 100) / 10
 			);
 		}
-		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / (u8g2_font_8x13_t_cyrillic.Width * scale), ALIGN_MODE_CENTER);
 
 		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			offset_x,
 			offset_y,
-			&u8g2_font_10x20_t_cyrillic,
+			&u8g2_font_8x13_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			value,
 			strlen(value),
-			2
+			scale
 		);
 	}
 }
@@ -700,15 +699,18 @@ void UI::_no_sens_s::operator ()() const
 	char line[PHRASE_LEN_MAX] = {};
 	const char* phrase = t(T_NO_SENSOR, settings.language);
 	snprintf(line, sizeof(line) - 1, "%s", phrase);
-	uint32_t scale = 2;
-	size_t width = display_width() / (u8g2_font_10x20_t_cyrillic.Width * scale);
+	uint32_t scale = 3;
+	if (settings.language == RUSSIAN) {
+		scale = 2;
+	}
+	size_t width = display_width() / (u8g2_font_8x13_t_cyrillic.Width * scale);
 	util_add_char(line, sizeof(line), ' ', width, ALIGN_MODE_CENTER);
 
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
-		&u8g2_font_10x20_t_cyrillic,
+		&u8g2_font_8x13_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
 		strlen(line),
