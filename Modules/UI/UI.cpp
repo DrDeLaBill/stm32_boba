@@ -159,22 +159,29 @@ void UI::showMode()
 	);
 }
 
-void UI::showHeader()
-{}
-
 void UI::showServiceHeader()
 {
 	char line[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_SERVICE, settings.language);
-	const char* phrase2 = t(T_MODE, settings.language);
-	snprintf(line, sizeof(line), "%s %s", phrase1, phrase2);
-	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+	sFONT* font = &u8g2_font_10x20_t_cyrillic;
+	if (get_last_error()) {
+		font = &u8g2_font_8x13_t_cyrillic;
+		snprintf(
+			line,
+			sizeof(line),
+			"%s: %s",
+			t(T_RESET_ERROR, settings.language),
+			get_string_error((SOUL_STATUS)get_last_error(), settings.language)
+		);
+	} else {
+		snprintf(line, sizeof(line), "%s %s", t(T_SERVICE, settings.language), t(T_MODE, settings.language));
+	}
+	util_add_char(line, sizeof(line), ' ', display_width() / font->Width, ALIGN_MODE_CENTER);
 
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		DISPLAY_HEADER_HEIGHT / 2,
-		&u8g2_font_10x20_t_cyrillic,
+		font,
 		DISPLAY_ALIGN_CENTER,
 		line,
 		strlen(line),
@@ -693,7 +700,6 @@ void UI::_load_s::operator ()() const
 void UI::_no_sens_s::operator ()() const
 {
 	showMode();
-	showHeader();
 	showManualFooter();
 
 	char line[PHRASE_LEN_MAX] = {};
@@ -985,8 +991,6 @@ void UI::load_start_a::operator ()() const
 
 	display_clear();
 	timer.changeDelay(LOADING_DELAY_MS);
-
-	showHeader();
 }
 
 void UI::no_sens_start_a::operator ()() const
@@ -1037,8 +1041,6 @@ void UI::manual_start_a::operator ()() const
 		strlen(mode),
 		DEFAULT_SCALE
 	);
-
-	showHeader();
 }
 
 void UI::auto_start_a::operator ()() const
@@ -1070,8 +1072,6 @@ void UI::auto_start_a::operator ()() const
 		strlen(mode),
 		DEFAULT_SCALE
 	);
-
-	showHeader();
 }
 
 void UI::service_start_a::operator ()() const

@@ -21,6 +21,7 @@
 #include "can.h"
 #include "crc.h"
 #include "i2c.h"
+#include "rtc.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -69,7 +70,8 @@ App app;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void system_pre_load(void);
+void system_post_load(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -84,7 +86,7 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	system_pre_load();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -112,6 +114,7 @@ int main(void)
   MX_CRC_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
@@ -125,19 +128,26 @@ int main(void)
 		SettingsWatchdog
 	> soulGuard;
 
-//	set_status(WAIT_LOAD);
-
-	gprint("\n\n\n");
-	printTagLog(MAIN_TAG, "The device is loading");
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	set_status(WAIT_LOAD);
 
     storage = new StorageAT(
 		eeprom_get_size() / STORAGE_PAGE_SIZE,
 		&storageDriver
 	);
+
+	while (has_errors() || is_status(WAIT_LOAD)) {
+		soulGuard.defend();
+		ui.tick();
+	}
+
+	gprint("\n\n\n");
+	printTagLog(MAIN_TAG, "The device is loading");
+
+    system_post_load();
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 
     // Buttons TIM start
     HAL_TIM_Base_Start_IT(&BTN_TIM);
@@ -190,16 +200,18 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
@@ -221,9 +233,108 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
+
+void system_pre_load(void)
+{
+	SET_BIT(RCC->CR, RCC_CR_HSEON_Pos);
+
+	unsigned counter = 0;
+	while (1) {
+		if (READ_BIT(RCC->CR, RCC_CR_HSERDY_Pos)) {
+			CLEAR_BIT(RCC->CR, RCC_CR_HSEON_Pos);
+			break;
+		}
+
+		if (counter > 0x100) {
+			set_error(RCC_ERROR);
+			break;
+		}
+
+		counter++;
+	}
+
+	uint32_t backupregister = (uint32_t)BKP_BASE;
+	backupregister += (RTC_BKP_DR1 * 4U);
+
+	SOUL_STATUS status = (SOUL_STATUS)((*(__IO uint32_t *)(backupregister)) & BKP_DR1_D);
+	set_last_error(status);
+	switch (status) {
+	case RCC_ERROR:
+        break;
+    case MEMORY_ERROR:
+    	set_error(MEMORY_ERROR);
+        break;
+    case POWER_ERROR:
+        break;
+    case STACK_ERROR:
+    	set_error(STACK_ERROR);
+        break;
+    case LOAD_ERROR:
+        break;
+    case RAM_ERROR:
+        break;
+    case USB_ERROR:
+        break;
+    case SETTINGS_LOAD_ERROR:
+    	set_error(SETTINGS_LOAD_ERROR);
+        break;
+    case APP_MODE_ERROR:
+        break;
+    case VALVE_ERROR:
+        break;
+    case ASSERT_ERROR:
+        break;
+    case ERROR_HANDLER_CALLED:
+    	break;
+    case INTERNAL_ERROR:
+        break;
+    default:
+		break;
+	}
+}
+
+void system_post_load(void)
+{
+	if (has_errors()) {
+		system_error_handler(LOAD_ERROR);
+	}
+
+	HAL_PWR_EnableBkUpAccess();
+	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0);
+	HAL_PWR_DisableBkUpAccess();
+}
+
+void system_error_handler(SOUL_STATUS error)
+{
+	static bool called = false;
+	if (called) {
+		return;
+	}
+	called = true;
+
+	set_error(error);
+
+	if (!has_errors()) {
+		error = INTERNAL_ERROR;
+	}
+
+	HAL_PWR_EnableBkUpAccess();
+	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, error);
+	HAL_PWR_DisableBkUpAccess();
+
+	uint32_t counter = 0x500;
+	while(--counter) ui.tick();
+	NVIC_SystemReset();
+}
 
 int _write(int, uint8_t *ptr, int len) {
 	(void)ptr;
@@ -258,8 +369,8 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
     b_assert(__FILE__, __LINE__, "The error handler has been called");
-	set_error(INTERNAL_ERROR);
-	while (1) ui.tick();
+	SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ERROR_HANDLER_CALLED;
+	system_error_handler(err);
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -275,8 +386,8 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
 	b_assert((char*)file, line, "Wrong parameters value");
-	set_error(INTERNAL_ERROR);
-	while (1) ui.tick();
+	SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ASSERT_ERROR;
+	system_error_handler(err);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

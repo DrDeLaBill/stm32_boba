@@ -112,16 +112,19 @@ const char T_RESETING_CHANGES[][TRANSLATE_MAX_LEN] = {
 	"RESETING CHANGES",
 	"—¡–Œ— »«Ã≈Õ≈Õ»…"
 };
-
+const char T_RESET_ERROR[][TRANSLATE_MAX_LEN] = {
+	"RESET ERROR",
+	"Œÿ»¡ ¿ —¡–Œ—¿"
+};
 
 
 const char T_UNKNOWN_ERROR[][TRANSLATE_MAX_LEN] = {
 	"UNKNOWN ERROR",
 	"Õ≈»«¬≈—“Õ¿ﬂ Œÿ»¡ ¿"
 };
-const char T_INTERNAL_ERROR[][TRANSLATE_MAX_LEN] = {
-	"INTERNAL ERROR",
-	"¬Õ”“–≈ÕÕﬂﬂ Œÿ»¡ ¿"
+const char T_RCC_ERROR[][TRANSLATE_MAX_LEN] = {
+	"RCC ERROR",
+	"Œÿ»¡ ¿ RCC"
 };
 const char T_MEMORY_ERROR[][TRANSLATE_MAX_LEN] = {
 	"MEMORY ERROR",
@@ -155,6 +158,18 @@ const char T_VALVE_ERROR[][TRANSLATE_MAX_LEN] = {
 	"VALVE ERROR",
 	"Œÿ»¡ ¿  À¿œ¿Õ¿"
 };
+const char T_ASSERT_ERROR[][TRANSLATE_MAX_LEN] = {
+	"VALIDATION ERROR",
+	"Œÿ»¡ ¿ ¬¿À»ƒ¿÷»»"
+};
+const char T_ERROR_HANDLER_CALLED[][TRANSLATE_MAX_LEN] = {
+	"PERIPHERY ERROR",
+	"Œÿ»¡ ¿ œ≈–»‘≈–»»"
+};
+const char T_INTERNAL_ERROR[][TRANSLATE_MAX_LEN] = {
+	"INTERNAL ERROR",
+	"¬Õ”“–≈ÕÕﬂﬂ Œÿ»¡ ¿"
+};
 
 
 const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang)
@@ -170,10 +185,9 @@ const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 		return t(T_UNKNOWN_ERROR, lang);
 	};
 
-	switch (error)
-	{
-	case INTERNAL_ERROR:
-		return t(T_INTERNAL_ERROR, lang);
+	switch (error) {
+	case RCC_ERROR:
+		return t(T_RCC_ERROR, lang);
 	case MEMORY_ERROR:
 		return t(T_MEMORY_ERROR, lang);
 	case POWER_ERROR:
@@ -192,6 +206,12 @@ const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 		return t(T_APP_ERROR, lang);
 	case VALVE_ERROR:
 		return t(T_VALVE_ERROR, lang);
+	case INTERNAL_ERROR:
+		return t(T_INTERNAL_ERROR, lang);
+	case ASSERT_ERROR:
+		return t(T_ASSERT_ERROR, lang);
+	case ERROR_HANDLER_CALLED:
+		return t(T_ERROR_HANDLER_CALLED, lang);
 	default:
 		return t(T_UNKNOWN_ERROR, lang);
 	};

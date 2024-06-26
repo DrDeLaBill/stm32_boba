@@ -52,7 +52,10 @@ extern const char T_Delay[][TRANSLATE_MAX_LEN];
 extern const char T_Language[][TRANSLATE_MAX_LEN];
 extern const char T_UPDATING_SETTINGS[][TRANSLATE_MAX_LEN];
 extern const char T_RESETING_CHANGES[][TRANSLATE_MAX_LEN];
+extern const char T_RESET_ERROR[][TRANSLATE_MAX_LEN];
 
+extern const char T_UNKNOWN_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_RCC_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_MEMORY_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_POWER_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_STACK_ERROR[][TRANSLATE_MAX_LEN];
@@ -61,6 +64,9 @@ extern const char T_RAM_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_SETTINGS_LOAD_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_APP_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_VALVE_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_ASSERT_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_ERROR_HANDLER_CALLED[][TRANSLATE_MAX_LEN];
+extern const char T_INTERNAL_ERROR[][TRANSLATE_MAX_LEN];
 
 
 const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang);

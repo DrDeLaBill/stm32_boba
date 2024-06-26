@@ -44,6 +44,7 @@ typedef struct _sensor_t {
 
 typedef struct _sensor_state_t {
 	void                (*fsm) (void);
+	bool                initialized;
 	bool                enabled;
 	bool                no_sensor;
 	sensor_t            sensors[__arr_len(SENSOR_FRAME_IDS)];
@@ -113,9 +114,11 @@ static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
 extern CAN_HandleTypeDef hcan;
 
 sensor_state_t sensor_state = {
-	.fsm       = _fsm_sensor_init,
-	.curr_mode = SENSOR_MODE_SURFACE,
-	.bigski_id = 0,
+	.fsm         = _fsm_sensor_init,
+	.initialized = false,
+	.curr_mode   = SENSOR_MODE_SURFACE,
+	.need_mode   = SENSOR_MODE_SURFACE,
+	.bigski_id   = 0,
 };
 
 
@@ -377,6 +380,7 @@ void _fsm_sensor_idle()
 		sensor_state.errors      = 0;
 		sensor_state.fsm         = _fsm_sensor_start;
 	} else if (
+		!sensor_state.initialized ||
 		sensor_state.need_mode   != sensor_state.curr_mode ||
 		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode) ||
 		sensor_state.no_sensor   != sensor_available()
@@ -675,6 +679,7 @@ void _fsm_sencor_set_mode_end3()
 		return;
 	}
 
+	sensor_state.initialized = true;
 	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 	sensor_state.curr_mode   = sensor_state.need_mode;
 	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);

@@ -109,7 +109,6 @@ protected:
 	static uint16_t f3_color;
 
 	static void showMode();
-	static void showHeader();
 	static void showServiceHeader();
 	static void showAutoFooter();
 	static void showManualFooter();
