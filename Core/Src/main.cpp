@@ -61,6 +61,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
 static constexpr char MAIN_TAG[] = "MAIN";
 
 StorageDriver storageDriver;
@@ -68,11 +69,14 @@ StorageAT* storage;
 
 UI ui;
 App app;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+void system_clock_hsi_config(void);
+
 void system_pre_load(void);
 void system_post_load(void);
 /* USER CODE END PFP */
@@ -98,14 +102,16 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  if (is_error(RCC_ERROR)) {
+	  system_clock_hsi_config();
+  } else {
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  }
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -128,8 +134,8 @@ int main(void)
 
 	SoulGuard<
 		RestartWatchdog,
-		StackWatchdog,
 #if !TEST_ERRORS
+		StackWatchdog,
 		MemoryWatchdog,
 #endif
 		SettingsWatchdog
@@ -165,6 +171,11 @@ int main(void)
     utl::Timer timer(1000);
     SOUL_STATUS error = ERRORS_START;
 #endif
+
+    bool foundError = false;
+    utl::Timer errTimer(30 * SECOND_MS);
+
+	set_status(WORKING);
 	while (1)
 	{
 		utl::CodeStopwatch stopwatch(MAIN_TAG, 3 * GENERAL_TIMEOUT_MS);
@@ -176,7 +187,7 @@ int main(void)
 			static unsigned* ptr = (unsigned*)&error;
 			(*ptr) += 1;
 			if (error == ERRORS_END) {
-				error = INTERNAL_ERROR;
+				error = (SOUL_STATUS)((unsigned)ERRORS_START + 1);
 			}
 			set_error(error);
 		}
@@ -186,9 +197,18 @@ int main(void)
 
 		ui.tick();
 
+		if (foundError && !errTimer.wait()) {
+			system_error_handler((SOUL_STATUS)get_first_error());
+		}
+
 		if (has_errors() || is_status(LOADING)) {
+			if (!foundError) {
+				foundError = true;
+				errTimer.start();
+			}
 			continue;
 		}
+		foundError = false;
 
 		sensor_tick();
     /* USER CODE END WHILE */
@@ -247,6 +267,46 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void system_clock_hsi_config(void)
+{
+	RCC_OscInitTypeDef RCC_OscInitStruct = {};
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
+	RCC_PeriphCLKInitTypeDef PeriphClkInit = {};
+
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+	RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+							  |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_ADC;
+	PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+	PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	reset_error(RCC_ERROR);
+}
 
 void system_pre_load(void)
 {
@@ -323,7 +383,6 @@ void system_post_load(void)
 	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0);
 	HAL_PWR_DisableBkUpAccess();
 
-
 	static uint16_t adc_voltage = 0;
 	HAL_ADCEx_Calibration_Start(&hadc1);
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_voltage, 1);
@@ -355,8 +414,6 @@ void system_post_load(void)
 				(SOUL_STATUS)get_first_error()
 		);
 	}
-
-	set_status(WORKING);
 }
 
 void system_error_handler(SOUL_STATUS error)

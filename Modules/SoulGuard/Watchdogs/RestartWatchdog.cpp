@@ -9,7 +9,7 @@
 #include "CodeStopwatch.h"
 
 
-volatile bool DISABLER = false;
+static bool DISABLER = false;
 
 bool RestartWatchdog::flagsCleared = false;
 

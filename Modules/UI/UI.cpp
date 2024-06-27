@@ -163,15 +163,12 @@ void UI::showServiceHeader()
 {
 	char line[PHRASE_LEN_MAX] = {};
 	sFONT* font = &u8g2_font_10x20_t_cyrillic;
+	uint16_t offset_x = display_width() / 2;
+	uint16_t offset_y = DISPLAY_HEADER_HEIGHT / 2;
+
 	if (get_last_error()) {
 		font = &u8g2_font_8x13_t_cyrillic;
-		snprintf(
-			line,
-			sizeof(line),
-			"%s: %s",
-			t(T_RESET_ERROR, settings.language),
-			get_string_error((SOUL_STATUS)get_last_error(), settings.language)
-		);
+		snprintf(line, sizeof(line), "%s", t(T_RESET_ERROR, settings.language));
 	} else {
 		snprintf(line, sizeof(line), "%s %s", t(T_SERVICE, settings.language), t(T_MODE, settings.language));
 	}
@@ -179,8 +176,27 @@ void UI::showServiceHeader()
 
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
-		display_width() / 2,
-		DISPLAY_HEADER_HEIGHT / 2,
+		offset_x,
+		offset_y,
+		font,
+		DISPLAY_ALIGN_CENTER,
+		line,
+		strlen(line),
+		DEFAULT_SCALE
+	);
+
+	if (!get_last_error()) {
+		return;
+	}
+
+	offset_y += font->Height;
+	snprintf(line, sizeof(line), "%s", get_string_error((SOUL_STATUS)get_last_error(), settings.language));
+	util_add_char(line, sizeof(line), ' ', display_width() / font->Width, ALIGN_MODE_CENTER);
+
+	display_set_color(DISPLAY_COLOR_RED);
+	display_text_show(
+		offset_x,
+		offset_y,
 		font,
 		DISPLAY_ALIGN_CENTER,
 		line,
@@ -727,6 +743,9 @@ void UI::_no_sens_s::operator ()() const
 	if (!is_status(NO_SENSOR)) {
 		fsm.push_event(sens_found_e{});
 	}
+	if (has_errors()) {
+		fsm.push_event(error_e{});
+	}
 
 	if (clicks.empty()) {
 		return;
@@ -1084,6 +1103,8 @@ void UI::service_start_a::operator ()() const
 	f1_color = DISPLAY_COLOR_WHITE;
 	f2_color = DISPLAY_COLOR_WHITE;
 	f3_color = DISPLAY_COLOR_WHITE;
+
+	display_clear();
 
 	clicks.clear();
 	fsm.clear_events();

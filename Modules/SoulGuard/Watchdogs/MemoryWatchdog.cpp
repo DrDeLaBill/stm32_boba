@@ -4,6 +4,7 @@
 
 #include <random>
 
+#include "main.h"
 #include "soul.h"
 #include "hal_defs.h"
 #include "at24cm01.h"
@@ -55,6 +56,6 @@ void MemoryWatchdog::check()
 	}
 
 	if (timerStarted && !errorTimer.wait()) {
-		NVIC_SystemReset();
+		system_error_handler(MEMORY_ERROR);
 	}
 }

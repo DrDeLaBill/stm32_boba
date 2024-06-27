@@ -10,3 +10,4 @@
 - Decoding of errors added
 - The auto mode switching fix
 - Added font scale
+- Errors backup added
