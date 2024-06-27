@@ -18,7 +18,7 @@ fsm::FiniteStateMachine<SettingsWatchdog::fsm_table> SettingsWatchdog::fsm;
 
 SettingsWatchdog::SettingsWatchdog()
 {
-	set_status(WAIT_LOAD);
+	set_status(LOADING);
 }
 
 void SettingsWatchdog::check()
@@ -55,7 +55,7 @@ void SettingsWatchdog::state_init::operator ()() const
 		settings_show();
 
 		set_status(SETTINGS_INITIALIZED);
-		reset_status(WAIT_LOAD);
+		reset_status(LOADING);
 
 		fsm.push_event(updated_e{});
 	} else {
@@ -69,13 +69,13 @@ void SettingsWatchdog::state_idle::operator ()() const
 #if SETTINGS_WATCHDOG_BEDUG
 		printTagLog(TAG, "state_idle: event_updated");
 #endif
-		set_status(WAIT_LOAD);
+		set_status(LOADING);
 		fsm.push_event(updated_e{});
 	} else if (is_status(NEED_LOAD_SETTINGS)) {
 #if SETTINGS_WATCHDOG_BEDUG
 		printTagLog(TAG, "state_idle: event_saved");
 #endif
-		set_status(WAIT_LOAD);
+		set_status(LOADING);
 		fsm.push_event(saved_e{});
 	}
 }
@@ -94,7 +94,7 @@ void SettingsWatchdog::state_save::operator ()() const
 		reset_error(SETTINGS_LOAD_ERROR);
 
 		reset_status(NEED_SAVE_SETTINGS);
-		reset_status(WAIT_LOAD);
+		reset_status(LOADING);
 	}
 }
 
@@ -111,7 +111,7 @@ void SettingsWatchdog::state_load::operator ()() const
 
 		reset_error(SETTINGS_LOAD_ERROR);
 		reset_status(NEED_LOAD_SETTINGS);
-		reset_status(WAIT_LOAD);
+		reset_status(LOADING);
 	}
 }
 

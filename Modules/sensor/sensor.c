@@ -332,11 +332,11 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 
 void _check_stop()
 {
-	if (sensor_state.enabled == is_status(WAIT_LOAD)) {
-		is_status(WAIT_LOAD) ?
+	if (sensor_state.enabled == is_status(LOADING)) {
+		is_status(LOADING) ?
 			HAL_CAN_DeactivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
 			HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
-		sensor_state.enabled = !is_status(WAIT_LOAD);
+		sensor_state.enabled = !is_status(LOADING);
 	}
 }
 
@@ -368,7 +368,7 @@ void _fsm_sensor_idle()
 
 	_check_stop();
 
-	if (is_status(WAIT_LOAD)) {
+	if (is_status(LOADING)) {
 		return;
 	}
 

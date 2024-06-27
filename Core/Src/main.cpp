@@ -21,6 +21,7 @@
 #include "adc.h"
 #include "can.h"
 #include "crc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "rtc.h"
 #include "spi.h"
@@ -109,6 +110,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_CAN_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
@@ -121,6 +123,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
+	gprint("\n\n\n");
+	printTagLog(MAIN_TAG, "The device is loading");
+
 	SoulGuard<
 		RestartWatchdog,
 		StackWatchdog,
@@ -130,20 +135,17 @@ int main(void)
 		SettingsWatchdog
 	> soulGuard;
 
-	set_status(WAIT_LOAD);
+	set_status(LOADING);
 
     storage = new StorageAT(
 		eeprom_get_size() / STORAGE_PAGE_SIZE,
 		&storageDriver
 	);
 
-	while (has_errors() || is_status(WAIT_LOAD)) {
+	while (has_errors() || is_status(LOADING)) {
 		soulGuard.defend();
 		ui.tick();
 	}
-
-	gprint("\n\n\n");
-	printTagLog(MAIN_TAG, "The device is loading");
 
     system_post_load();
   /* USER CODE END 2 */
@@ -184,7 +186,7 @@ int main(void)
 
 		ui.tick();
 
-		if (has_errors() || is_status(WAIT_LOAD)) {
+		if (has_errors() || is_status(LOADING)) {
 			continue;
 		}
 
@@ -202,9 +204,9 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -216,7 +218,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -231,12 +233,13 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_ADC;
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV2;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -293,6 +296,16 @@ void system_pre_load(void)
         break;
     case VALVE_ERROR:
         break;
+    case NON_MASKABLE_INTERRUPT:
+        break;
+    case HARD_FAULT:
+        break;
+    case MEM_MANAGE:
+        break;
+    case BUS_FAULT:
+        break;
+    case USAGE_FAULT:
+        break;
     case ASSERT_ERROR:
         break;
     case ERROR_HANDLER_CALLED:
@@ -316,20 +329,24 @@ void system_post_load(void)
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_voltage, 1);
 	unsigned counter = 0;
 	while (1) {
-		uint16_t voltage = STM_ADC_MAX * STM_REF_VOLTAGEx10 / adc_voltage;
+		uint16_t voltage = 0;
+		if (adc_voltage) {
+			voltage = STM_ADC_MAX * STM_REF_VOLTAGEx10 / adc_voltage;
+		}
 
 		if (STM_MIN_VOLTAGEx10 <= voltage && voltage <= STM_MAX_VOLTAGEx10) {
 			break;
 		}
 
-		if (counter > 0x100) {
+		if (counter > 0x1000) {
 			set_error(POWER_ERROR);
 			break;
 		}
 
+		ui.tick();
+
 		counter++;
 	}
-
 
 	if (has_errors()) {
 		system_error_handler(
@@ -339,7 +356,7 @@ void system_post_load(void)
 		);
 	}
 
-	HAL_ADC_Stop_DMA(&hadc1);
+	set_status(WORKING);
 }
 
 void system_error_handler(SOUL_STATUS error)

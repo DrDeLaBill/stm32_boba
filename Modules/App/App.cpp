@@ -140,7 +140,7 @@ void App::_init_s::operator ()()
 {
 	stop();
 
-	if (is_status(WAIT_LOAD)) {
+	if (is_status(LOADING)) {
 		return;
 	}
 

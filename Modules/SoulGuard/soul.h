@@ -20,7 +20,8 @@ typedef enum _SOUK_STATUS {
 	/* Device statuses start */
 	STATUSES_START = 0,
 
-	WAIT_LOAD,
+	LOADING,
+	WORKING,
 	MEMORY_READ_FAULT,
 	MEMORY_WRITE_FAULT,
 	NEED_MEASURE,
