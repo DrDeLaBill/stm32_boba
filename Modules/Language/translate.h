@@ -54,6 +54,12 @@ extern const char T_UPDATING_SETTINGS[][TRANSLATE_MAX_LEN];
 extern const char T_RESETING_CHANGES[][TRANSLATE_MAX_LEN];
 extern const char T_RESET_ERROR[][TRANSLATE_MAX_LEN];
 
+extern const char T_INTERRUPT_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_HARD_FAULT[][TRANSLATE_MAX_LEN];
+extern const char T_MEMORY_MANAGE[][TRANSLATE_MAX_LEN];
+extern const char T_MEMORY_ACCESS_ERROR[][TRANSLATE_MAX_LEN];
+extern const char T_ILLEGAL_STATE[][TRANSLATE_MAX_LEN];
+
 extern const char T_UNKNOWN_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_RCC_ERROR[][TRANSLATE_MAX_LEN];
 extern const char T_MEMORY_ERROR[][TRANSLATE_MAX_LEN];

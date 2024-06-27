@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "can.h"
 #include "crc.h"
 #include "i2c.h"
@@ -33,6 +34,7 @@
 #include "sensor.h"
 #include "bmacro.h"
 #include "at24cm01.h"
+#include "hal_defs.h"
 
 #include "App.h"
 #include "SoulGuard.h"
@@ -115,10 +117,10 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_RTC_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
-	// TODO: RAM analyzer & crystal check & clock check & modbus check & reload controller
 	SoulGuard<
 		RestartWatchdog,
 		StackWatchdog,
@@ -304,13 +306,40 @@ void system_pre_load(void)
 
 void system_post_load(void)
 {
-	if (has_errors()) {
-		system_error_handler(LOAD_ERROR);
-	}
-
 	HAL_PWR_EnableBkUpAccess();
 	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0);
 	HAL_PWR_DisableBkUpAccess();
+
+
+	static uint16_t adc_voltage = 0;
+	HAL_ADCEx_Calibration_Start(&hadc1);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_voltage, 1);
+	unsigned counter = 0;
+	while (1) {
+		uint16_t voltage = STM_ADC_MAX * STM_REF_VOLTAGEx10 / adc_voltage;
+
+		if (STM_MIN_VOLTAGEx10 <= voltage && voltage <= STM_MAX_VOLTAGEx10) {
+			break;
+		}
+
+		if (counter > 0x100) {
+			set_error(POWER_ERROR);
+			break;
+		}
+
+		counter++;
+	}
+
+
+	if (has_errors()) {
+		system_error_handler(
+			(get_first_error() == INTERNAL_ERROR) ?
+				LOAD_ERROR :
+				(SOUL_STATUS)get_first_error()
+		);
+	}
+
+	HAL_ADC_Stop_DMA(&hadc1);
 }
 
 void system_error_handler(SOUL_STATUS error)
@@ -326,6 +355,11 @@ void system_error_handler(SOUL_STATUS error)
 	if (!has_errors()) {
 		error = INTERNAL_ERROR;
 	}
+
+	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
+	reset_status(AUTO_NEED_VALVE_DOWN);
+	reset_status(AUTO_NEED_VALVE_UP);
 
 	HAL_PWR_EnableBkUpAccess();
 	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, error);

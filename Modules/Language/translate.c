@@ -118,6 +118,28 @@ const char T_RESET_ERROR[][TRANSLATE_MAX_LEN] = {
 };
 
 
+const char T_INTERRUPT_ERROR[][TRANSLATE_MAX_LEN] = {
+	"INTERRUPT ERROR",
+	"Œÿ»¡ ¿ œ–≈–€¬¿Õ»ﬂ"
+};
+const char T_HARD_FAULT[][TRANSLATE_MAX_LEN] = {
+	"HARD FAULT",
+	" –»“»◊≈— ¿ﬂ Œÿ»¡ ¿"
+};
+const char T_MEMORY_MANAGE[][TRANSLATE_MAX_LEN] = {
+	"MEMORY MANAGE",
+	"”œ–¿¬À≈Õ»≈ œ¿Ãﬂ“‹ﬁ"
+};
+const char T_MEMORY_ACCESS_ERROR[][TRANSLATE_MAX_LEN] = {
+	"MEMORY ACCESS ERROR",
+	"Œÿ»¡ ¿ ƒŒ—“”œ¿   œ¿Ãﬂ“»"
+};
+const char T_ILLEGAL_STATE[][TRANSLATE_MAX_LEN] = {
+	"ILLEGAL STATE",
+	"Õ≈ƒŒœ”—“»ÃŒ≈ —Œ—“ŒﬂÕ»≈"
+};
+
+
 const char T_UNKNOWN_ERROR[][TRANSLATE_MAX_LEN] = {
 	"UNKNOWN ERROR",
 	"Õ≈»«¬≈—“Õ¿ﬂ Œÿ»¡ ¿"
@@ -186,32 +208,44 @@ const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 	};
 
 	switch (error) {
+#ifdef DEBUG
+	case NON_MASKABLE_INTERRUPT:
+		return t(T_INTERNAL_ERROR, lang);
+	case HARD_FAULT:
+		return t(T_HARD_FAULT, lang);
+	case MEM_MANAGE:
+		return t(T_MEMORY_MANAGE, lang);
+	case BUS_FAULT:
+		return t(T_MEMORY_ACCESS_ERROR, lang);
+	case USAGE_FAULT:
+		return t(T_ILLEGAL_STATE, lang);
 	case RCC_ERROR:
 		return t(T_RCC_ERROR, lang);
-	case MEMORY_ERROR:
-		return t(T_MEMORY_ERROR, lang);
-	case POWER_ERROR:
-		return t(T_POWER_ERROR, lang);
 	case STACK_ERROR:
 		return t(T_STACK_ERROR, lang);
-	case LOAD_ERROR:
-		return t(T_LOAD_ERROR, lang);
 	case RAM_ERROR:
 		return t(T_RAM_ERROR, lang);
 	case USB_ERROR:
 		return t(T_UNKNOWN_ERROR, lang);
-	case SETTINGS_LOAD_ERROR:
-		return t(T_SETTINGS_LOAD_ERROR, lang);
 	case APP_MODE_ERROR:
 		return t(T_APP_ERROR, lang);
-	case VALVE_ERROR:
-		return t(T_VALVE_ERROR, lang);
-	case INTERNAL_ERROR:
-		return t(T_INTERNAL_ERROR, lang);
 	case ASSERT_ERROR:
 		return t(T_ASSERT_ERROR, lang);
 	case ERROR_HANDLER_CALLED:
 		return t(T_ERROR_HANDLER_CALLED, lang);
+#endif
+	case POWER_ERROR:
+		return t(T_POWER_ERROR, lang);
+	case MEMORY_ERROR:
+		return t(T_MEMORY_ERROR, lang);
+	case VALVE_ERROR:
+		return t(T_VALVE_ERROR, lang);
+	case LOAD_ERROR:
+		return t(T_LOAD_ERROR, lang);
+	case SETTINGS_LOAD_ERROR:
+		return t(T_SETTINGS_LOAD_ERROR, lang);
+	case INTERNAL_ERROR:
+		return t(T_INTERNAL_ERROR, lang);
 	default:
 		return t(T_UNKNOWN_ERROR, lang);
 	};

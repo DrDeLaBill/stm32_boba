@@ -57,6 +57,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_adc1;
 extern CAN_HandleTypeDef hcan;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
@@ -74,6 +75,7 @@ void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 	system_error_handler(NON_MASKABLE_INTERRUPT);
+	return;
   /* USER CODE END NonMaskableInt_IRQn 0 */
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
    while (1)
@@ -89,6 +91,7 @@ void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
 	system_error_handler(HARD_FAULT);
+	return;
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
@@ -104,6 +107,7 @@ void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
 	system_error_handler(MEM_MANAGE);
+	return;
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
   {
@@ -119,6 +123,7 @@ void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
 	system_error_handler(BUS_FAULT);
+	return;
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
   {
@@ -134,6 +139,7 @@ void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
 	system_error_handler(USAGE_FAULT);
+	return;
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
   {
@@ -201,6 +207,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles DMA1 channel1 global interrupt.
+  */
+void DMA1_Channel1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc1);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 1 */
+}
 
 /**
   * @brief This function handles USB low priority or CAN RX0 interrupts.

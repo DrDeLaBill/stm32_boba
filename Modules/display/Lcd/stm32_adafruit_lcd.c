@@ -92,7 +92,7 @@ EndDependencies */
 /* @defgroup STM32_ADAFRUIT_LCD_Private_Defines */
 #define POLY_X(Z)             ((int32_t)((Points + (Z))->X))
 #define POLY_Y(Z)             ((int32_t)((Points + (Z))->Y))
-#define NULL                  (void *)0
+//#define NULL                  (void *)0
 
 #define MAX_HEIGHT_FONT       51
 #define MAX_WIDTH_FONT        51
