@@ -4,10 +4,10 @@
 
 #include <string.h>
 
-#include "log.h"
+#include "glog.h"
 #include "main.h"
 #include "soul.h"
-#include "utils.h"
+#include "gutils.h"
 #include "hal_defs.h"
 #include "settings.h"
 
@@ -17,7 +17,7 @@
 #define SENSOR_COMMAND_DELAY_MS    (15)
 #define SENSOR_CAN_DELAY_MS        (100)
 #define SENSOR_MAX_ERRORS          (100)
-#define SENSOR_CONNECTION_DELAY_MS (3000)
+#define SENSOR_CONNECTION_DELAY_MS (300)
 
 #define SENSOR_FRAME_ID1           (0x02AB)
 #define SENSOR_FRAME_ID2           (0x02A7)
@@ -39,11 +39,14 @@ const uint16_t SENSOR_FRAME_IDS[] = {
 typedef struct _sensor_t {
 	int16_t             value;
 	util_old_timer_t    connection_timer;
+	STRING_DIRECTION    direction;
 } sensor_t;
 
 typedef struct _sensor_state_t {
 	void                (*fsm) (void);
+	bool                initialized;
 	bool                enabled;
+	bool                no_sensor;
 	sensor_t            sensors[__arr_len(SENSOR_FRAME_IDS)];
 	SENSOR_MODE         curr_mode;
 	SENSOR_MODE         need_mode;
@@ -104,21 +107,18 @@ static const can_frame_t start_frames[] = {
 	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x19,}},
 	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x15,}},
 	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x16,}},
-	{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x05, 0xF2, 0xDD,}},
-	{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x17, 0x0C, 0xFE,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x23, 0x00,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x22, 0x01,}},
-	{0x07EC, 0x04, {0x01, 0x0F, 0x00, 0xFF,}},
 };
 
-static const uint8_t BIGSKI_IDS[] = {0x02, 0x00, 0x04};
+static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
 
 extern CAN_HandleTypeDef hcan;
 
 sensor_state_t sensor_state = {
-	.fsm       = _fsm_sensor_init,
-	.curr_mode = SENSOR_MODE_SURFACE,
-	.bigski_id = 0,
+	.fsm         = _fsm_sensor_init,
+	.initialized = false,
+	.curr_mode   = SENSOR_MODE_SURFACE,
+	.need_mode   = SENSOR_MODE_SURFACE,
+	.bigski_id   = 0,
 };
 
 
@@ -131,36 +131,37 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	CAN_RxHeaderTypeDef tmp_rx_header = {0};
 	uint8_t             tmp_rx_buffer[SENSOR_DATA_MAX_SIZE] = {0};
     if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
-    	if (sensor_state.need_std_id && tmp_rx_header.StdId != sensor_state.need_std_id) {
-    		reset_status(CAN_FAULT);
-    		return;
-    	}
     	bool is_value = false;
-    	int16_t value = ((int16_t)tmp_rx_buffer[1] << 8) | (int16_t)tmp_rx_buffer[2];
     	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
     	    if (tmp_rx_header.StdId != SENSOR_FRAME_IDS[i] ||
 				tmp_rx_buffer[0]    != SENSOR_DISTANCE_FRAME_ID
     		) {
     	    	continue;
     		}
-    		sensor_state.sensors[i].value = value;
+    		sensor_state.sensors[i].value     = ((int16_t)tmp_rx_buffer[1] << 8) | (int16_t)tmp_rx_buffer[2];
+    		sensor_state.sensors[i].direction = tmp_rx_buffer[3];
     		is_value = true;
 #if SENSOR_BEDUG
     		printTagLog(
     			"SNS",
     			"distance[%X]=%d.%d",
 				(i == 0 ? SENSOR_FRAME_ID1 : i == 1 ? SENSOR_FRAME_ID2 : SENSOR_FRAME_ID3),
-    			value / 100,
-    			__abs(value % 100)
+				sensor_state.sensors[i].value / 100,
+    			__abs(sensor_state.sensors[i].value % 100)
     		);
 #endif
     		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
     	}
-    	if (!is_value) {
-			memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
-			memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-			sensor_state.received = true;
+    	if (is_value ||
+			!sensor_state.need_std_id ||
+			(tmp_rx_header.StdId != sensor_state.need_std_id)
+		) {
+    		reset_status(CAN_FAULT);
+    		return;
     	}
+		memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
+		memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
+		sensor_state.received = true;
     }
 	reset_status(CAN_FAULT);
 }
@@ -299,6 +300,19 @@ SENSOR_MODE get_sensor_mode()
 	return sensor_state.curr_mode;
 }
 
+SENSOR_MODE get_sensor_target_mode()
+{
+	return sensor_state.need_mode;
+}
+
+STRING_DIRECTION get_sensor_direction()
+{
+	if (get_sensor_mode() == SENSOR_MODE_STRING) {
+		return sensor_state.sensors[1].direction;
+	}
+	return STR_MIDDLE;
+}
+
 
 void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t* data)
 {
@@ -318,11 +332,11 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 
 void _check_stop()
 {
-	if (sensor_state.enabled != is_status(WAIT_LOAD)) {
-		is_status(WAIT_LOAD) ?
+	if (sensor_state.enabled == is_status(LOADING)) {
+		is_status(LOADING) ?
 			HAL_CAN_DeactivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
 			HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
-		sensor_state.enabled = is_status(WAIT_LOAD);
+		sensor_state.enabled = !is_status(LOADING);
 	}
 }
 
@@ -350,23 +364,33 @@ void _fsm_sensor_init()
 
 void _fsm_sensor_idle()
 {
+	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+
 	_check_stop();
 
-	if (is_status(WAIT_LOAD)) {
+	if (is_status(LOADING)) {
 		return;
 	}
+
+	sensor_state.no_sensor = !sensor_available();
 
 	if (sensor_state.errors > SENSOR_MAX_ERRORS) {
 		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
-		sensor_state.fsm = _fsm_sensor_start;
+		sensor_state.errors      = 0;
+		sensor_state.fsm         = _fsm_sensor_start;
 	} else if (
+		!sensor_state.initialized ||
 		sensor_state.need_mode   != sensor_state.curr_mode ||
-		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode)
+		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode) ||
+		sensor_state.no_sensor   != sensor_available()
 	) {
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 		sensor_state.fsm = _fsm_sensor_change_mode;
-	} else if (!util_old_timer_wait(&(sensor_state.frame_timer))) {
+	} else if (
+		sensor_available() &&
+		!util_old_timer_wait(&(sensor_state.frame_timer))
+	) {
 		util_old_timer_start(&sensor_state.frame_timer, SENSOR_FRAME_DELAY_MS);
 		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 		sensor_state.fsm = _fsm_sensor_send_frame1;
@@ -378,7 +402,14 @@ void _fsm_sensor_idle()
 		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 	}
 
-	sensor_available() ? reset_status(NO_SENSOR) : set_status(NO_SENSOR);
+	if (sensor_available()) {
+		reset_status(NO_SENSOR);
+		reset_status(NO_BIGSKI);
+	} else {
+		sensor_state.errors = SENSOR_MAX_ERRORS + 1;
+		set_status(NO_SENSOR);
+		set_status(NO_BIGSKI);
+	}
 }
 
 void _fsm_sensor_start()
@@ -393,8 +424,9 @@ void _fsm_sensor_start()
 	}
 
 	if (counter >= __arr_len(start_frames)) {
-		sensor_state.errors = 0;
-		sensor_state.fsm    = _fsm_sensor_idle;
+		sensor_state.no_sensor = true;
+		sensor_state.errors    = 0;
+		sensor_state.fsm       = _fsm_sensor_idle;
 		counter = 0;
 		return;
 	}
@@ -406,6 +438,7 @@ void _fsm_sensor_start()
 	counter++;
 
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	sensor_state.errors = 0;
 	sensor_state.fsm = _fsm_sensor_start;
 }
 
@@ -461,10 +494,12 @@ void _fsm_sencor_set_mode_bigski1()
 				{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x12, 0x00,}};
 		_sensor_send_frame(mode_request.std_id, mode_request.dlc, mode_request.data);
 		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+		sensor_state.errors = 0;
 		sensor_state.fsm = _fsm_sencor_set_mode_bigski3;
 	} else {
 		_sensor_send_frame(request.std_id, request.dlc, request.data);
 		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+		sensor_state.errors = 0;
 		sensor_state.fsm = _fsm_sencor_set_mode_bigski2;
 	}
 }
@@ -499,6 +534,7 @@ void _fsm_sencor_set_mode_bigski2()
 	}
 
 	sensor_state.bigski_id++;
+	sensor_state.errors = 0;
 	sensor_state.fsm = _fsm_sencor_set_mode_bigski1;
 }
 
@@ -530,6 +566,7 @@ void _fsm_sencor_set_mode_bigski3()
 		return;
 	}
 
+	sensor_state.errors      = 0;
 	sensor_state.bigski_id   = 0;
 	sensor_state.curr_mode   = sensor_state.need_mode;
 	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
@@ -571,6 +608,7 @@ void _fsm_sencor_set_mode_end1()
 
 	_sensor_send_frame(request2.std_id, request2.dlc, request2.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	sensor_state.errors = 0;
 	sensor_state.fsm = _fsm_sencor_set_mode_end2;
 }
 
@@ -608,6 +646,7 @@ void _fsm_sencor_set_mode_end2()
 
 	_sensor_send_frame(request3.std_id, request3.dlc, request3.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	sensor_state.errors = 0;
 	sensor_state.fsm = _fsm_sencor_set_mode_end3;
 }
 
@@ -640,8 +679,11 @@ void _fsm_sencor_set_mode_end3()
 		return;
 	}
 
+	sensor_state.initialized = true;
+	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 	sensor_state.curr_mode   = sensor_state.need_mode;
 	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
+	sensor_state.errors      = 0;
 	sensor_state.fsm         = _fsm_sensor_idle;
 }
 

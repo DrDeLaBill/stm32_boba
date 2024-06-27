@@ -2,14 +2,14 @@
 
 #include "Watchdogs.h"
 
-#include "log.h"
+#include "glog.h"
 #include "main.h"
 #include "hal_defs.h"
 
 #include "CodeStopwatch.h"
 
 
-volatile bool DISABLER = false;
+static bool DISABLER = false;
 
 bool RestartWatchdog::flagsCleared = false;
 

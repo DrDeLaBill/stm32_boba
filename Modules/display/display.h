@@ -52,6 +52,8 @@ extern sFONT save_bitmap;
 extern sFONT surface_bitmap;
 extern sFONT string_bitmap;
 extern sFONT bigski_bitmap;
+extern sFONT left_bitmap;
+extern sFONT right_bitmap;
 
 
 void display_init();
@@ -75,7 +77,8 @@ void display_text_show(
 	sFONT* font,
 	DISPLAY_ALIGN_MODE mode,
 	const char* text,
-	const unsigned len
+	const unsigned len,
+	const uint32_t scale
 );
 
 void display_draw_bitmap(uint16_t x, uint16_t y, const BITMAPSTRUCT* bmp);

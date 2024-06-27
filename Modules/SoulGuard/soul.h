@@ -12,7 +12,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "utils.h"
+#include "gutils.h"
 #include "hal_defs.h"
 
 
@@ -20,7 +20,8 @@ typedef enum _SOUK_STATUS {
 	/* Device statuses start */
 	STATUSES_START = 0,
 
-	WAIT_LOAD,
+	LOADING,
+	WORKING,
 	MEMORY_READ_FAULT,
 	MEMORY_WRITE_FAULT,
 	NEED_MEASURE,
@@ -39,7 +40,9 @@ typedef enum _SOUK_STATUS {
 	CAN_FAULT,
 	NO_BIGSKI,
 
-	NEED_UI_EXIT,
+	NEED_SERVICE_BACK,
+	NEED_SERVICE_SAVE,
+	NEED_SERVICE_UPDATE,
 
 	/* Device statuses end */
 	STATUSES_END,
@@ -47,16 +50,26 @@ typedef enum _SOUK_STATUS {
 	/* Device errors start */
 	ERRORS_START,
 
-	INTERNAL_ERROR,
-	MEMORY_ERROR,
+	RCC_ERROR,
 	POWER_ERROR,
+	MEMORY_ERROR,
 	STACK_ERROR,
-	LOAD_ERROR,
 	RAM_ERROR,
 	USB_ERROR,
 	SETTINGS_LOAD_ERROR,
 	APP_MODE_ERROR,
 	VALVE_ERROR,
+	LOAD_ERROR,
+
+	NON_MASKABLE_INTERRUPT,
+	HARD_FAULT,
+	MEM_MANAGE,
+	BUS_FAULT,
+	USAGE_FAULT,
+
+	ASSERT_ERROR,
+	ERROR_HANDLER_CALLED,
+	INTERNAL_ERROR,
 
 	/* Device errors end */
 	ERRORS_END,
@@ -67,9 +80,13 @@ typedef enum _SOUK_STATUS {
 
 
 typedef struct _soul_t {
+	unsigned last_err;
 	uint8_t statuses[__div_up(SOUL_STATUSES_END - 1, BITS_IN_BYTE)];
 } soul_t;
 
+
+unsigned get_last_error();
+void set_last_error(SOUL_STATUS error);
 
 bool has_errors();
 
@@ -81,8 +98,6 @@ unsigned get_first_error();
 bool is_status(SOUL_STATUS status);
 void set_status(SOUL_STATUS status);
 void reset_status(SOUL_STATUS status);
-
-void soul_hard_fault();
 
 
 #ifdef __cplusplus

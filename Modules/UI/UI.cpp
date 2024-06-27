@@ -6,10 +6,10 @@
 #include <cstring>
 
 #include "bmp.h"
-#include "log.h"
+#include "glog.h"
 #include "soul.h"
 #include "main.h"
-#include "utils.h"
+#include "gutils.h"
 #include "sensor.h"
 #include "bmacro.h"
 #include "gstring.h"
@@ -22,6 +22,7 @@
 #include "CodeStopwatch.h"
 
 
+#define DEFAULT_SCALE      (1)
 #define LOAD_POINT_COUNT   (3)
 #define PHRASE_LEN_MAX     (40)
 
@@ -46,24 +47,17 @@ utl::Timer UI::timer(SECOND_MS);
 fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
 MenuItem menuItems[] =
 {
-	{(new version_callback()),          false, "Version:",       "v0.0.0"},
-	{(new language_callback()),         true,  "Language:",      "_"},
-	{(new max_pid_time_callback()),     true,  "Max PID time:",  "0 ms"},
-	{(new label_callback())  ,          false, "        SURFACE MODE        "},
-	{(new surface_kp_callback()),       true,  "PID Kp:",        "0.00"},
-	{(new surface_ki_callback()),       true,  "PID Ki:",        "0.00"},
-	{(new surface_kd_callback()),       true,  "PID Kd:",        "0.00"},
-	{(new surface_sampling_callback()), true,  "PID sampling:",  "0 ms"},
-	{(new label_callback())  ,          false, "        GROUND  MODE        "},
-	{(new bigski_kp_callback()),        true,  "PID Kp:",        "0.00"},
-	{(new bigski_ki_callback()),        true,  "PID Ki:",        "0.00"},
-	{(new bigski_kd_callback()),        true,  "PID Kd:",        "0.00"},
-	{(new bigski_sampling_callback()),  true,  "PID sampling:",  "0 ms"},
-	{(new label_callback())  ,          false, "        STRING  MODE        "},
-	{(new string_kp_callback()),        true,  "PID Kp:",        "0.00"},
-	{(new string_ki_callback()),        true,  "PID Ki:",        "0.00"},
-	{(new string_kd_callback()),        true,  "PID Kd:",        "0.00"},
-	{(new string_sampling_callback()),  true,  "PID sampling:",  "0 ms"}
+	{(new version_callback()),          false},
+	{(new language_callback()),         true},
+	{(new surface_label_callback()),    false},
+	{(new surface_snstv_callback()),    true},
+	{(new surface_delay_callback()),    true},
+	{(new string_label_callback()),     false},
+	{(new string_snstv_callback()),     true},
+	{(new string_delay_callback()),     true},
+	{(new bigski_label_callback()),     false},
+	{(new bigski_snstv_callback()),     true},
+	{(new bigski_delay_callback()),     true},
 };
 std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 	0,
@@ -76,10 +70,16 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 SENSOR_MODE UI::manual_f1_mode = SENSOR_MODE_SURFACE;
 SENSOR_MODE UI::manual_f3_mode = SENSOR_MODE_STRING;
 
+uint16_t UI::f1_color = DISPLAY_COLOR_WHITE;
+uint16_t UI::f2_color = DISPLAY_COLOR_WHITE;
+uint16_t UI::f3_color = DISPLAY_COLOR_WHITE;
+
+const char (*UI::loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
+
 
 void UI::tick()
 {
-	utl::CodeStopwatch watch("UI2", 100);
+	utl::CodeStopwatch watch("UI2", 300);
 	fsm.proccess();
 }
 
@@ -107,7 +107,7 @@ void UI::showMode()
 		display_width() / u8g2_font_8x13_t_cyrillic.Width,
 		ALIGN_MODE_CENTER
 	);
-	switch (get_sensor_mode()) {
+	switch (get_sensor_target_mode()) {
 	case SENSOR_MODE_SURFACE:
 		bitmap = &surface_bitmap;
 		break;
@@ -142,7 +142,8 @@ void UI::showMode()
 		&u8g2_font_8x13_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		sensors,
-		strlen(sensors)
+		strlen(sensors),
+		DEFAULT_SCALE
 	);
 
 	char line[] = " ";
@@ -153,19 +154,59 @@ void UI::showMode()
 		bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 }
 
-void UI::showHeader()
-{}
+void UI::showServiceHeader()
+{
+	char line[PHRASE_LEN_MAX] = {};
+	sFONT* font = &u8g2_font_10x20_t_cyrillic;
+	uint16_t offset_x = display_width() / 2;
+	uint16_t offset_y = DISPLAY_HEADER_HEIGHT / 2;
+
+	if (get_last_error()) {
+		font = &u8g2_font_8x13_t_cyrillic;
+		snprintf(line, sizeof(line), "%s", t(T_RESET_ERROR, settings.language));
+	} else {
+		snprintf(line, sizeof(line), "%s %s", t(T_SERVICE, settings.language), t(T_MODE, settings.language));
+	}
+	util_add_char(line, sizeof(line), ' ', display_width() / font->Width, ALIGN_MODE_CENTER);
+
+	display_set_color(DISPLAY_COLOR_BLACK);
+	display_text_show(
+		offset_x,
+		offset_y,
+		font,
+		DISPLAY_ALIGN_CENTER,
+		line,
+		strlen(line),
+		DEFAULT_SCALE
+	);
+
+	if (!get_last_error()) {
+		return;
+	}
+
+	offset_y += font->Height;
+	snprintf(line, sizeof(line), "%s", get_string_error((SOUL_STATUS)get_last_error(), settings.language));
+	util_add_char(line, sizeof(line), ' ', display_width() / font->Width, ALIGN_MODE_CENTER);
+
+	display_set_color(DISPLAY_COLOR_RED);
+	display_text_show(
+		offset_x,
+		offset_y,
+		font,
+		DISPLAY_ALIGN_CENTER,
+		line,
+		strlen(line),
+		DEFAULT_SCALE
+	);
+}
 
 void UI::showAutoFooter()
 {
-	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
-
 	uint16_t halfSection = display_width() / 3 / 2;
 
 	uint16_t x = 0;
@@ -173,7 +214,7 @@ void UI::showAutoFooter()
 	uint16_t w = display_width() / 3;
 	uint16_t h = display_height() - y;
 	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	SENSOR_MODE mode = get_sensor_mode();
+	SENSOR_MODE mode = get_sensor_target_mode();
 	char line[] = " ";
 
 	if (mode == SENSOR_MODE_SURFACE) {
@@ -191,7 +232,8 @@ void UI::showAutoFooter()
 		&surface_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 
 
@@ -213,7 +255,8 @@ void UI::showAutoFooter()
 		&string_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 
 
@@ -234,16 +277,13 @@ void UI::showAutoFooter()
 		&bigski_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 }
 
 void UI::showManualFooter()
 {
-	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f2_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
-
 	uint16_t x = static_cast<uint16_t>(display_width() / 3 + 1);
 	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
 	uint16_t w = display_width() / 3 - 1;
@@ -265,18 +305,15 @@ void UI::showManualFooter()
 		&settings_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef2,
-		strlen(linef2)
+		strlen(linef2),
+		DEFAULT_SCALE
 	);
-
-	if (is_status(NO_SENSOR)) {
-		return;
-	}
 
 	x = 0;
 	w = display_width() / 3;
 	manual_f1_mode = SENSOR_MODE_SURFACE;
 	sFONT* bitmap = &surface_bitmap;
-	if (manual_f1_mode == get_sensor_mode()) {
+	if (manual_f1_mode == get_sensor_mode() && !(get_sensor_target_mode() == SENSOR_MODE_BIGSKI)) {
 		manual_f1_mode = SENSOR_MODE_STRING;
 		bitmap = &string_bitmap;
 	}
@@ -294,7 +331,8 @@ void UI::showManualFooter()
 		bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef1,
-		strlen(linef1)
+		strlen(linef1),
+		DEFAULT_SCALE
 	);
 
 	w -= 1;
@@ -319,15 +357,13 @@ void UI::showManualFooter()
 		bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef3,
-		strlen(linef3)
+		strlen(linef3),
+		DEFAULT_SCALE
 	);
 }
 
 void UI::showServiceFooter()
 {
-	static uint16_t f1_color = DISPLAY_COLOR_WHITE;
-	static uint16_t f3_color = DISPLAY_COLOR_WHITE;
-
 	uint16_t halfSection = display_width() / 3 / 2;
 
 	uint16_t x = 0;
@@ -348,7 +384,8 @@ void UI::showServiceFooter()
 		&back_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef1,
-		strlen(linef1)
+		strlen(linef1),
+		DEFAULT_SCALE
 	);
 
 	w -= 1;
@@ -370,7 +407,8 @@ void UI::showServiceFooter()
 		&save_bitmap,
 		DISPLAY_ALIGN_CENTER,
 		linef3,
-		strlen(linef3)
+		strlen(linef3),
+		DEFAULT_SCALE
 	);
 }
 
@@ -385,10 +423,10 @@ void UI::showValue()
 		snprintf(
 			target,
 			sizeof(target) - 1,
-			"%s: %03d.%02d",
+			"%s: %d.%d",
 			phrase,
 			get_sensor_mode_target(get_sensor_mode()) / 100,
-			__abs(get_sensor_mode_target(get_sensor_mode()) % 100)
+			__abs(get_sensor_mode_target(get_sensor_mode()) % 100) / 10
 		);
 		util_add_char(target, sizeof(target), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -399,32 +437,43 @@ void UI::showValue()
 			&u8g2_font_8x13_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			target,
-			strlen(target)
+			strlen(target),
+			DEFAULT_SCALE
 		);
 	}
 
 	{
-		offset_y = display_height() / 2;
+		offset_y = display_height() / 2 + DEFAULT_MARGIN;
 		char value[PHRASE_LEN_MAX] = {};
-		const char* phrase = t(T_VALUE, settings.language);
-		snprintf(
-			value,
-			sizeof(value) - 1,
-			"%s: %03d.%02d",
-			phrase,
-			App::getValue() / 100,
-			__abs(App::getValue() % 100)
-		);
-		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+		uint32_t scale = 2;
+		if (App::getRealValue() == App::SENSOR_VALUE_ERR) {
+			snprintf(
+				value,
+				sizeof(value) - 1,
+				"%s",
+				t(T_ERROR, settings.language)
+			);
+		} else {
+			snprintf(
+				value,
+				sizeof(value) - 1,
+				"%s: %d.%d",
+				t(T_VALUE, settings.language),
+				App::getRealValue() / 100,
+				__abs(App::getRealValue() % 100) / 10
+			);
+		}
+		util_add_char(value, sizeof(value), ' ', (size_t)DISPLAY_WIDTH / (u8g2_font_8x13_t_cyrillic.Width * scale), ALIGN_MODE_CENTER);
 
 		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
 			offset_x,
 			offset_y,
-			&u8g2_font_10x20_t_cyrillic,
+			&u8g2_font_8x13_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			value,
-			strlen(value)
+			strlen(value),
+			scale
 		);
 	}
 }
@@ -432,8 +481,7 @@ void UI::showValue()
 void UI::showLoading()
 {
 	char line[PHRASE_LEN_MAX] = {};
-	const char* phrase = t(T_LOADING, settings.language);
-	snprintf(line, sizeof(line) - 1, "%s", phrase);
+	snprintf(line, sizeof(line) - 1, "%s", t(loadStr, settings.language));
 	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
 	display_set_color(DISPLAY_COLOR_BLACK);
@@ -443,23 +491,137 @@ void UI::showLoading()
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
+	);
+}
+
+void UI::showDirection(bool flag)
+{
+	static bool visible = true;
+	static int8_t direction = (int8_t)0xFF;
+	if (direction == get_sensor_direction() && visible == flag) {
+		return;
+	}
+	direction = get_sensor_direction();
+	visible = flag;
+
+	uint16_t y = static_cast<uint16_t>(
+		DISPLAY_HEADER_HEIGHT +
+		DISPLAY_CONTENT_HEIGHT -
+		DEFAULT_MARGIN -
+		left_bitmap.Height
+	);
+	display_fill_rect(0, y, display_width(), left_bitmap.Height, DISPLAY_COLOR_WHITE);
+
+
+	sFONT* font = &u8g2_font_10x20_t_cyrillic;
+	char direction_line[TRANSLATE_MAX_LEN] = "";
+	sFONT* bitmap = nullptr;
+	uint16_t color = DISPLAY_COLOR_WHITE;
+	switch (direction) {
+	case STR_FORCE_LEFT:
+		memcpy(
+			direction_line,
+			t(T_LEFT, settings.language),
+			__min(strlen(t(T_LEFT, settings.language)), sizeof(direction_line))
+		);
+		bitmap = &left_bitmap;
+		color = DISPLAY_COLOR_RED;
+		break;
+	case STR_LEFT:
+		memcpy(
+			direction_line,
+			t(T_LEFT, settings.language),
+			__min(strlen(t(T_LEFT, settings.language)), sizeof(direction_line))
+		);
+		bitmap = &left_bitmap;
+		color = DISPLAY_COLOR_BLACK;
+		break;
+	case STR_FORCE_RIGHT:
+		memcpy(
+			direction_line,
+			t(T_RIGHT, settings.language),
+			__min(strlen(t(T_RIGHT, settings.language)), sizeof(direction_line))
+		);
+		bitmap = &right_bitmap;
+		color = DISPLAY_COLOR_RED;
+		break;
+	case STR_RIGHT:
+		memcpy(
+			direction_line,
+			t(T_RIGHT, settings.language),
+			__min(strlen(t(T_RIGHT, settings.language)), sizeof(direction_line))
+		);
+		bitmap = &right_bitmap;
+		color = DISPLAY_COLOR_BLACK;
+		break;
+	case STR_MIDDLE:
+		bitmap = &left_bitmap;
+		break;
+	default:
+#ifdef DEBUG
+		BEDUG_ASSERT(false, "Unknown STRING mode direction");
+#endif
+		fsm.push_event(error_e{});
+		set_error(INTERNAL_ERROR);
+		Error_Handler();
+		return;
+	};
+
+	if (get_sensor_mode() != SENSOR_MODE_STRING || !visible) {
+		color = DISPLAY_COLOR_WHITE;
+	}
+
+	uint16_t text_len = (uint16_t)(strlen(direction_line) * font->Width);
+	uint16_t full_len = text_len + bitmap->Width;
+
+	uint16_t x = 0;
+	if (direction == STR_FORCE_LEFT || direction == STR_LEFT) {
+		x = display_width() / 2 - full_len / 2;
+	} else {
+		x = (uint16_t)(display_width() / 2 + full_len / 2 - bitmap->Width);
+	}
+	char bitmap_line[] = " ";
+	display_set_color(color);
+	display_text_show(
+		x,
+		y,
+		bitmap,
+		DISPLAY_ALIGN_LEFT,
+		bitmap_line,
+		strlen(bitmap_line),
+		DEFAULT_SCALE
+	);
+
+
+	if (direction == STR_FORCE_LEFT || direction == STR_LEFT) {
+		x += bitmap->Width;
+	} else {
+		x -= text_len;
+	}
+	y += (uint16_t)(bitmap->Height / 2 - font->Height / 2);
+	display_set_color(color);
+	display_text_show(
+		x,
+		y,
+		font,
+		DISPLAY_ALIGN_LEFT,
+		direction_line,
+		strlen(direction_line),
+		DEFAULT_SCALE
 	);
 }
 
 void UI::showUp(bool flag)
 {
 	extern const BITMAPSTRUCT bmp_up_15x15;
-	extern const BITMAPSTRUCT bmp_down_15x15;
 
 	uint16_t x = DEFAULT_MARGIN;
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
-		DISPLAY_CONTENT_HEIGHT -
-		DEFAULT_MARGIN -
-		bmp_down_15x15.infoHeader.biHeight -
-		DEFAULT_MARGIN -
-		bmp_up_15x15.infoHeader.biHeight
+		bmp_up_15x15.infoHeader.biHeight +
+		u8g2_font_8x13_t_cyrillic.Height
 	);
 
 	if (flag) {
@@ -472,15 +634,17 @@ void UI::showUp(bool flag)
 
 void UI::showDown(bool flag)
 {
+	extern const BITMAPSTRUCT bmp_up_15x15;
 	extern const BITMAPSTRUCT bmp_down_15x15;
 
 	uint16_t x = DEFAULT_MARGIN;
-	uint16_t y =
+	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
-		DISPLAY_CONTENT_HEIGHT -
-		DEFAULT_MARGIN -
-		static_cast<uint16_t>(bmp_down_15x15.infoHeader.biHeight)
-	;
+		u8g2_font_8x13_t_cyrillic.Height +
+		bmp_up_15x15.infoHeader.biHeight +
+		DEFAULT_MARGIN +
+		bmp_down_15x15.infoHeader.biHeight
+	);
 
 	if (flag) {
 		display_draw_bitmap(x, y, &bmp_down_15x15);
@@ -519,7 +683,8 @@ void UI::_init_s::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		DEFAULT_SCALE
 	);
 
 	fsm.push_event(success_e{});
@@ -528,12 +693,14 @@ void UI::_init_s::operator ()() const
 
 void UI::_load_s::operator ()() const
 {
-	if (!is_status(WAIT_LOAD)) {
+	if (!is_status(LOADING) &&
+		is_status(WORKING) &&
+		!is_status(NEED_LOAD_SETTINGS) &&
+		!is_status(NEED_SAVE_SETTINGS)
+	) {
 		fsm.push_event(success_e{});
 	}
-	if (is_status(NO_SENSOR)) {
-		fsm.push_event(no_sens_e{});
-	}
+
 	if (has_errors()) {
 		fsm.push_event(error_e{});
 	}
@@ -549,26 +716,35 @@ void UI::_load_s::operator ()() const
 
 void UI::_no_sens_s::operator ()() const
 {
-	showHeader();
+	showMode();
 	showManualFooter();
 
 	char line[PHRASE_LEN_MAX] = {};
 	const char* phrase = t(T_NO_SENSOR, settings.language);
 	snprintf(line, sizeof(line) - 1, "%s", phrase);
-	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
+	uint32_t scale = 3;
+	if (settings.language == RUSSIAN) {
+		scale = 2;
+	}
+	size_t width = display_width() / (u8g2_font_8x13_t_cyrillic.Width * scale);
+	util_add_char(line, sizeof(line), ' ', width, ALIGN_MODE_CENTER);
 
 	display_set_color(DISPLAY_COLOR_BLACK);
 	display_text_show(
 		display_width() / 2,
 		display_height() / 2,
-		&u8g2_font_10x20_t_cyrillic,
+		&u8g2_font_8x13_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		line,
-		strlen(line)
+		strlen(line),
+		scale
 	);
 
 	if (!is_status(NO_SENSOR)) {
 		fsm.push_event(sens_found_e{});
+	}
+	if (has_errors()) {
+		fsm.push_event(error_e{});
 	}
 
 	if (clicks.empty()) {
@@ -577,15 +753,21 @@ void UI::_no_sens_s::operator ()() const
 
 	uint16_t click = clicks.pop_front();
 	switch (click) {
+	case BTN_F1_Pin:
+		App::changeSensorMode(manual_f1_mode);
+		fsm.push_event(sens_found_e{});
+		break;
 	case BTN_F2_Pin:
 		fsm.push_event(service_e{});
+		break;
+	case BTN_F3_Pin:
+		App::changeSensorMode(manual_f3_mode);
+		fsm.push_event(sens_found_e{});
 		break;
 	case BTN_MODE_Pin:
 	case BTN_ENTER_Pin:
 	case BTN_UP_Pin:
 	case BTN_DOWN_Pin:
-	case BTN_F1_Pin:
-	case BTN_F3_Pin:
 		clicks.push_back(click);
 		break;
 	default:
@@ -606,7 +788,8 @@ void UI::_manual_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
-	showMiddle(__abs(App::getValue()) < TRIG_VALUE_LOW);
+	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
+	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
 	if (is_status(NO_SENSOR)) {
 		fsm.push_event(no_sens_e{});
@@ -637,6 +820,9 @@ void UI::_manual_mode_s::operator ()() const
 		App::setAppMode(APP_MODE_AUTO);
 		break;
 	case BTN_ENTER_Pin:
+		if (App::getRealValue() == std::numeric_limits<int16_t>::max()) {
+			break;
+		}
 		if (target_reseted) {
 			target_reseted = false;
 			break;
@@ -674,9 +860,12 @@ void UI::_auto_mode_s::operator ()() const
 	showValue();
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
-	showMiddle(__abs(App::getValue()) < TRIG_VALUE_LOW);
+	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
+	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
-	if (is_status(NO_SENSOR)) {
+	if (App::getAppMode() == APP_MODE_MANUAL ||
+		is_status(NO_SENSOR)
+	) {
 		fsm.push_event(no_sens_e{});
 	}
 	if (has_errors()) {
@@ -720,6 +909,7 @@ void UI::_auto_mode_s::operator ()() const
 
 void UI::_service_s::operator ()() const
 {
+	showServiceHeader();
 	showServiceFooter();
 
 	auto button = buttons.find(BTN_UP_Pin);
@@ -739,11 +929,23 @@ void UI::_service_s::operator ()() const
 		serviceMenu->click(clicks.pop_front());
 	}
 
-	if (is_status(NEED_UI_EXIT)) {
-		reset_status(NEED_UI_EXIT);
-		is_status(NO_SENSOR) ?
-			fsm.push_event(no_sens_e{}) :
-			fsm.push_event(service_e{});
+	if (is_status(NEED_SERVICE_SAVE)) {
+		loadStr = T_UPDATING_SETTINGS;
+	}
+
+	if (is_status(NEED_SERVICE_BACK)) {
+		loadStr = T_RESETING_CHANGES;
+	}
+
+	if (is_status(NEED_SERVICE_SAVE) || is_status(NEED_SERVICE_BACK)) {
+		reset_status(NEED_SERVICE_SAVE);
+		reset_status(NEED_SERVICE_BACK);
+		fsm.push_event(success_e{});
+	}
+
+	if (is_status(NEED_SERVICE_UPDATE)) {
+		reset_status(NEED_SERVICE_UPDATE);
+		serviceMenu->update();
 	}
 
 	serviceMenu->show();
@@ -755,30 +957,47 @@ void UI::_error_s::operator ()() const
 	unsigned error = get_first_error();
 
 	if (error) {
+		uint16_t x = display_width() / 2;
+		uint16_t y = display_height() / 2;
+
 		char line[PHRASE_LEN_MAX] = {};
 		const char* phrase = t(T_ERROR, settings.language);
 		snprintf(line, sizeof(line) - 1, "%s %u", phrase, error);
 		util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
-
-
 		display_set_color(DISPLAY_COLOR_BLACK);
 		display_text_show(
-			display_width() / 2,
-			display_height() / 2,
+			x,
+			y,
 			&u8g2_font_10x20_t_cyrillic,
 			DISPLAY_ALIGN_CENTER,
 			line,
-			strlen(line)
+			strlen(line),
+			DEFAULT_SCALE
+		);
+
+		y += (uint16_t)(u8g2_font_10x20_t_cyrillic.Height + DEFAULT_MARGIN);
+		snprintf(line, sizeof(line) - 1, "%s", get_string_error((SOUL_STATUS)error, settings.language));
+		util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
+		display_set_color(DISPLAY_COLOR_BLACK);
+		display_set_color(DISPLAY_COLOR_BLACK);
+		display_text_show(
+			x,
+			y,
+			&u8g2_font_8x13_t_cyrillic,
+			DISPLAY_ALIGN_CENTER,
+			line,
+			strlen(line),
+			DEFAULT_SCALE
 		);
 	} else {
+		loadStr = T_LOADING;
 		fsm.push_event(success_e{});
 	}
 }
 
 void UI::error_a::operator ()() const
 {
-	display_clear_header();
-	display_clear_content();
+	display_clear();
 
 	showDown(false);
 	showUp(false);
@@ -788,16 +1007,22 @@ void UI::error_a::operator ()() const
 #define LOADING_DELAY_MS ((uint32_t)300)
 void UI::load_start_a::operator ()() const
 {
-	display_clear();
-	display_sections_show();
-	timer.changeDelay(LOADING_DELAY_MS);
+	fsm.clear_events();
 
-	showHeader();
-	showLoading();
+	const char* loading1 = t(loadStr, settings.language);
+	const char* loading2 = t(T_LOADING, settings.language);
+	if (memcmp(loading1, loading2, __min(strlen(loading1), strlen(loading2)))) {
+		display_clear();
+	}
+	timer.changeDelay(LOADING_DELAY_MS);
 }
 
 void UI::no_sens_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 
@@ -811,6 +1036,10 @@ void UI::no_sens_start_a::operator ()() const
 
 void UI::manual_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 
@@ -821,8 +1050,8 @@ void UI::manual_start_a::operator ()() const
 
 
 	char mode[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_manual, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
+	const char* phrase1 = t(T_MANUAL, settings.language);
+	const char* phrase2 = t(T_MODE, settings.language);
 	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
 	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -833,14 +1062,17 @@ void UI::manual_start_a::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		mode,
-		strlen(mode)
+		strlen(mode),
+		DEFAULT_SCALE
 	);
-
-	showHeader();
 }
 
 void UI::auto_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
 	clicks.clear();
 	fsm.clear_events();
 
@@ -849,8 +1081,8 @@ void UI::auto_start_a::operator ()() const
 	display_sections_show();
 
 	char mode[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_auto, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
+	const char* phrase1 = t(T_AUTO, settings.language);
+	const char* phrase2 = t(T_MODE, settings.language);
 	snprintf(mode, sizeof(mode), "%s %s", phrase1, phrase2);
 	util_add_char(mode, sizeof(mode), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
@@ -861,35 +1093,24 @@ void UI::auto_start_a::operator ()() const
 		&u8g2_font_10x20_t_cyrillic,
 		DISPLAY_ALIGN_CENTER,
 		mode,
-		strlen(mode)
+		strlen(mode),
+		DEFAULT_SCALE
 	);
-
-	showHeader();
 }
 
 void UI::service_start_a::operator ()() const
 {
+	f1_color = DISPLAY_COLOR_WHITE;
+	f2_color = DISPLAY_COLOR_WHITE;
+	f3_color = DISPLAY_COLOR_WHITE;
+
+	display_clear();
+
 	clicks.clear();
 	fsm.clear_events();
 
 	display_clear_content();
 	display_sections_show();
-
-	char line[PHRASE_LEN_MAX] = {};
-	const char* phrase1 = t(T_service, settings.language);
-	const char* phrase2 = t(T_mode, settings.language);
-	snprintf(line, sizeof(line), "%s %s", phrase1, phrase2);
-	util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_10x20_t_cyrillic.Width, ALIGN_MODE_CENTER);
-
-	display_set_color(DISPLAY_COLOR_BLACK);
-	display_text_show(
-		display_width() / 2,
-		DISPLAY_HEADER_HEIGHT / 2,
-		&u8g2_font_10x20_t_cyrillic,
-		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line)
-	);
 
 	serviceMenu->reset();
 }

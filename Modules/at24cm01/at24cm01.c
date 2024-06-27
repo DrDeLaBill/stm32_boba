@@ -7,13 +7,13 @@
 
 #include "hal_defs.h"
 
-#include "log.h"
+#include "glog.h"
 #include "main.h"
-#include "utils.h"
+#include "gutils.h"
 
 
-#define EEPROM_TIMER_DELAY_MS ((uint16_t)80)
-#define EEPROM_DELAY_MS       ((uint16_t)20)
+#define EEPROM_TIMER_DELAY_MS ((uint16_t)1000)
+#define EEPROM_DELAY_MS       ((uint16_t)100)
 #define EEPROM_MAX_ERRORS     (5)
 
 

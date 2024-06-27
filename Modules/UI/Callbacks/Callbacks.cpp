@@ -10,7 +10,6 @@
 #include "translate.h"
 
 
-#define PID_STEP      (0.05f)
 #define SAMPLING_STEP (50)
 
 
@@ -18,23 +17,17 @@ void version_callback::click(uint16_t) {}
 char* version_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "v%d.%d.%d", DEVICE_VER1, DEVICE_VER2, DEVICE_VER3);
+	snprintf(value, sizeof(value), "v%d.%d.%d", DEVICE_MAJOR, DEVICE_MINOR, DEVICE_PATCH);
 	return value;
 }
-
-
-void label_callback::click(uint16_t) {}
-char* label_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	return value;
-}
+char* version_callback::label() { return (char*)t(T_Version, settings.language); }
 
 
 void language_callback::click(uint16_t button)
 {
 	if (button == BTN_UP_Pin || button == BTN_DOWN_Pin) {
 		settings.language = (settings.language == ENGLISH ? RUSSIAN : ENGLISH);
+		set_status(NEED_SERVICE_UPDATE);
 	}
 }
 char* language_callback::value()
@@ -43,208 +36,157 @@ char* language_callback::value()
 	snprintf(value, sizeof(value), "%s", settings.language == ENGLISH ? __STR_DEF2__(ENGLISH) : __STR_DEF2__(RUSSIAN));
 	return value;
 }
+char* language_callback::label()  { return (char*)t(T_Language, settings.language); }
 
 
-void max_pid_time_callback::click(uint16_t button)
+void surface_label_callback::click(uint16_t) {}
+char* surface_label_callback::value()
 {
-	const int16_t STEP = 100;
-	if (settings.max_pid_time < STEP && button == BTN_DOWN_Pin) {
-		settings.max_pid_time = STEP;
+	static char value[MenuItem::VALUE_MAX_LEN] = "";
+	return value;
+}
+char* surface_label_callback::label()  { return (char*)t(T_SURFACE_MODE, settings.language); }
+
+void surface_snstv_callback::click(uint16_t button)
+{
+	uint8_t tmp = settings.surface_snstv;
+	callback_click<uint8_t>(&tmp, 1, button);
+	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_UP_Pin) {
+		tmp = SENSITIVITY[0];
 		return;
 	}
-	int16_t tmp = settings.max_pid_time;
-	callback_click<int16_t>(&tmp, STEP, button);
-	settings.max_pid_time = tmp;
-}
-char* max_pid_time_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.max_pid_time);
-	return value;
-}
-
-
-void surface_kp_callback::click(uint16_t button)
-{
-	float tmp = settings.surface.kp;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.surface.kp = tmp;
-}
-char* surface_kp_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface.kp), __abs((int)(settings.surface.kp * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void surface_ki_callback::click(uint16_t button)
-{
-	float tmp = settings.surface.ki;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.surface.ki = tmp;
-}
-char* surface_ki_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface.ki), __abs((int)(settings.surface.ki * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void surface_kd_callback::click(uint16_t button)
-{
-	float tmp = settings.surface.kd;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.surface.kd = tmp;
-}
-char* surface_kd_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.surface.kd), __abs((int)(settings.surface.kd * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void surface_sampling_callback::click(uint16_t button)
-{
-	if (settings.surface.sampling < SAMPLING_STEP && button == BTN_DOWN_Pin) {
-		settings.surface.sampling = SAMPLING_STEP;
+	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_DOWN_Pin) {
+		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
 		return;
 	}
-	uint32_t tmp = settings.surface.sampling;
-	callback_click<uint32_t>(&tmp, SAMPLING_STEP, button);
-	settings.surface.sampling = tmp;
+	settings.surface_snstv = tmp;
 }
-char* surface_sampling_callback::value()
+char* surface_snstv_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.surface.sampling);
+	snprintf(value, sizeof(value), "%u", SENSITIVITY[settings.surface_snstv]);
 	return value;
 }
+char* surface_snstv_callback::label()  { return (char*)t(T_Sensitivity, settings.language); }
 
-
-
-
-void bigski_kp_callback::click(uint16_t button)
+void surface_delay_callback::click(uint16_t button)
 {
-	float tmp = settings.bigski.kp;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.bigski.kp = tmp;
-}
-char* bigski_kp_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.bigski.kp), __abs((int)(settings.bigski.kp * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void bigski_ki_callback::click(uint16_t button)
-{
-	float tmp = settings.bigski.ki;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.bigski.ki = tmp;
-}
-char* bigski_ki_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.bigski.ki), __abs((int)(settings.bigski.ki * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void bigski_kd_callback::click(uint16_t button)
-{
-	float tmp = settings.bigski.kd;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.bigski.kd = tmp;
-}
-char* bigski_kd_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.bigski.kd), __abs((int)(settings.bigski.kd * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void bigski_sampling_callback::click(uint16_t button)
-{
-	if (settings.bigski.sampling < SAMPLING_STEP && button == BTN_DOWN_Pin) {
-		settings.bigski.sampling = SAMPLING_STEP;
+	uint8_t tmp = settings.surface_delay;
+	if (tmp == 0 && button == BTN_DOWN_Pin) {
 		return;
 	}
-	uint32_t tmp = settings.bigski.sampling;
-	callback_click<uint32_t>(&tmp, SAMPLING_STEP, button);
-	settings.bigski.sampling = tmp;
+	callback_click<uint8_t>(&tmp, 1, button);
+	if (tmp >= SETTINGS_WORK_DELAY_MAX_S && button == BTN_UP_Pin) {
+		tmp = SETTINGS_WORK_DELAY_MAX_S;
+	}
+	settings.surface_delay = tmp;
 }
-
-char* bigski_sampling_callback::value()
+char* surface_delay_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.bigski.sampling);
+	snprintf(value, sizeof(value), "%u %s", settings.surface_delay, t(T_sec, settings.language));
 	return value;
 }
+char* surface_delay_callback::label()  { return (char*)t(T_Delay, settings.language); }
 
 
-
-
-void string_kp_callback::click(uint16_t button)
-{
-	float tmp = settings.string.kp;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.string.kp = tmp;
-}
-char* string_kp_callback::value()
+void string_label_callback::click(uint16_t) {}
+char* string_label_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string.kp), __abs((int)(settings.string.kp * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
 	return value;
 }
+char* string_label_callback::label()  { return (char*)t(T_STRING_MODE, settings.language); }
 
-
-void string_ki_callback::click(uint16_t button)
+void string_snstv_callback::click(uint16_t button)
 {
-	float tmp = settings.string.ki;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.string.ki = tmp;
-}
-char* string_ki_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string.ki), __abs((int)(settings.string.ki * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void string_kd_callback::click(uint16_t button)
-{
-	float tmp = settings.string.kd;
-	callback_click<float>(&tmp, PID_STEP, button);
-	settings.string.kd = tmp;
-}
-char* string_kd_callback::value()
-{
-	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%d.%02d", ((int)settings.string.kd), __abs((int)(settings.string.kd * SETTINGS_PID_MULTIPLIER) % SETTINGS_PID_MULTIPLIER));
-	return value;
-}
-
-
-void string_sampling_callback::click(uint16_t button)
-{
-	if (settings.string.sampling < SAMPLING_STEP && button == BTN_DOWN_Pin) {
-		settings.string.sampling = SAMPLING_STEP;
+	uint8_t tmp = settings.string_snstv;
+	callback_click<uint8_t>(&tmp, 1, button);
+	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_UP_Pin) {
+		tmp = SENSITIVITY[0];
 		return;
 	}
-	uint32_t tmp = settings.string.sampling;
-	callback_click<uint32_t>(&tmp, SAMPLING_STEP, button);
-	settings.string.sampling = tmp;
+	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_DOWN_Pin) {
+		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
+		return;
+	}
+	settings.string_snstv = tmp;
 }
-char* string_sampling_callback::value()
+char* string_snstv_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%lu ms", settings.string.sampling);
+	snprintf(value, sizeof(value), "%u", SENSITIVITY[settings.string_snstv]);
 	return value;
 }
+char* string_snstv_callback::label()  { return (char*)t(T_Sensitivity, settings.language); }
 
+void string_delay_callback::click(uint16_t button)
+{
+	uint8_t tmp = settings.string_delay;
+	if (tmp == 0 && button == BTN_DOWN_Pin) {
+		return;
+	}
+	callback_click<uint8_t>(&tmp, 1, button);
+	if (tmp >= SETTINGS_WORK_DELAY_MAX_S && button == BTN_UP_Pin) {
+		tmp = SETTINGS_WORK_DELAY_MAX_S;
+	}
+	settings.string_delay = tmp;
+}
+char* string_delay_callback::value()
+{
+	static char value[MenuItem::VALUE_MAX_LEN] = "";
+	snprintf(value, sizeof(value), "%u %s", settings.string_delay, t(T_sec, settings.language));
+	return value;
+}
+char* string_delay_callback::label()  { return (char*)t(T_Delay, settings.language); }
+
+
+void bigski_label_callback::click(uint16_t) {}
+char* bigski_label_callback::value()
+{
+	static char value[MenuItem::VALUE_MAX_LEN] = "";
+	return value;
+}
+char* bigski_label_callback::label()  { return (char*)t(T_BIGSKI_MODE, settings.language); }
+
+void bigski_snstv_callback::click(uint16_t button)
+{
+	uint8_t tmp = settings.bigski_snstv;
+	callback_click<uint8_t>(&tmp, 1, button);
+	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_UP_Pin) {
+		tmp = SENSITIVITY[0];
+		return;
+	}
+	if (tmp >= __arr_len(SENSITIVITY) && button == BTN_DOWN_Pin) {
+		tmp = SENSITIVITY[__arr_len(SENSITIVITY)-1];
+		return;
+	}
+	settings.bigski_snstv = tmp;
+}
+char* bigski_snstv_callback::value()
+{
+	static char value[MenuItem::VALUE_MAX_LEN] = "";
+	snprintf(value, sizeof(value), "%u", SENSITIVITY[settings.bigski_snstv]);
+	return value;
+}
+char* bigski_snstv_callback::label()  { return (char*)t(T_Sensitivity, settings.language); }
+
+void bigski_delay_callback::click(uint16_t button)
+{
+	uint8_t tmp = settings.bigski_delay;
+	if (tmp == 0 && button == BTN_DOWN_Pin) {
+		return;
+	}
+	callback_click<uint8_t>(&tmp, 1, button);
+	if (tmp >= SETTINGS_WORK_DELAY_MAX_S && button == BTN_UP_Pin) {
+		tmp = SETTINGS_WORK_DELAY_MAX_S;
+	}
+	settings.bigski_delay = tmp;
+}
+char* bigski_delay_callback::value()
+{
+	static char value[MenuItem::VALUE_MAX_LEN] = "";
+	snprintf(value, sizeof(value), "%u %s", settings.bigski_delay, t(T_sec, settings.language));
+	return value;
+}
+char* bigski_delay_callback::label()  { return (char*)t(T_Delay, settings.language); }

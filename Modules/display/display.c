@@ -92,28 +92,34 @@ void display_text_show(
 	sFONT* font,
 	DISPLAY_ALIGN_MODE mode,
 	const char* text,
-	const unsigned len
+	const unsigned len,
+	const uint32_t scale
 ) {
     BSP_LCD_SetFont(font);
 
-    uint16_t tmp_x = x, tmp_y = y - font->Height;
+    uint16_t tmp_x = x, tmp_y = y - font->Height * scale;
 
     switch (mode) {
     case DISPLAY_ALIGN_CENTER:
-    	tmp_x -= ((len * font->Width) / 2);
-    	tmp_y -= (font->Height / 2);
+    	tmp_x -= (uint16_t)((len * font->Width * scale) / 2);
+    	tmp_y -= (uint16_t)(font->Height * scale / 2);
     	break;
     case DISPLAY_ALIGN_LEFT:
     	break;
     case DISPLAY_ALIGN_RIGHT:
-    	tmp_x -= (len * font->Width);
+    	tmp_x -= (uint16_t)(len * font->Width * scale);
     	break;
     default:
     	break;
     }
 
     for (unsigned i = 0; i < len; i++) {
-        BSP_LCD_DisplayChar(tmp_x + (uint16_t)i * font->Width, tmp_y + font->Height, text[i]);
+        BSP_LCD_DisplayChar(
+			(uint16_t)(tmp_x + i * font->Width * scale),
+			(uint16_t)(tmp_y + font->Height * scale),
+			(uint8_t)text[i],
+			scale
+        );
     }
 
     BSP_LCD_SetBackColor(DISPLAY_COLOR_WHITE);

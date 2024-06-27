@@ -53,7 +53,7 @@ ENDMACRO()
 # endif()
 
 # Название проекта
-project(stm32_boba VERSION 1.0.0)
+project(stm32_boba VERSION 0.1.0)
 message(STATUS "Project version: ${CMAKE_PROJECT_VERSION}")
 message(STATUS "Building ${PROJECT_NAME}")
 message(STATUS "C FLAGS:   ${CMAKE_C_FLAGS}")

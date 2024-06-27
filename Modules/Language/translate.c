@@ -2,6 +2,9 @@
 
 #include "translate.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #include "hal_defs.h"
 
 
@@ -13,29 +16,41 @@ const char T_NO_SENSOR[][TRANSLATE_MAX_LEN] = {
 	"NO SENSOR",
 	"мер дюрвхйю"
 };
-const char T_mode[][TRANSLATE_MAX_LEN] = {
-	"mode",
-	"ПЕФХЛ"
+const char T_MODE[][TRANSLATE_MAX_LEN] = {
+	"MODE",
+	"пефхл"
 };
-const char T_manual[][TRANSLATE_MAX_LEN] = {
-	"manual",
-	"ПСВМНИ"
+const char T_MANUAL[][TRANSLATE_MAX_LEN] = {
+	"MANUAL",
+	"псвмни"
 };
-const char T_auto[][TRANSLATE_MAX_LEN] = {
-	"auto",
-	"ЮБРН"
+const char T_AUTO[][TRANSLATE_MAX_LEN] = {
+	"AUTO",
+	"юбрн"
 };
 const char T_surface[][TRANSLATE_MAX_LEN] = {
 	"surface",
 	"ОНЙПШРХЕ"
 };
-const char T_BIGSKY[][TRANSLATE_MAX_LEN] = {
-	"BIGSKY",
-	"BIGSKY"
-};
 const char T_string[][TRANSLATE_MAX_LEN] = {
 	"string",
 	"ЯРПСМЮ"
+};
+const char T_BIGSKI[][TRANSLATE_MAX_LEN] = {
+	"BIGSKI",
+	"BIGSKI"
+};
+const char T_SURFACE_MODE[][TRANSLATE_MAX_LEN] = {
+	"SURFACE MODE",
+	"пефхл онйпшрхе"
+};
+const char T_STRING_MODE[][TRANSLATE_MAX_LEN] = {
+	"STRING MODE",
+	"пефхл ярпсмш"
+};
+const char T_BIGSKI_MODE[][TRANSLATE_MAX_LEN] = {
+	"BIGSKI MODE",
+	"BIGSKI пефхл"
 };
 const char T_error[][TRANSLATE_MAX_LEN] = {
 	"error",
@@ -57,9 +72,125 @@ const char T_ERROR[][TRANSLATE_MAX_LEN] = {
 	"ERROR",
 	"ньхайю"
 };
-const char T_service[][TRANSLATE_MAX_LEN] = {
-	"service",
-	"ЯЕПБХЯМШИ"
+const char T_SERVICE[][TRANSLATE_MAX_LEN] = {
+	"SERVICE",
+	"яепбхямши"
+};
+const char T_LEFT[][TRANSLATE_MAX_LEN] = {
+	"LEFT",
+	"бкебн"
+};
+const char T_RIGHT[][TRANSLATE_MAX_LEN] = {
+	"RIGHT",
+	"бопюбн"
+};
+const char T_sec[][TRANSLATE_MAX_LEN] = {
+	"sec",
+	"ЯЕЙ"
+};
+const char T_Version[][TRANSLATE_MAX_LEN] = {
+	"Version",
+	"бЕПЯХЪ"
+};
+const char T_Sensitivity[][TRANSLATE_MAX_LEN] = {
+	"Sensitivity",
+	"вСБЯРБХРЕКЭМНЯРЭ"
+};
+const char T_Delay[][TRANSLATE_MAX_LEN] = {
+	"Delay",
+	"гЮДЕПФЙЮ"
+};
+const char T_Language[][TRANSLATE_MAX_LEN] = {
+	"Language",
+	"ъГШЙ"
+};
+const char T_UPDATING_SETTINGS[][TRANSLATE_MAX_LEN] = {
+	"UPDATING SETTINGS",
+	"намнбкемхе мюярпней"
+};
+const char T_RESETING_CHANGES[][TRANSLATE_MAX_LEN] = {
+	"RESETING CHANGES",
+	"яапня хглемемхи"
+};
+const char T_RESET_ERROR[][TRANSLATE_MAX_LEN] = {
+	"RESET ERROR",
+	"ньхайю яапняю"
+};
+
+
+const char T_INTERRUPT_ERROR[][TRANSLATE_MAX_LEN] = {
+	"INTERRUPT ERROR",
+	"ньхайю опепшбюмхъ"
+};
+const char T_HARD_FAULT[][TRANSLATE_MAX_LEN] = {
+	"HARD FAULT",
+	"йпхрхвеяйюъ ньхайю"
+};
+const char T_MEMORY_MANAGE[][TRANSLATE_MAX_LEN] = {
+	"MEMORY MANAGE",
+	"сопюбкемхе оюлърэч"
+};
+const char T_MEMORY_ACCESS_ERROR[][TRANSLATE_MAX_LEN] = {
+	"MEMORY ACCESS ERROR",
+	"ньхайю днярсою й оюлърх"
+};
+const char T_ILLEGAL_STATE[][TRANSLATE_MAX_LEN] = {
+	"ILLEGAL STATE",
+	"медносярхлне янярнъмхе"
+};
+
+
+const char T_UNKNOWN_ERROR[][TRANSLATE_MAX_LEN] = {
+	"UNKNOWN ERROR",
+	"мехгбеярмюъ ньхайю"
+};
+const char T_RCC_ERROR[][TRANSLATE_MAX_LEN] = {
+	"RCC ERROR",
+	"ньхайю RCC"
+};
+const char T_MEMORY_ERROR[][TRANSLATE_MAX_LEN] = {
+	"MEMORY ERROR",
+	"ньхайю оюлърх"
+};
+const char T_POWER_ERROR[][TRANSLATE_MAX_LEN] = {
+	"POWER ERROR",
+	"ньхайю охрюмхъ"
+};
+const char T_STACK_ERROR[][TRANSLATE_MAX_LEN] = {
+	"STACK ERROR",
+	"ньхайю ярейю"
+};
+const char T_LOAD_ERROR[][TRANSLATE_MAX_LEN] = {
+	"LOAD ERROR",
+	"ньхайю гюцпсгйх"
+};
+const char T_RAM_ERROR[][TRANSLATE_MAX_LEN] = {
+	"RAM ERROR",
+	"ньхайю нгс"
+};
+const char T_SETTINGS_LOAD_ERROR[][TRANSLATE_MAX_LEN] = {
+	"SETTINGS LOAD ERROR",
+	"ньхайю гюцпсгйх мюярпней"
+};
+const char T_APP_ERROR[][TRANSLATE_MAX_LEN] = {
+	"APPLICATION ERROR",
+	"ньхайю опхкнфемхъ"
+};
+const char T_VALVE_ERROR[][TRANSLATE_MAX_LEN] = {
+	"VALVE ERROR",
+	"ньхайю йкюоюмю"
+};
+const char T_ASSERT_ERROR[][TRANSLATE_MAX_LEN] = {
+	"VALIDATION ERROR",
+	"ньхайю бюкхдюжхх"
+};
+const char T_ERROR_HANDLER_CALLED[][TRANSLATE_MAX_LEN] = {
+	"PERIPHERY ERROR",
+	"ньхайю оепхтепхх"
+};
+const char T_INTERNAL_ERROR[][TRANSLATE_MAX_LEN] = {
+	"INTERNAL ERROR",
+	"бмсрпеммъъ ньхайю"
 };
 
 
@@ -68,4 +199,54 @@ const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang)
 	assert_param(IS_LANGUAGE(lang));
 
 	return (const char*)phrase[lang];
+}
+
+const char* get_string_error(SOUL_STATUS error, uint8_t lang)
+{
+	if (error <= ERRORS_START && error >= ERRORS_END) {
+		return t(T_UNKNOWN_ERROR, lang);
+	};
+
+	switch (error) {
+#ifdef DEBUG
+	case NON_MASKABLE_INTERRUPT:
+		return t(T_INTERNAL_ERROR, lang);
+	case HARD_FAULT:
+		return t(T_HARD_FAULT, lang);
+	case MEM_MANAGE:
+		return t(T_MEMORY_MANAGE, lang);
+	case BUS_FAULT:
+		return t(T_MEMORY_ACCESS_ERROR, lang);
+	case USAGE_FAULT:
+		return t(T_ILLEGAL_STATE, lang);
+	case RCC_ERROR:
+		return t(T_RCC_ERROR, lang);
+	case STACK_ERROR:
+		return t(T_STACK_ERROR, lang);
+	case RAM_ERROR:
+		return t(T_RAM_ERROR, lang);
+	case USB_ERROR:
+		return t(T_UNKNOWN_ERROR, lang);
+	case APP_MODE_ERROR:
+		return t(T_APP_ERROR, lang);
+	case ASSERT_ERROR:
+		return t(T_ASSERT_ERROR, lang);
+	case ERROR_HANDLER_CALLED:
+		return t(T_ERROR_HANDLER_CALLED, lang);
+#endif
+	case POWER_ERROR:
+		return t(T_POWER_ERROR, lang);
+	case MEMORY_ERROR:
+		return t(T_MEMORY_ERROR, lang);
+	case VALVE_ERROR:
+		return t(T_VALVE_ERROR, lang);
+	case LOAD_ERROR:
+		return t(T_LOAD_ERROR, lang);
+	case SETTINGS_LOAD_ERROR:
+		return t(T_SETTINGS_LOAD_ERROR, lang);
+	case INTERNAL_ERROR:
+		return t(T_INTERNAL_ERROR, lang);
+	default:
+		return t(T_UNKNOWN_ERROR, lang);
+	};
 }

@@ -32,8 +32,7 @@ private:
 protected:
 	static constexpr uint16_t DEFAULT_MARGIN = 10;
 
-	static constexpr int16_t TRIG_VALUE_LOW = 30;
-	static constexpr int16_t TRIG_VALUE_HIGH = 30;
+	static const char (*loadStr)[TRANSLATE_MAX_LEN];
 
 	// Events:
 	FSM_CREATE_EVENT(success_e,     0);
@@ -88,8 +87,7 @@ protected:
 		fsm::Transition<manual_mode_s, service_e,     service_s,     service_start_a>,
 		fsm::Transition<manual_mode_s, error_e,       error_s,       error_a>,
 
-		fsm::Transition<service_s,     service_e,     manual_mode_s, manual_start_a>,
-		fsm::Transition<service_s,     no_sens_e,     no_sens_s,     no_sens_start_a>,
+		fsm::Transition<service_s,     success_e,     load_s,        load_start_a>,
 
 		fsm::Transition<auto_mode_s,   change_mode_e, manual_mode_s, manual_start_a>,
 		fsm::Transition<auto_mode_s,   no_sens_e,     no_sens_s,     no_sens_start_a>,
@@ -106,21 +104,24 @@ protected:
 	static SENSOR_MODE manual_f1_mode;
 	static SENSOR_MODE manual_f3_mode;
 
+	static uint16_t f1_color;
+	static uint16_t f2_color;
+	static uint16_t f3_color;
+
 	static void showMode();
-	static void showHeader();
+	static void showServiceHeader();
 	static void showAutoFooter();
 	static void showManualFooter();
 	static void showServiceFooter();
 	static void showValue();
 	static void showLoading();
-
+	static void showDirection(bool flag = true);
 
 public:
 	static constexpr char TAG[] = "UI";
 
 	static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
 	static std::unordered_map<uint16_t, Button> buttons;
-//	static std::pair<uint16_t, Button> buttons[BUTTONS_COUNT];
 
 	static void showUp(bool flag = false);
 	static void showDown(bool flag = false);

@@ -31,11 +31,15 @@ private:
 
 	uint16_t start_idx;
 	uint16_t focused_idx;
+	uint16_t last_focused_idx;
 	uint16_t real_start_idx;
 	bool selected;
-	bool needRefresh;
+	bool needInit;
 
 	utl::Timer timer;
+
+	bool needUpdateSelected;
+	bool needUpdateAll;
 
 public:
 	Menu(uint16_t x, uint16_t y, uint16_t w, uint16_t h, MenuItem* items, uint16_t size);
@@ -45,6 +49,7 @@ public:
 	void click(uint16_t button);
 	void holdUp();
 	void holdDown();
+	void update();
 
 	void show();
 

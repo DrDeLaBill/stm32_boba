@@ -7,6 +7,7 @@
 
 
 static soul_t soul = {
+	.last_err = 0,
 	.statuses = { 0 }
 };
 
@@ -15,6 +16,18 @@ bool _is_status(SOUL_STATUS status);
 void _set_status(SOUL_STATUS status);
 void _reset_status(SOUL_STATUS status);
 
+
+unsigned get_last_error()
+{
+	return soul.last_err;
+}
+
+void set_last_error(SOUL_STATUS error)
+{
+	if (ERRORS_START < error && error < ERRORS_END) {
+		soul.last_err = error;
+	}
+}
 
 bool has_errors()
 {
@@ -107,13 +120,4 @@ void _reset_status(SOUL_STATUS status)
 	}
 	uint8_t status_num = (uint8_t)(status) - 1;
 	soul.statuses[status_num / BITS_IN_BYTE] &= (uint8_t)~(0x01 << (status_num % BITS_IN_BYTE));
-}
-
-void soul_hard_fault()
-{
-#ifdef DEBUG
-	while(1) {}
-#else
-	NVIC_SystemReset();
-#endif
 }
