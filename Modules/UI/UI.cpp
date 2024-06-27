@@ -677,7 +677,8 @@ void UI::_init_s::operator ()() const
 
 void UI::_load_s::operator ()() const
 {
-	if (!is_status(WAIT_LOAD) &&
+	if (!is_status(LOADING) &&
+		is_status(WORKING) &&
 		!is_status(NEED_LOAD_SETTINGS) &&
 		!is_status(NEED_SAVE_SETTINGS)
 	) {
