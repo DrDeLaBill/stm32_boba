@@ -990,7 +990,11 @@ void UI::load_start_a::operator ()() const
 {
 	fsm.clear_events();
 
-	display_clear();
+	const char* loading1 = t(loadStr, settings.language);
+	const char* loading2 = t(T_LOADING, settings.language);
+	if (memcmp(loading1, loading2, __min(strlen(loading1), strlen(loading2)))) {
+		display_clear();
+	}
 	timer.changeDelay(LOADING_DELAY_MS);
 }
 
