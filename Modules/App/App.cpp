@@ -275,7 +275,10 @@ void App::manual_start_a::operator ()()
 {
 	stop();
 
-	int16_t lastValue = value_buffer.front();
+	int16_t lastValue = 0;
+	if (!value_buffer.empty()) {
+	    lastValue = value_buffer.front();
+	}
 	value_buffer.clear();
 	value_buffer.push_front(lastValue);
 }
