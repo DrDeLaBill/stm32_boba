@@ -166,7 +166,7 @@ void UI::showServiceHeader()
 	uint16_t offset_x = display_width() / 2;
 	uint16_t offset_y = DISPLAY_HEADER_HEIGHT / 2;
 
-	if (get_last_error()) {
+	if (get_last_error() || is_status(RCC_FAULT)) {
 		font = &u8g2_font_8x13_t_cyrillic;
 		snprintf(line, sizeof(line), "%s", t(T_RESET_ERROR, settings.language));
 	} else {

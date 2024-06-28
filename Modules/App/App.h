@@ -25,6 +25,7 @@ struct App
 protected:
 	static constexpr char TAG[] = "APP";
 
+	static constexpr uint32_t MEAS_DELAY_MS = 500;
 	static constexpr uint32_t SAMPLE_PWM_MS = 1100;
 	static constexpr uint32_t VALVE_MIN_TIME_MS = 100;
 	static constexpr uint32_t WORK_DELAY_BUFFER_MS = 100;

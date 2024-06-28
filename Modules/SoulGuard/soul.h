@@ -3,7 +3,6 @@
 #ifndef __SOUL_H
 #define __SOUL_H
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,6 +21,7 @@ typedef enum _SOUK_STATUS {
 
 	LOADING,
 	WORKING,
+	RCC_FAULT,
 	MEMORY_READ_FAULT,
 	MEMORY_WRITE_FAULT,
 	NEED_MEASURE,
@@ -50,6 +50,7 @@ typedef enum _SOUK_STATUS {
 	/* Device errors start */
 	ERRORS_START,
 
+	MCU_ERROR,
 	RCC_ERROR,
 	POWER_ERROR,
 	MEMORY_ERROR,

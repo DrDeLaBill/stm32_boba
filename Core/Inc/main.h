@@ -54,8 +54,6 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
-void system_error_handler(SOUL_STATUS error);
-
 int _write(int file, uint8_t *ptr, int len);
 
 /* USER CODE END EFP */
@@ -129,6 +127,12 @@ extern TIM_HandleTypeDef         htim4;
 // App
 extern TIM_HandleTypeDef         htim3;
 #define APP_TIM                  (htim3)
+
+// RTC
+extern RTC_HandleTypeDef         hrtc;
+
+// ADC
+extern ADC_HandleTypeDef         hadc1;
 
 
 /* USER CODE END Private defines */

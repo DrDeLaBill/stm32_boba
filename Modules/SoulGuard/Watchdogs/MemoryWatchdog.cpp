@@ -6,6 +6,7 @@
 
 #include "main.h"
 #include "soul.h"
+#include "system.h"
 #include "hal_defs.h"
 #include "at24cm01.h"
 
