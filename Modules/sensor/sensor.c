@@ -15,7 +15,7 @@
 #define SENSOR_DATA_MAX_SIZE       (8)
 #define SENSOR_FRAME_DELAY_MS      (400)
 #define SENSOR_COMMAND_DELAY_MS    (15)
-#define SENSOR_CAN_DELAY_MS        (100)
+#define SENSOR_CAN_DELAY_MS        (200)
 #define SENSOR_MAX_ERRORS          (100)
 #define SENSOR_CONNECTION_DELAY_MS (300)
 
@@ -372,8 +372,6 @@ void _fsm_sensor_idle()
 		return;
 	}
 
-	sensor_state.no_sensor = !sensor_available();
-
 	if (sensor_state.errors > SENSOR_MAX_ERRORS) {
 		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
@@ -383,7 +381,7 @@ void _fsm_sensor_idle()
 		!sensor_state.initialized ||
 		sensor_state.need_mode   != sensor_state.curr_mode ||
 		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode) ||
-		sensor_state.no_sensor   != sensor_available()
+		sensor_state.no_sensor   != !sensor_available()
 	) {
 		sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 		sensor_state.fsm = _fsm_sensor_change_mode;
@@ -401,6 +399,8 @@ void _fsm_sensor_idle()
 	} else {
 		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
 	}
+
+	sensor_state.no_sensor = !sensor_available();
 
 	if (sensor_available()) {
 		reset_status(NO_SENSOR);

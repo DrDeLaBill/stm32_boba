@@ -1,7 +1,7 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2024 Georgy E. All rights reserved. */
 
-#ifndef __SOUL_H
-#define __SOUL_H
+#ifndef _SOUL_H_
+#define _SOUL_H_
 
 #ifdef __cplusplus
 extern "C" {
