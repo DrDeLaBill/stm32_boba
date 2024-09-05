@@ -27,11 +27,17 @@
 extern "C" void STACK_WATCHDOG_FILL_RAM(void);
 
 
+struct PowerWatchdog
+{
+	void check();
+};
+
 struct StackWatchdog
 {
 private:
 	static constexpr char TAG[] = "STCK";
 	static unsigned lastFree;
+	static utl::Timer timer;
 
 public:
 	void check();

@@ -1,8 +1,7 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2024 Georgy E. All rights reserved. */
 
-#ifndef __SOUL_H
-#define __SOUL_H
-
+#ifndef _SOUL_H_
+#define _SOUL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +21,7 @@ typedef enum _SOUK_STATUS {
 
 	LOADING,
 	WORKING,
+	RCC_FAULT,
 	MEMORY_READ_FAULT,
 	MEMORY_WRITE_FAULT,
 	NEED_MEASURE,
@@ -50,6 +50,7 @@ typedef enum _SOUK_STATUS {
 	/* Device errors start */
 	ERRORS_START,
 
+	MCU_ERROR,
 	RCC_ERROR,
 	POWER_ERROR,
 	MEMORY_ERROR,

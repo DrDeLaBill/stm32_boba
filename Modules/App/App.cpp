@@ -14,8 +14,8 @@ fsm::FiniteStateMachine<App::fsm_table> App::fsm;
 uint16_t App::deadBand = 0;
 uint16_t App::propBand = 0;
 utl::Timer App::sampleTimer(App::SAMPLE_PWM_MS);
-utl::Timer App::sensDelayTimer(0);
-utl::Timer App::workTimer(0);
+utl::Timer App::sensDelayTimer(1);
+utl::Timer App::workTimer(1);
 SENSOR_MODE App::sensorMode = SENSOR_MODE_SURFACE;
 APP_MODE App::appMode = APP_MODE_MANUAL;
 App::SENSOR_POSITION App::position = App::ON_INIT;
@@ -23,7 +23,7 @@ App::buffer_t App::value_buffer;
 
 
 
-App::App(): measureTimer(0) {}
+App::App(): measureTimer(MEAS_DELAY_MS) {}
 
 void App::proccess()
 {
@@ -275,7 +275,10 @@ void App::manual_start_a::operator ()()
 {
 	stop();
 
-	int16_t lastValue = value_buffer.front();
+	int16_t lastValue = 0;
+	if (!value_buffer.empty()) {
+	    lastValue = value_buffer.front();
+	}
 	value_buffer.clear();
 	value_buffer.push_front(lastValue);
 }
