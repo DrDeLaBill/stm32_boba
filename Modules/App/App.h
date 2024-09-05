@@ -6,6 +6,7 @@
 
 #include <limits>
 
+#include "sensor.h"
 #include "settings.h"
 
 #include "UI.h"
@@ -118,8 +119,6 @@ protected:
 
 private:
 	utl::Timer measureTimer;
-
-	int16_t getCurrentSensorValue();
 
 public:
 	static constexpr int16_t SENSOR_VALUE_ERR = std::numeric_limits<int16_t>::max();

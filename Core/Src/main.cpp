@@ -145,7 +145,8 @@ int main(void)
 
     storage = new StorageAT(
 		eeprom_get_size() / STORAGE_PAGE_SIZE,
-		&storageDriver
+		&storageDriver,
+		EEPROM_PAGE_SIZE
 	);
 
 	while (has_errors() || is_status(LOADING)) {

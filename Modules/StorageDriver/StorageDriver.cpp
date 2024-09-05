@@ -25,7 +25,7 @@ uint32_t StorageDriver::lastAddress = 0;
 #endif
 
 
-StorageStatus StorageDriver::read(uint32_t address, uint8_t *data, uint32_t len) {
+StorageStatus StorageDriver::read(const uint32_t address, uint8_t *data, const uint32_t len) {
 	if (is_error(POWER_ERROR) || is_status(MEMORY_ERROR)) {
 
 #if STORAGE_DRIVER_BEDUG
@@ -101,7 +101,8 @@ StorageStatus StorageDriver::read(uint32_t address, uint8_t *data, uint32_t len)
 }
 ;
 
-StorageStatus StorageDriver::write(uint32_t address, uint8_t *data, uint32_t len) {
+StorageStatus StorageDriver::write(const uint32_t address, const uint8_t *data, const uint32_t len)
+{
 	if (is_error(POWER_ERROR) || is_status(MEMORY_ERROR)) {
 
 #if STORAGE_DRIVER_BEDUG
@@ -153,5 +154,10 @@ StorageStatus StorageDriver::write(uint32_t address, uint8_t *data, uint32_t len
 
 	hasError = false;
 	reset_status(MEMORY_WRITE_FAULT);
+    return STORAGE_OK;
+}
+
+StorageStatus StorageDriver::erase(const uint32_t*, const uint32_t)
+{
     return STORAGE_OK;
 }

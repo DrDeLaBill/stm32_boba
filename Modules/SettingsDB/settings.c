@@ -67,6 +67,32 @@ const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
 	30
 };
 
+const uint16_t ANGLE_DEAD_BANDS[__arr_len(SENSITIVITY)] = {
+	15,
+	12,
+	10,
+	8,
+	6,
+	5,
+	4,
+	3,
+	2,
+	1
+};
+
+const uint16_t ANGLE_PROP_BANDS[__arr_len(SENSITIVITY)] = {
+	150,
+	120,
+	100,
+	80,
+	60,
+	50,
+	40,
+	30,
+	20,
+	10
+};
+
 
 settings_t settings = { 0 };
 
@@ -105,6 +131,10 @@ void settings_reset(settings_t* other)
 	other->bigski_snstv = 0;
 	other->bigski_delay = SETTNNGS_WORK_DELAY_DEFAULT_S;
 	memset((void*)other->bigski_target, 0, sizeof(other->bigski_target));
+
+	other->angle_snstv = 0;
+	other->angle_delay = SETTNNGS_WORK_DELAY_DEFAULT_S;
+	other->angle_target = 0;
 }
 
 uint32_t settings_size()
@@ -112,7 +142,6 @@ uint32_t settings_size()
 	return sizeof(settings_t);
 }
 
-// TODO: version updater (if version older than current -> update settings)
 bool settings_check(settings_t* other)
 {
 	if (other->dv_type != DEVICE_TYPE) {
@@ -138,6 +167,9 @@ bool settings_check(settings_t* other)
 	if (s_min > settings.bigski_snstv || settings.bigski_snstv > s_max) {
 		return false;
 	}
+	if (s_min > settings.angle_snstv || settings.angle_snstv > s_max) {
+		return false;
+	}
 	return true;
 }
 
@@ -147,8 +179,38 @@ void settings_repair(settings_t* other)
 
 	set_status(NEED_SAVE_SETTINGS);
 
+	if (other->dv_type != DEVICE_TYPE) {
+		settings_reset(other);
+	}
+
 	if (other->fw_id != FW_VERSION) {
 		other->fw_id = FW_VERSION;
+	}
+
+	if (other->sw_id == 0x01) {
+		other->sw_id = 0x02;
+		other->angle_snstv = 0;
+		other->angle_delay = SETTNNGS_WORK_DELAY_DEFAULT_S;
+		other->angle_target = 0;
+	}
+
+	if (!IS_LANGUAGE(other->language)) {
+		other->language = ENGLISH;
+	}
+
+	uint16_t s_min = 0;
+	uint16_t s_max = __arr_len(SENSITIVITY) - 1;
+	if (s_min > settings.surface_snstv || settings.surface_snstv > s_max) {
+		settings.surface_snstv = 0;
+	}
+	if (s_min > settings.string_snstv || settings.string_snstv > s_max) {
+		settings.string_snstv = 0;
+	}
+	if (s_min > settings.bigski_snstv || settings.bigski_snstv > s_max) {
+		settings.bigski_snstv = 0;
+	}
+	if (s_min > settings.angle_snstv || settings.angle_snstv > s_max) {
+		settings.angle_snstv = 0;
 	}
 
 	if (!settings_check(other)) {
@@ -190,5 +252,12 @@ void settings_show()
 	for (unsigned i = 0; i < __arr_len(settings.bigski_target); i++) {
 		printPretty("Last target[%u]: %d\n", i, settings.bigski_target[i]);
 	}
+    printPretty("------------------ANGLE   MODE------------------\n");
+	printPretty("Sensitivity: %u\n", SENSITIVITY[settings.angle_snstv]);
+	printPretty("Dead band: %u\n", ANGLE_DEAD_BANDS[settings.angle_snstv]);
+	printPretty("Prop band: %u\n", ANGLE_PROP_BANDS[settings.angle_snstv]);
+	printPretty("Sensitivity delay: %lu ms\n", SENSITIVITY_DELAY_MS[settings.angle_snstv]);
+	printPretty("Work delay: %u s\n", settings.angle_delay);
+	printPretty("Last target: %d\n", settings.angle_target);
     printPretty("####################SETTINGS####################\n\n");
 }

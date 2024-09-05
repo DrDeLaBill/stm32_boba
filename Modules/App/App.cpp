@@ -35,7 +35,7 @@ void App::proccess()
 	measureTimer.start();
 
 	value_buffer.pop_back();
-	value_buffer.push_front(getCurrentSensorValue());
+	value_buffer.push_front(get_sensor_value());
 }
 
 void App::setAppMode(APP_MODE mode)
@@ -85,6 +85,8 @@ uint16_t App::getDeadBand()
 		return DEAD_BANDS_MMx10[settings.string_snstv];
 	case SENSOR_MODE_BIGSKI:
 		return DEAD_BANDS_MMx10[settings.bigski_snstv];
+	case SENSOR_MODE_ANGLE:
+		return ANGLE_DEAD_BANDS[settings.angle_snstv];
 	default:
 		BEDUG_ASSERT(false, "Unknown mode");
 		fsm.push_event(error_e{});
@@ -125,15 +127,6 @@ bool App::isOnDeadBand()
 bool App::isOnPropBand()
 {
 	return __abs(getActualValue()) > deadBand && __abs(getActualValue()) <= propBand;
-}
-
-int16_t App::getCurrentSensorValue()
-{
-	if (get_sensor_mode() == SENSOR_MODE_BIGSKI) {
-		return get_sensor_average();
-	}
-
-	return get_sensor2A7_value();
 }
 
 void App::_init_s::operator ()()
@@ -304,6 +297,12 @@ void App::auto_start_a::operator ()()
 		propBand = PROP_BANDS_MMx10[settings.bigski_snstv];
 		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.bigski_snstv]);
 		measureCount = settings.bigski_delay * WORK_DELAY_BUFFER_MS;
+		break;
+	case SENSOR_MODE_ANGLE:
+		deadBand = ANGLE_DEAD_BANDS[settings.angle_snstv];
+		propBand = ANGLE_PROP_BANDS[settings.angle_snstv];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.angle_snstv]);
+		measureCount = settings.angle_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	default:
 		BEDUG_ASSERT(false, "Unknown mode");

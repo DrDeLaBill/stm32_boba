@@ -19,7 +19,8 @@ extern "C" {
 typedef enum _SENSOR_MODE {
     SENSOR_MODE_SURFACE = 0x01,
     SENSOR_MODE_STRING,
-    SENSOR_MODE_BIGSKI
+    SENSOR_MODE_BIGSKI,
+	SENSOR_MODE_ANGLE
 } SENSOR_MODE;
 
 
@@ -34,23 +35,20 @@ typedef enum _STRING_DIRECTION {
 
 #define IS_SENSOR_MODE(MODE) ((MODE) == SENSOR_MODE_SURFACE ||  \
                               (MODE) == SENSOR_MODE_STRING || \
-                              (MODE) == SENSOR_MODE_BIGSKI)
+                              (MODE) == SENSOR_MODE_BIGSKI || \
+							  (MODE) == SENSOR_MODE_ANGLE)
 
 
 void sensor_tick();
+bool sensor2AB_available();
+bool sensor2A7_available();
+bool sensor2A8_available();
 bool sensor_available();
-int16_t get_sensor2A7_value();
-int16_t get_sensor2A8_value();
-int16_t get_sensor2AB_value();
-int16_t get_sensor_average();
+int16_t get_sensor_value();
 
 int16_t get_sensor_mode_target(SENSOR_MODE mode);
 void save_sensor_mode_target();
 void reset_sensor_mode_target();
-
-bool sensor2AB_available();
-bool sensor2A7_available();
-bool sensor2A8_available();
 
 void set_sensor_mode(SENSOR_MODE mode);
 SENSOR_MODE get_sensor_mode();

@@ -12,19 +12,28 @@
 #include "gutils.h"
 #include "sensor.h"
 #include "bmacro.h"
+#include "fsm_gc.h"
 #include "gstring.h"
 #include "display.h"
 #include "settings.h"
 #include "hal_defs.h"
+#include "sensor.h"
+#include "translate.h"
 
 #include "App.h"
+#include "Menu.h"
+#include "Timer.h"
+#include "Button.h"
 #include "Callbacks.h"
+#include "CircleBuffer.h"
 #include "CodeStopwatch.h"
 
 
 #define DEFAULT_SCALE      (1)
 #define LOAD_POINT_COUNT   (3)
 #define PHRASE_LEN_MAX     (40)
+#define UI_CLICKS_SIZE     (8)
+#define UI_DEFAULT_MARGIN  (10)
 
 #define ADD_SPACES_STRING(PHRASE, FONT) \
 	char NAME[PHRASE_LEN_MAX] = {}; \
@@ -33,8 +42,8 @@
 
 
 
-utl::circle_buffer<UI::UI_CLICKS_SIZE, uint16_t> UI::clicks;
-std::unordered_map<uint16_t, Button> UI::buttons = {
+static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
+static std::unordered_map<uint16_t, Button> buttons = {
 	{BTN_F1_Pin,    {BTN_F1_GPIO_Port,    BTN_F1_Pin,    true}},
 	{BTN_DOWN_Pin,  {BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true}},
 	{BTN_UP_Pin,    {BTN_UP_GPIO_Port,    BTN_UP_Pin,    true}},
@@ -43,9 +52,8 @@ std::unordered_map<uint16_t, Button> UI::buttons = {
 	{BTN_F2_Pin,    {BTN_F2_GPIO_Port,    BTN_F2_Pin,    true}},
 	{BTN_F3_Pin,    {BTN_F3_GPIO_Port,    BTN_F3_Pin,    true}}
 };
-utl::Timer UI::timer(SECOND_MS);
-fsm::FiniteStateMachine<UI::fsm_table> UI::fsm;
-MenuItem menuItems[] =
+static utl::Timer timer(SECOND_MS);
+static MenuItem menuItems[] =
 {
 	{(new version_callback()),          false},
 	{(new language_callback()),         true},
@@ -59,7 +67,7 @@ MenuItem menuItems[] =
 	{(new bigski_snstv_callback()),     true},
 	{(new bigski_delay_callback()),     true},
 };
-std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
+static std::unique_ptr<Menu> serviceMenu = std::make_unique<Menu>(
 	0,
 	DISPLAY_HEADER_HEIGHT,
 	display_width(),
@@ -67,20 +75,98 @@ std::unique_ptr<Menu> UI::serviceMenu = std::make_unique<Menu>(
 	menuItems,
 	__arr_len(menuItems)
 );
-SENSOR_MODE UI::manual_f1_mode = SENSOR_MODE_SURFACE;
-SENSOR_MODE UI::manual_f3_mode = SENSOR_MODE_STRING;
+static SENSOR_MODE manual_f1_mode = SENSOR_MODE_SURFACE;
+static SENSOR_MODE manual_f3_mode = SENSOR_MODE_STRING;
 
-uint16_t UI::f1_color = DISPLAY_COLOR_WHITE;
-uint16_t UI::f2_color = DISPLAY_COLOR_WHITE;
-uint16_t UI::f3_color = DISPLAY_COLOR_WHITE;
+static uint16_t f1_color = DISPLAY_COLOR_WHITE;
+static uint16_t f2_color = DISPLAY_COLOR_WHITE;
+static uint16_t f3_color = DISPLAY_COLOR_WHITE;
 
-const char (*UI::loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
+const char (*loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
 
+static void showMode();
+static void showServiceHeader();
+static void showAutoFooter();
+static void showManualFooter();
+static void showServiceFooter();
+static void showValue();
+static void showLoading();
+static void showDirection(bool flag = true);
+
+static void showUp(bool flag = false);
+static void showDown(bool flag = false);
+static void showMiddle(bool flag = false);
+
+
+static void _init_s        (void);
+static void _load_s        (void);
+static void _no_sens_s     (void);
+static void _manual_mode_s (void);
+static void _auto_mode_s   (void);
+static void _service_s     (void);
+static void _error_s       (void);
+
+static void error_a         (void);
+static void load_start_a    (void);
+static void no_sens_start_a (void);
+static void manual_start_a  (void);
+static void auto_start_a    (void);
+static void service_start_a (void);
+
+
+FSM_GC_CREATE(ui_fsm)
+
+FSM_GC_CREATE_EVENT(success_e,     0)
+FSM_GC_CREATE_EVENT(sens_found_e,  0)
+FSM_GC_CREATE_EVENT(change_mode_e, 0)
+FSM_GC_CREATE_EVENT(service_e,     1)
+FSM_GC_CREATE_EVENT(no_sens_e,     2)
+FSM_GC_CREATE_EVENT(error_e,       3)
+
+FSM_GC_CREATE_STATE(init_s,        _init_s);
+FSM_GC_CREATE_STATE(load_s,        _load_s);
+FSM_GC_CREATE_STATE(no_sens_s,     _no_sens_s);
+FSM_GC_CREATE_STATE(manual_mode_s, _manual_mode_s);
+FSM_GC_CREATE_STATE(auto_mode_s,   _auto_mode_s);
+FSM_GC_CREATE_STATE(service_s,     _service_s);
+FSM_GC_CREATE_STATE(error_s,       _error_s);
+
+FSM_GC_CREATE_TABLE(
+	ui_fsm_table,
+	{&init_s,        &success_e,     &load_s,        load_start_a},
+
+	{&load_s,        &success_e,     &manual_mode_s, manual_start_a},
+	{&load_s,        &no_sens_e,     &no_sens_s,     no_sens_start_a},
+	{&load_s,        &error_e,       &error_s,       error_a},
+
+	{&no_sens_s,     &sens_found_e,  &manual_mode_s, manual_start_a},
+	{&no_sens_s,     &service_e,     &service_s,     service_start_a},
+	{&no_sens_s,     &error_e,       &error_s,       error_a},
+
+	{&manual_mode_s, &change_mode_e, &auto_mode_s,   auto_start_a},
+	{&manual_mode_s, &no_sens_e,     &no_sens_s,     no_sens_start_a},
+	{&manual_mode_s, &service_e,     &service_s,     service_start_a},
+	{&manual_mode_s, &error_e,       &error_s,       error_a},
+
+	{&service_s,     &success_e,     &load_s,        load_start_a},
+
+	{&auto_mode_s,   &change_mode_e, &manual_mode_s, manual_start_a},
+	{&auto_mode_s,   &no_sens_e,     &no_sens_s,     no_sens_start_a},
+	{&auto_mode_s,   &error_e,       &error_s,       error_a},
+
+	{&error_s,       &success_e,     &load_s,        load_start_a}
+)
+
+
+UI::UI()
+{
+	fsm_gc_init(&ui_fsm, ui_fsm_table, __arr_len(ui_fsm_table));
+}
 
 void UI::tick()
 {
 	utl::CodeStopwatch watch("UI2", 300);
-	fsm.proccess();
+	fsm_gc_proccess(&ui_fsm);
 }
 
 
@@ -96,7 +182,7 @@ void UI::buttonsTick()
 	}
 }
 
-void UI::showMode()
+void showMode()
 {
 	sFONT* bitmap = NULL;
 	char sensors[PHRASE_LEN_MAX] = "";
@@ -125,11 +211,14 @@ void UI::showMode()
 			sensor2A8_available() ? '3' : '-'
 		);
 		break;
+	case SENSOR_MODE_ANGLE:
+		bitmap = &angle_bitmap;
+		break;
 	default:
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown APP mode");
 #endif
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 		set_error(INTERNAL_ERROR);
 		Error_Handler();
 		return;
@@ -159,7 +248,7 @@ void UI::showMode()
 	);
 }
 
-void UI::showServiceHeader()
+void showServiceHeader()
 {
 	char line[PHRASE_LEN_MAX] = {};
 	sFONT* font = &u8g2_font_10x20_t_cyrillic;
@@ -205,7 +294,7 @@ void UI::showServiceHeader()
 	);
 }
 
-void UI::showAutoFooter()
+void showAutoFooter()
 {
 	uint16_t halfSection = display_width() / 3 / 2;
 
@@ -282,7 +371,7 @@ void UI::showAutoFooter()
 	);
 }
 
-void UI::showManualFooter()
+void showManualFooter()
 {
 	uint16_t x = static_cast<uint16_t>(display_width() / 3 + 1);
 	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
@@ -362,7 +451,7 @@ void UI::showManualFooter()
 	);
 }
 
-void UI::showServiceFooter()
+void showServiceFooter()
 {
 	uint16_t halfSection = display_width() / 3 / 2;
 
@@ -412,10 +501,10 @@ void UI::showServiceFooter()
 	);
 }
 
-void UI::showValue()
+void showValue()
 {
 	uint16_t offset_x = display_width() / 2;
-	uint16_t offset_y = static_cast<uint16_t>(display_height() / (uint16_t)2 - u8g2_font_8x13_t_cyrillic.Height - DEFAULT_MARGIN);
+	uint16_t offset_y = static_cast<uint16_t>(display_height() / (uint16_t)2 - u8g2_font_8x13_t_cyrillic.Height - UI_DEFAULT_MARGIN);
 
 	{
 		char target[PHRASE_LEN_MAX] = {};
@@ -443,7 +532,7 @@ void UI::showValue()
 	}
 
 	{
-		offset_y = display_height() / 2 + DEFAULT_MARGIN;
+		offset_y = display_height() / 2 + UI_DEFAULT_MARGIN;
 		char value[PHRASE_LEN_MAX] = {};
 		uint32_t scale = 2;
 		if (App::getRealValue() == App::SENSOR_VALUE_ERR) {
@@ -478,7 +567,7 @@ void UI::showValue()
 	}
 }
 
-void UI::showLoading()
+void showLoading()
 {
 	char line[PHRASE_LEN_MAX] = {};
 	snprintf(line, sizeof(line) - 1, "%s", t(loadStr, settings.language));
@@ -496,7 +585,7 @@ void UI::showLoading()
 	);
 }
 
-void UI::showDirection(bool flag)
+void showDirection(bool flag)
 {
 	static bool visible = true;
 	static int8_t direction = (int8_t)0xFF;
@@ -509,7 +598,7 @@ void UI::showDirection(bool flag)
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
 		DISPLAY_CONTENT_HEIGHT -
-		DEFAULT_MARGIN -
+		UI_DEFAULT_MARGIN -
 		left_bitmap.Height
 	);
 	display_fill_rect(0, y, display_width(), left_bitmap.Height, DISPLAY_COLOR_WHITE);
@@ -563,7 +652,7 @@ void UI::showDirection(bool flag)
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown STRING mode direction");
 #endif
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 		set_error(INTERNAL_ERROR);
 		Error_Handler();
 		return;
@@ -613,11 +702,11 @@ void UI::showDirection(bool flag)
 	);
 }
 
-void UI::showUp(bool flag)
+void showUp(bool flag)
 {
 	extern const BITMAPSTRUCT bmp_up_15x15;
 
-	uint16_t x = DEFAULT_MARGIN;
+	uint16_t x = UI_DEFAULT_MARGIN;
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
 		bmp_up_15x15.infoHeader.biHeight +
@@ -632,17 +721,17 @@ void UI::showUp(bool flag)
 	HAL_GPIO_WritePin(LED_UP_GPIO_Port, LED_UP_Pin, static_cast<GPIO_PinState>(flag));
 }
 
-void UI::showDown(bool flag)
+void showDown(bool flag)
 {
 	extern const BITMAPSTRUCT bmp_up_15x15;
 	extern const BITMAPSTRUCT bmp_down_15x15;
 
-	uint16_t x = DEFAULT_MARGIN;
+	uint16_t x = UI_DEFAULT_MARGIN;
 	uint16_t y = static_cast<uint16_t>(
 		DISPLAY_HEADER_HEIGHT +
 		u8g2_font_8x13_t_cyrillic.Height +
 		bmp_up_15x15.infoHeader.biHeight +
-		DEFAULT_MARGIN +
+		UI_DEFAULT_MARGIN +
 		bmp_down_15x15.infoHeader.biHeight
 	);
 
@@ -654,7 +743,7 @@ void UI::showDown(bool flag)
 	HAL_GPIO_WritePin(LED_DOWN_GPIO_Port, LED_DOWN_Pin, static_cast<GPIO_PinState>(flag));
 }
 
-void UI::showMiddle(bool flag)
+void showMiddle(bool flag)
 {
 	GPIO_PinState enable_mid = static_cast<GPIO_PinState>(flag);
 	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, enable_mid);
@@ -667,7 +756,7 @@ void UI::showMiddle(bool flag)
 	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, enable_center);
 }
 
-void UI::_init_s::operator ()() const
+void _init_s(void)
 {
 	char line[PHRASE_LEN_MAX] = "bObA";
 	const char* phrase = t(T_LOADING, settings.language);
@@ -687,22 +776,22 @@ void UI::_init_s::operator ()() const
 		DEFAULT_SCALE
 	);
 
-	fsm.push_event(success_e{});
+	fsm_gc_push_event(&ui_fsm, &success_e);
 }
 
 
-void UI::_load_s::operator ()() const
+void _load_s(void)
 {
 	if (!is_status(LOADING) &&
 		is_status(WORKING) &&
 		!is_status(NEED_LOAD_SETTINGS) &&
 		!is_status(NEED_SAVE_SETTINGS)
 	) {
-		fsm.push_event(success_e{});
+		fsm_gc_push_event(&ui_fsm, &success_e);
 	}
 
 	if (has_errors()) {
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 	}
 
 	if (timer.wait()) {
@@ -714,7 +803,7 @@ void UI::_load_s::operator ()() const
 }
 
 
-void UI::_no_sens_s::operator ()() const
+void _no_sens_s(void)
 {
 	showMode();
 	showManualFooter();
@@ -741,10 +830,10 @@ void UI::_no_sens_s::operator ()() const
 	);
 
 	if (!is_status(NO_SENSOR)) {
-		fsm.push_event(sens_found_e{});
+		fsm_gc_push_event(&ui_fsm, &sens_found_e);
 	}
 	if (has_errors()) {
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 	}
 
 	if (clicks.empty()) {
@@ -755,14 +844,14 @@ void UI::_no_sens_s::operator ()() const
 	switch (click) {
 	case BTN_F1_Pin:
 		App::changeSensorMode(manual_f1_mode);
-		fsm.push_event(sens_found_e{});
+		fsm_gc_push_event(&ui_fsm, &sens_found_e);
 		break;
 	case BTN_F2_Pin:
-		fsm.push_event(service_e{});
+		fsm_gc_push_event(&ui_fsm, &service_e);
 		break;
 	case BTN_F3_Pin:
 		App::changeSensorMode(manual_f3_mode);
-		fsm.push_event(sens_found_e{});
+		fsm_gc_push_event(&ui_fsm, &sens_found_e);
 		break;
 	case BTN_MODE_Pin:
 	case BTN_ENTER_Pin:
@@ -774,14 +863,14 @@ void UI::_no_sens_s::operator ()() const
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown button in buffer");
 #endif
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 		set_error(INTERNAL_ERROR);
 		break;
 	}
 }
 
 
-void UI::_manual_mode_s::operator ()() const
+void _manual_mode_s(void)
 {
 	showMode();
 	showManualFooter();
@@ -792,10 +881,10 @@ void UI::_manual_mode_s::operator ()() const
 	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
 	if (is_status(NO_SENSOR)) {
-		fsm.push_event(no_sens_e{});
+		fsm_gc_push_event(&ui_fsm, &no_sens_e);
 	}
 	if (has_errors()) {
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 	}
 
 	buttons[BTN_UP_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_UP) : reset_status(MANUAL_NEED_VALVE_UP);
@@ -816,7 +905,7 @@ void UI::_manual_mode_s::operator ()() const
 	uint16_t click = clicks.pop_front();
 	switch (click) {
 	case BTN_MODE_Pin:
-		fsm.push_event(change_mode_e{});
+		fsm_gc_push_event(&ui_fsm, &change_mode_e);
 		App::setAppMode(APP_MODE_AUTO);
 		break;
 	case BTN_ENTER_Pin:
@@ -834,7 +923,7 @@ void UI::_manual_mode_s::operator ()() const
 		App::changeSensorMode(manual_f1_mode);
 		break;
 	case BTN_F2_Pin:
-		fsm.push_event(service_e{});
+		fsm_gc_push_event(&ui_fsm, &service_e);
 		break;
 	case BTN_F3_Pin:
 		App::changeSensorMode(manual_f3_mode);
@@ -847,13 +936,13 @@ void UI::_manual_mode_s::operator ()() const
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown button in buffer");
 #endif
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 		set_error(INTERNAL_ERROR);
 		break;
 	}
 }
 
-void UI::_auto_mode_s::operator ()() const
+void _auto_mode_s(void)
 {
 	showMode();
 	showAutoFooter();
@@ -866,10 +955,10 @@ void UI::_auto_mode_s::operator ()() const
 	if (App::getAppMode() == APP_MODE_MANUAL ||
 		is_status(NO_SENSOR)
 	) {
-		fsm.push_event(no_sens_e{});
+		fsm_gc_push_event(&ui_fsm, &no_sens_e);
 	}
 	if (has_errors()) {
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 	}
 
 	if (clicks.empty()) {
@@ -878,7 +967,7 @@ void UI::_auto_mode_s::operator ()() const
 
 	switch (clicks.pop_front()) {
 	case BTN_MODE_Pin:
-		fsm.push_event(change_mode_e{});
+		fsm_gc_push_event(&ui_fsm, &change_mode_e);
 		App::setAppMode(APP_MODE_MANUAL);
 		break;
 	case BTN_ENTER_Pin:
@@ -900,14 +989,14 @@ void UI::_auto_mode_s::operator ()() const
 #ifdef DEBUG
 		BEDUG_ASSERT(false, "Unknown button in buffer");
 #endif
-		fsm.push_event(error_e{});
+		fsm_gc_push_event(&ui_fsm, &error_e);
 		set_error(INTERNAL_ERROR);
 		break;
 	}
 }
 
 
-void UI::_service_s::operator ()() const
+void _service_s(void)
 {
 	showServiceHeader();
 	showServiceFooter();
@@ -940,7 +1029,7 @@ void UI::_service_s::operator ()() const
 	if (is_status(NEED_SERVICE_SAVE) || is_status(NEED_SERVICE_BACK)) {
 		reset_status(NEED_SERVICE_SAVE);
 		reset_status(NEED_SERVICE_BACK);
-		fsm.push_event(success_e{});
+		fsm_gc_push_event(&ui_fsm, &success_e);
 	}
 
 	if (is_status(NEED_SERVICE_UPDATE)) {
@@ -952,7 +1041,7 @@ void UI::_service_s::operator ()() const
 }
 
 
-void UI::_error_s::operator ()() const
+void _error_s(void)
 {
 	unsigned error = get_first_error();
 
@@ -975,7 +1064,7 @@ void UI::_error_s::operator ()() const
 			DEFAULT_SCALE
 		);
 
-		y += (uint16_t)(u8g2_font_10x20_t_cyrillic.Height + DEFAULT_MARGIN);
+		y += (uint16_t)(u8g2_font_10x20_t_cyrillic.Height + UI_DEFAULT_MARGIN);
 		snprintf(line, sizeof(line) - 1, "%s", get_string_error((SOUL_STATUS)error, settings.language));
 		util_add_char(line, sizeof(line), ' ', display_width() / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 		display_set_color(DISPLAY_COLOR_BLACK);
@@ -991,11 +1080,11 @@ void UI::_error_s::operator ()() const
 		);
 	} else {
 		loadStr = T_LOADING;
-		fsm.push_event(success_e{});
+		fsm_gc_push_event(&ui_fsm, &success_e);
 	}
 }
 
-void UI::error_a::operator ()() const
+void error_a(void)
 {
 	display_clear();
 
@@ -1005,9 +1094,9 @@ void UI::error_a::operator ()() const
 }
 
 #define LOADING_DELAY_MS ((uint32_t)300)
-void UI::load_start_a::operator ()() const
+void load_start_a(void)
 {
-	fsm.clear_events();
+	fsm_gc_clear(&ui_fsm);
 
 	const char* loading1 = t(loadStr, settings.language);
 	const char* loading2 = t(T_LOADING, settings.language);
@@ -1017,14 +1106,14 @@ void UI::load_start_a::operator ()() const
 	timer.changeDelay(LOADING_DELAY_MS);
 }
 
-void UI::no_sens_start_a::operator ()() const
+void no_sens_start_a(void)
 {
 	f1_color = DISPLAY_COLOR_WHITE;
 	f2_color = DISPLAY_COLOR_WHITE;
 	f3_color = DISPLAY_COLOR_WHITE;
 
 	clicks.clear();
-	fsm.clear_events();
+	fsm_gc_clear(&ui_fsm);
 
 	display_clear();
 	display_sections_show();
@@ -1034,14 +1123,14 @@ void UI::no_sens_start_a::operator ()() const
 	showMiddle(false);
 }
 
-void UI::manual_start_a::operator ()() const
+void manual_start_a(void)
 {
 	f1_color = DISPLAY_COLOR_WHITE;
 	f2_color = DISPLAY_COLOR_WHITE;
 	f3_color = DISPLAY_COLOR_WHITE;
 
 	clicks.clear();
-	fsm.clear_events();
+	fsm_gc_clear(&ui_fsm);
 
 	display_clear_header();
 	display_clear_content();
@@ -1067,14 +1156,14 @@ void UI::manual_start_a::operator ()() const
 	);
 }
 
-void UI::auto_start_a::operator ()() const
+void auto_start_a(void)
 {
 	f1_color = DISPLAY_COLOR_WHITE;
 	f2_color = DISPLAY_COLOR_WHITE;
 	f3_color = DISPLAY_COLOR_WHITE;
 
 	clicks.clear();
-	fsm.clear_events();
+	fsm_gc_clear(&ui_fsm);
 
 	display_clear_content();
 	display_clear_footer();
@@ -1098,7 +1187,7 @@ void UI::auto_start_a::operator ()() const
 	);
 }
 
-void UI::service_start_a::operator ()() const
+void service_start_a(void)
 {
 	f1_color = DISPLAY_COLOR_WHITE;
 	f2_color = DISPLAY_COLOR_WHITE;
@@ -1107,7 +1196,7 @@ void UI::service_start_a::operator ()() const
 	display_clear();
 
 	clicks.clear();
-	fsm.clear_events();
+	fsm_gc_clear(&ui_fsm);
 
 	display_clear_content();
 	display_sections_show();

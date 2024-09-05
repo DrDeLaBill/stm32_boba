@@ -17,7 +17,7 @@ extern "C" {
 
 
 #define DEVICE_MAJOR (0)
-#define DEVICE_MINOR (1)
+#define DEVICE_MINOR (2)
 #define DEVICE_PATCH (0)
 
 
@@ -46,6 +46,8 @@ extern const uint8_t  SENSITIVITY[SETTINGS_BANDS_COUNT];
 extern const uint32_t SENSITIVITY_DELAY_MS[__arr_len(SENSITIVITY)];
 extern const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)];
 extern const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)];
+extern const uint16_t ANGLE_DEAD_BANDS[__arr_len(SENSITIVITY)];
+extern const uint16_t ANGLE_PROP_BANDS[__arr_len(SENSITIVITY)];
 
 
 typedef enum _SettingsStatus {
@@ -87,6 +89,13 @@ typedef struct __attribute__((packed)) _settings_t  {
     uint8_t   bigski_delay;
     // Last BIGSKI target sensor value
     int16_t   bigski_target[SETTINGS_BIGSKI_COUNT];
+
+    // Angle mode sensitivity
+    uint8_t   angle_snstv;
+    // Angle mode work delay in ms
+    uint8_t   angle_delay;
+    // Last angle target sensor value
+    int16_t   angle_target;
 } settings_t;
 
 
