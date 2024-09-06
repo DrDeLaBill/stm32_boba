@@ -26,6 +26,7 @@
 #define SENSOR_DISTANCE_FRAME_ID   (0x02)
 
 #define SENSOR_FRAME_ANGLE         (0x02AC)
+#define SENSOR_FRAME_ANGLE_IDX     (3)
 
 #define SENSOR_MODE_NONE           (0)
 
@@ -189,6 +190,8 @@ FSM_GC_CREATE_TABLE(
 	{&bigski3_s, &timeout_e,  &idle_s,    error_a},
 	{&bigski3_s, &success_e,  &idle_s,    start_idle_a},
 
+	{&angle_s,   &success_e,  &idle_s,    start_idle_a},
+
 	{&end1_s,    &timeout_e,  &idle_s,    error_a},
 	{&end1_s,    &success_e,  &end2_s,    NULL},
 	{&end2_s,    &timeout_e,  &idle_s,    error_a},
@@ -211,7 +214,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     	bool is_value = false;
     	switch (tmp_rx_header.StdId) {
     	case SENSOR_FRAME_ANGLE:
-			sensor_state.sensors[3].value = ((int16_t)tmp_rx_buffer[0] << 8) | (int16_t)tmp_rx_buffer[1];
+			sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].value =
+				((int16_t)tmp_rx_buffer[0] << 8) | (int16_t)tmp_rx_buffer[1];
+			util_old_timer_start(
+				&sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].connection_timer,
+				SENSOR_CONNECTION_DELAY_MS
+			);
 			is_value = true;
     		break;
     	default:
@@ -250,11 +258,11 @@ void sensor_tick()
 
 bool sensor_available()
 {
-	if (get_sensor_mode() == SENSOR_MODE_ANGLE) {
+	if (get_sensor_target_mode() == SENSOR_MODE_ANGLE) {
 		return sensor_angle_available();
 	}
 
-	if (get_sensor_mode() != SENSOR_MODE_BIGSKI) {
+	if (get_sensor_target_mode() != SENSOR_MODE_BIGSKI) {
 		return sensor2A7_available();
 	}
 
@@ -287,7 +295,7 @@ int16_t get_sensor_average()
 
 int16_t get_sensor_angle()
 {
-	return 360;
+	return sensor_state.sensors[3].value;
 }
 
 int16_t get_sensor_value()
@@ -545,7 +553,9 @@ void _start_s(void)
 		return;
 	}
 
-	if (counter >= __arr_len(start_frames)) {
+	if (counter >= __arr_len(start_frames) ||
+		get_sensor_target_mode() == SENSOR_MODE_ANGLE
+	) {
 		sensor_state.no_sensor = true;
 		sensor_state.errors    = 0;
 		counter                = 0;
@@ -678,6 +688,11 @@ void _bigski3_s(void)
 
 void _angle_s(void)
 {
+	sensor_state.initialized = true;
+	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+	sensor_state.curr_mode   = sensor_state.need_mode;
+	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
+	sensor_state.errors      = 0;
 	fsm_gc_push_event(&sens_fsm, &success_e);
 }
 
@@ -809,6 +824,8 @@ void surface_a(void)
 	can_frame_t surface_request =
 		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x02,}};
 
+	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
+
 	_sensor_send_frame(surface_request.std_id, surface_request.dlc, surface_request.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 }
@@ -825,12 +842,17 @@ void start_change_a(void)
 	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 }
 
-void start_idle_a(void) {}
+void start_idle_a(void)
+{
+	fsm_gc_clear(&sens_fsm);
+}
 
 void string_a(void)
 {
 	can_frame_t string_request =
 		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x01,}};
+
+	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
 
 	_sensor_send_frame(string_request.std_id, string_request.dlc, string_request.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);

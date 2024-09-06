@@ -35,7 +35,13 @@ void App::proccess()
 	measureTimer.start();
 
 	value_buffer.pop_back();
-	value_buffer.push_front(get_sensor_value());
+
+	int16_t value = get_sensor_value();
+	if (get_sensor_mode() == SENSOR_MODE_ANGLE) {
+		value -= (int16_t)((value > 180) ? 360 : 0);
+		value -= settings.angle_target;
+	}
+	value_buffer.push_front(value);
 }
 
 void App::setAppMode(APP_MODE mode)
@@ -172,8 +178,7 @@ void App::_auto_s::operator ()()
 		fsm.push_event(auto_e{});
 	}
 
-	if (!sensor2A7_available()) {
-		setAppMode(APP_MODE_MANUAL);
+	if (!sensor_available()) {
 		stop();
 		return;
 	}

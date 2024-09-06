@@ -75,8 +75,7 @@ static std::unique_ptr<Menu> serviceMenu = std::make_unique<Menu>(
 	menuItems,
 	__arr_len(menuItems)
 );
-static SENSOR_MODE manual_f1_mode = SENSOR_MODE_SURFACE;
-static SENSOR_MODE manual_f3_mode = SENSOR_MODE_STRING;
+static SENSOR_MODE f_modes[] = { SENSOR_MODE_STRING, SENSOR_MODE_ANGLE, SENSOR_MODE_BIGSKI };
 
 static uint16_t f1_color = DISPLAY_COLOR_WHITE;
 static uint16_t f2_color = DISPLAY_COLOR_WHITE;
@@ -86,8 +85,7 @@ const char (*loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
 
 static void showMode();
 static void showServiceHeader();
-static void showAutoFooter();
-static void showManualFooter();
+static void showFooter();
 static void showServiceFooter();
 static void showValue();
 static void showLoading();
@@ -116,12 +114,13 @@ static void service_start_a (void);
 
 FSM_GC_CREATE(ui_fsm)
 
-FSM_GC_CREATE_EVENT(success_e,     0)
-FSM_GC_CREATE_EVENT(sens_found_e,  0)
-FSM_GC_CREATE_EVENT(change_mode_e, 0)
-FSM_GC_CREATE_EVENT(service_e,     1)
-FSM_GC_CREATE_EVENT(no_sens_e,     2)
-FSM_GC_CREATE_EVENT(error_e,       3)
+FSM_GC_CREATE_EVENT(success_e,      0)
+FSM_GC_CREATE_EVENT(auto_found_e,   0)
+FSM_GC_CREATE_EVENT(manual_found_e, 0)
+FSM_GC_CREATE_EVENT(change_mode_e,  0)
+FSM_GC_CREATE_EVENT(service_e,      1)
+FSM_GC_CREATE_EVENT(no_sens_e,      2)
+FSM_GC_CREATE_EVENT(error_e,        3)
 
 FSM_GC_CREATE_STATE(init_s,        _init_s);
 FSM_GC_CREATE_STATE(load_s,        _load_s);
@@ -133,28 +132,29 @@ FSM_GC_CREATE_STATE(error_s,       _error_s);
 
 FSM_GC_CREATE_TABLE(
 	ui_fsm_table,
-	{&init_s,        &success_e,     &load_s,        load_start_a},
+	{&init_s,        &success_e,      &load_s,        load_start_a},
 
-	{&load_s,        &success_e,     &manual_mode_s, manual_start_a},
-	{&load_s,        &no_sens_e,     &no_sens_s,     no_sens_start_a},
-	{&load_s,        &error_e,       &error_s,       error_a},
+	{&load_s,        &success_e,      &manual_mode_s, manual_start_a},
+	{&load_s,        &no_sens_e,      &no_sens_s,     no_sens_start_a},
+	{&load_s,        &error_e,        &error_s,       error_a},
 
-	{&no_sens_s,     &sens_found_e,  &manual_mode_s, manual_start_a},
-	{&no_sens_s,     &service_e,     &service_s,     service_start_a},
-	{&no_sens_s,     &error_e,       &error_s,       error_a},
+	{&no_sens_s,     &manual_found_e, &manual_mode_s, manual_start_a},
+	{&no_sens_s,     &auto_found_e,   &auto_mode_s,   auto_start_a},
+	{&no_sens_s,     &service_e,      &service_s,     service_start_a},
+	{&no_sens_s,     &error_e,        &error_s,       error_a},
 
-	{&manual_mode_s, &change_mode_e, &auto_mode_s,   auto_start_a},
-	{&manual_mode_s, &no_sens_e,     &no_sens_s,     no_sens_start_a},
-	{&manual_mode_s, &service_e,     &service_s,     service_start_a},
-	{&manual_mode_s, &error_e,       &error_s,       error_a},
+	{&manual_mode_s, &change_mode_e,  &auto_mode_s,   auto_start_a},
+	{&manual_mode_s, &no_sens_e,      &no_sens_s,     no_sens_start_a},
+	{&manual_mode_s, &service_e,      &service_s,     service_start_a},
+	{&manual_mode_s, &error_e,        &error_s,       error_a},
 
-	{&service_s,     &success_e,     &load_s,        load_start_a},
+	{&service_s,     &success_e,      &load_s,        load_start_a},
 
-	{&auto_mode_s,   &change_mode_e, &manual_mode_s, manual_start_a},
-	{&auto_mode_s,   &no_sens_e,     &no_sens_s,     no_sens_start_a},
-	{&auto_mode_s,   &error_e,       &error_s,       error_a},
+	{&auto_mode_s,   &change_mode_e,  &manual_mode_s, manual_start_a},
+	{&auto_mode_s,   &no_sens_e,      &no_sens_s,     no_sens_start_a},
+	{&auto_mode_s,   &error_e,        &error_s,       error_a},
 
-	{&error_s,       &success_e,     &load_s,        load_start_a}
+	{&error_s,       &success_e,      &load_s,        load_start_a}
 )
 
 
@@ -294,118 +294,48 @@ void showServiceHeader()
 	);
 }
 
-void showAutoFooter()
+void showFooter()
 {
+	const SENSOR_MODE modes [] = {
+		SENSOR_MODE_SURFACE,
+		SENSOR_MODE_STRING,
+		SENSOR_MODE_ANGLE,
+		SENSOR_MODE_BIGSKI
+	};
+	sFONT* bitmaps[3] = {};
+	unsigned counter = 0;
+	for (unsigned i = 0; i < __arr_len(modes); i++) {
+		if (get_sensor_target_mode() == modes[i]) {
+			continue;
+		}
+		switch (modes[i]) {
+		case SENSOR_MODE_SURFACE:
+			bitmaps[counter] = &surface_bitmap;
+			break;
+		case SENSOR_MODE_STRING:
+			bitmaps[counter] = &string_bitmap;
+			break;
+		case SENSOR_MODE_ANGLE:
+			bitmaps[counter] = &angle_bitmap;
+			break;
+		case SENSOR_MODE_BIGSKI:
+			bitmaps[counter] = &bigski_bitmap;
+			break;
+		default:
+			Error_Handler();
+			break;
+		}
+		f_modes[counter++] = modes[i];
+	}
+
+	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
+	uint16_t h = display_height() - y;
 	uint16_t halfSection = display_width() / 3 / 2;
 
 	uint16_t x = 0;
-	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
 	uint16_t w = display_width() / 3;
-	uint16_t h = display_height() - y;
-	uint16_t curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	SENSOR_MODE mode = get_sensor_target_mode();
-	char line[] = " ";
-
-	if (mode == SENSOR_MODE_SURFACE) {
-		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
-	}
-	if (f1_color != curr_color) {
-		display_fill_rect(x, y, w, h, curr_color);
-		f1_color = curr_color;
-	}
-	display_set_background(curr_color);
-	display_set_color(buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
-	display_text_show(
-		x + halfSection,
-		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&surface_bitmap,
-		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line),
-		DEFAULT_SCALE
-	);
-
-
-	w -= 1;
-	x += static_cast<uint16_t>(display_width() / 3 + 1);
-	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	if (mode == SENSOR_MODE_STRING) {
-		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
-	}
-	if (f2_color != curr_color) {
-		display_fill_rect(x, y, w, h, curr_color);
-		f2_color = curr_color;
-	}
-	display_set_background(curr_color);
-	display_set_color(buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
-	display_text_show(
-		x + halfSection,
-		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&string_bitmap,
-		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line),
-		DEFAULT_SCALE
-	);
-
-
-	x += static_cast<uint16_t>(display_width() / 3);
-	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	if (mode == SENSOR_MODE_BIGSKI) {
-		curr_color = DISPLAY_COLOR_LIGHT_GRAY;
-	}
-	if (f3_color != curr_color) {
-		display_fill_rect(x, y, w, h, curr_color);
-		f3_color = curr_color;
-	}
-	display_set_background(curr_color);
-	display_set_color(buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
-	display_text_show(
-		x + halfSection,
-		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&bigski_bitmap,
-		DISPLAY_ALIGN_CENTER,
-		line,
-		strlen(line),
-		DEFAULT_SCALE
-	);
-}
-
-void showManualFooter()
-{
-	uint16_t x = static_cast<uint16_t>(display_width() / 3 + 1);
-	uint16_t y = DISPLAY_HEADER_HEIGHT + DISPLAY_CONTENT_HEIGHT + 1;
-	uint16_t w = display_width() / 3 - 1;
-	uint16_t h = display_height() - y;
-	uint16_t halfSection = display_width() / 3 / 2;
 	uint16_t curr_color = DISPLAY_COLOR_WHITE;
-
-	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
-	if (f2_color != curr_color) {
-		display_fill_rect(x, y, w, h, curr_color);
-		f2_color = curr_color;
-	}
-	char linef2[] = " ";
-	display_set_background(curr_color);
-	display_set_color(buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
-	display_text_show(
-		x + halfSection,
-		y + (DISPLAY_FOOTER_HEIGHT / 2),
-		&settings_bitmap,
-		DISPLAY_ALIGN_CENTER,
-		linef2,
-		strlen(linef2),
-		DEFAULT_SCALE
-	);
-
-	x = 0;
-	w = display_width() / 3;
-	manual_f1_mode = SENSOR_MODE_SURFACE;
-	sFONT* bitmap = &surface_bitmap;
-	if (manual_f1_mode == get_sensor_mode() && !(get_sensor_target_mode() == SENSOR_MODE_BIGSKI)) {
-		manual_f1_mode = SENSOR_MODE_STRING;
-		bitmap = &string_bitmap;
-	}
+	sFONT* bitmap = bitmaps[0];
 	curr_color = buttons[BTN_F1_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f1_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
@@ -424,14 +354,31 @@ void showManualFooter()
 		DEFAULT_SCALE
 	);
 
+	w = display_width() / 3 - 1;
+	x = static_cast<uint16_t>(display_width() / 3 + 1);
+	bitmap = bitmaps[1];
+	curr_color = DISPLAY_COLOR_WHITE;
+	curr_color = buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
+	if (f2_color != curr_color) {
+		display_fill_rect(x, y, w, h, curr_color);
+		f2_color = curr_color;
+	}
+	char linef2[] = " ";
+	display_set_background(curr_color);
+	display_set_color(buttons[BTN_F2_Pin].pressed() ? DISPLAY_COLOR_GRAY : DISPLAY_COLOR_BLACK);
+	display_text_show(
+		x + halfSection,
+		y + (DISPLAY_FOOTER_HEIGHT / 2),
+		bitmap,
+		DISPLAY_ALIGN_CENTER,
+		linef2,
+		strlen(linef2),
+		DEFAULT_SCALE
+	);
+
 	w -= 1;
 	x = static_cast<uint16_t>(display_width() / 3 * 2 + 1);
-	manual_f3_mode = SENSOR_MODE_STRING;
-	bitmap = &string_bitmap;
-	if (manual_f1_mode == manual_f3_mode || manual_f3_mode == get_sensor_mode()) {
-		manual_f3_mode = SENSOR_MODE_BIGSKI;
-		bitmap = &bigski_bitmap;
-	}
+	bitmap = bitmaps[2];
 	curr_color = buttons[BTN_F3_Pin].pressed() ? DISPLAY_COLOR_LIGHT_GRAY : DISPLAY_COLOR_WHITE;
 	if (f3_color != curr_color) {
 		display_fill_rect(x, y, w, h, curr_color);
@@ -509,14 +456,24 @@ void showValue()
 	{
 		char target[PHRASE_LEN_MAX] = {};
 		const char* phrase = t(T_TARGET, settings.language);
-		snprintf(
-			target,
-			sizeof(target) - 1,
-			"%s: %d.%d",
-			phrase,
-			get_sensor_mode_target(get_sensor_mode()) / 100,
-			__abs(get_sensor_mode_target(get_sensor_mode()) % 100) / 10
-		);
+		if (get_sensor_target_mode() == SENSOR_MODE_ANGLE) {
+			snprintf(
+				target,
+				sizeof(target) - 1,
+				"%s: %d",
+				phrase,
+				get_sensor_mode_target(get_sensor_mode())
+			);
+		} else {
+			snprintf(
+				target,
+				sizeof(target) - 1,
+				"%s: %d.%d",
+				phrase,
+				get_sensor_mode_target(get_sensor_mode()) / 100,
+				__abs(get_sensor_mode_target(get_sensor_mode()) % 100) / 10
+			);
+		}
 		util_add_char(target, sizeof(target), ' ', (size_t)DISPLAY_WIDTH / u8g2_font_8x13_t_cyrillic.Width, ALIGN_MODE_CENTER);
 
 		display_set_color(DISPLAY_COLOR_BLACK);
@@ -541,6 +498,14 @@ void showValue()
 				sizeof(value) - 1,
 				"%s",
 				t(T_ERROR, settings.language)
+			);
+		} else if (get_sensor_target_mode() == SENSOR_MODE_ANGLE) {
+			snprintf(
+				value,
+				sizeof(value) - 1,
+				"%s: %d",
+				t(T_VALUE, settings.language),
+				App::getRealValue()
 			);
 		} else {
 			snprintf(
@@ -806,7 +771,7 @@ void _load_s(void)
 void _no_sens_s(void)
 {
 	showMode();
-	showManualFooter();
+	showFooter();
 
 	char line[PHRASE_LEN_MAX] = {};
 	const char* phrase = t(T_NO_SENSOR, settings.language);
@@ -830,10 +795,19 @@ void _no_sens_s(void)
 	);
 
 	if (!is_status(NO_SENSOR)) {
-		fsm_gc_push_event(&ui_fsm, &sens_found_e);
+		if (App::getAppMode() == APP_MODE_AUTO) {
+			fsm_gc_push_event(&ui_fsm, &auto_found_e);
+		} else {
+			fsm_gc_push_event(&ui_fsm, &manual_found_e);
+		}
 	}
 	if (has_errors()) {
 		fsm_gc_push_event(&ui_fsm, &error_e);
+	}
+
+	if (buttons[BTN_MODE_Pin].isHolded()) {
+		fsm_gc_push_event(&ui_fsm, &service_e);
+		return;
 	}
 
 	if (clicks.empty()) {
@@ -843,15 +817,16 @@ void _no_sens_s(void)
 	uint16_t click = clicks.pop_front();
 	switch (click) {
 	case BTN_F1_Pin:
-		App::changeSensorMode(manual_f1_mode);
-		fsm_gc_push_event(&ui_fsm, &sens_found_e);
+		App::changeSensorMode(f_modes[0]);
+		fsm_gc_push_event(&ui_fsm, &manual_found_e);
 		break;
 	case BTN_F2_Pin:
-		fsm_gc_push_event(&ui_fsm, &service_e);
+		App::changeSensorMode(f_modes[1]);
+		fsm_gc_push_event(&ui_fsm, &manual_found_e);
 		break;
 	case BTN_F3_Pin:
-		App::changeSensorMode(manual_f3_mode);
-		fsm_gc_push_event(&ui_fsm, &sens_found_e);
+		App::changeSensorMode(f_modes[2]);
+		fsm_gc_push_event(&ui_fsm, &manual_found_e);
 		break;
 	case BTN_MODE_Pin:
 	case BTN_ENTER_Pin:
@@ -873,7 +848,7 @@ void _no_sens_s(void)
 void _manual_mode_s(void)
 {
 	showMode();
-	showManualFooter();
+	showFooter();
 	showValue();
 	showUp(is_status(MANUAL_NEED_VALVE_UP));
 	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
@@ -895,6 +870,11 @@ void _manual_mode_s(void)
 		reset_sensor_mode_target();
 		target_reseted = true;
 		set_status(NEED_SAVE_SETTINGS);
+		return;
+	}
+
+	if (buttons[BTN_MODE_Pin].isHolded()) {
+		fsm_gc_push_event(&ui_fsm, &service_e);
 		return;
 	}
 
@@ -920,13 +900,13 @@ void _manual_mode_s(void)
 		set_status(NEED_SAVE_SETTINGS);
 		break;
 	case BTN_F1_Pin:
-		App::changeSensorMode(manual_f1_mode);
+		App::changeSensorMode(f_modes[0]);
 		break;
 	case BTN_F2_Pin:
-		fsm_gc_push_event(&ui_fsm, &service_e);
+		App::changeSensorMode(f_modes[1]);
 		break;
 	case BTN_F3_Pin:
-		App::changeSensorMode(manual_f3_mode);
+		App::changeSensorMode(f_modes[2]);
 		break;
 	case BTN_UP_Pin:
 	case BTN_DOWN_Pin:
@@ -945,7 +925,7 @@ void _manual_mode_s(void)
 void _auto_mode_s(void)
 {
 	showMode();
-	showAutoFooter();
+	showFooter();
 	showValue();
 	showUp(is_status(AUTO_NEED_VALVE_UP));
 	showDown(is_status(AUTO_NEED_VALVE_DOWN));
@@ -977,13 +957,13 @@ void _auto_mode_s(void)
 	case BTN_DOWN_Pin:
 		break;
 	case BTN_F1_Pin:
-		App::changeSensorMode(SENSOR_MODE_SURFACE);
+		App::changeSensorMode(f_modes[0]);
 		break;
 	case BTN_F2_Pin:
-		App::changeSensorMode(SENSOR_MODE_STRING);
+		App::changeSensorMode(f_modes[1]);
 		break;
 	case BTN_F3_Pin:
-		App::changeSensorMode(SENSOR_MODE_BIGSKI);
+		App::changeSensorMode(f_modes[2]);
 		break;
 	default:
 #ifdef DEBUG

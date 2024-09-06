@@ -54,6 +54,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+void error_loop(void);
 int _write(int file, uint8_t *ptr, int len);
 
 /* USER CODE END EFP */

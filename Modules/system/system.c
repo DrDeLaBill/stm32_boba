@@ -2,8 +2,14 @@
 
 #include "system.h"
 
+#include "glog.h"
 #include "main.h"
 #include "hal_defs.h"
+
+
+#ifdef DEBUG
+static const char SYSTEM_TAG[] = "SYS";
+#endif
 
 
 uint16_t SYSTEM_ADC_VOLTAGE = 0;
@@ -11,6 +17,7 @@ uint16_t SYSTEM_ADC_VOLTAGE = 0;
 
 void system_clock_hsi_config(void)
 {
+#ifdef STM32F1
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
@@ -45,8 +52,51 @@ void system_clock_hsi_config(void)
 	{
 		Error_Handler();
 	}
+#elif defined(STM32F4)
+	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-	reset_error(RCC_ERROR);
+	/** Configure the main internal regulator output voltage
+	*/
+	__HAL_RCC_PWR_CLK_ENABLE();
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+
+	/** Initializes the RCC Oscillators according to the specified parameters
+	* in the RCC_OscInitTypeDef structure.
+	*/
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI
+										|RCC_OSCILLATORTYPE_LSE;
+	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+	RCC_OscInitStruct.PLL.PLLM = 8;
+	RCC_OscInitStruct.PLL.PLLN = 84;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	/** Initializes the CPU, AHB and APB buses clocks
+	*/
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+									|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+	{
+		Error_Handler();
+	}
+#else
+#   error "Please select your controller"
+#endif
 }
 
 void system_pre_load(void)
@@ -74,54 +124,25 @@ void system_pre_load(void)
 		counter++;
 	}
 
+#ifdef STM32F1
 	uint32_t backupregister = (uint32_t)BKP_BASE;
 	backupregister += (RTC_BKP_DR1 * 4U);
-
 	SOUL_STATUS status = (SOUL_STATUS)((*(__IO uint32_t *)(backupregister)) & BKP_DR1_D);
+#elif defined(STM32F4)
+	HAL_PWR_EnableBkUpAccess();
+	SOUL_STATUS status = (SOUL_STATUS)HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1);
+	HAL_PWR_DisableBkUpAccess();
+#endif
+
 	set_last_error(status);
-	switch (status) {
-	case RCC_ERROR:
-        break;
-    case MEMORY_ERROR:
-    	set_error(MEMORY_ERROR);
-        break;
-    case POWER_ERROR:
-        break;
-    case STACK_ERROR:
+
+    if (status == MEMORY_ERROR) {
+     	set_error(MEMORY_ERROR);
+    } else if (status == STACK_ERROR) {
     	set_error(STACK_ERROR);
-        break;
-    case LOAD_ERROR:
-        break;
-    case RAM_ERROR:
-        break;
-    case USB_ERROR:
-        break;
-    case SETTINGS_LOAD_ERROR:
+    } else if (status == SETTINGS_LOAD_ERROR) {
     	set_error(SETTINGS_LOAD_ERROR);
-        break;
-    case APP_MODE_ERROR:
-        break;
-    case VALVE_ERROR:
-        break;
-    case NON_MASKABLE_INTERRUPT:
-        break;
-    case HARD_FAULT:
-        break;
-    case MEM_MANAGE:
-        break;
-    case BUS_FAULT:
-        break;
-    case USAGE_FAULT:
-        break;
-    case ASSERT_ERROR:
-        break;
-    case ERROR_HANDLER_CALLED:
-    	break;
-    case INTERNAL_ERROR:
-        break;
-    default:
-		break;
-	}
+    }
 }
 
 void system_post_load(void)
@@ -130,20 +151,30 @@ void system_post_load(void)
 	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0);
 	HAL_PWR_DisableBkUpAccess();
 
-	HAL_ADCEx_Calibration_Start(&hadc1);
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&SYSTEM_ADC_VOLTAGE, 1);
-	unsigned counter = 0;
-	while (1) {
-		uint16_t voltage = 0;
-		if (SYSTEM_ADC_VOLTAGE) {
-			voltage = STM_ADC_MAX * STM_REF_VOLTAGEx10 / SYSTEM_ADC_VOLTAGE;
-		}
+#if SYSTEM_BEDUG
+	if (get_last_error()) {
+		printTagLog(SYSTEM_TAG, "Last reload error: %u", get_last_error());
+	}
+#endif
 
+#ifdef STM32F1
+	HAL_ADCEx_Calibration_Start(&hadc1);
+#endif
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&SYSTEM_ADC_VOLTAGE, 1);
+	uint64_t counter = 0;
+	uint64_t count_max = HAL_RCC_GetHCLKFreq() * 10;
+	util_old_timer_t timer = {0};
+	util_old_timer_start(&timer, 10000);
+	while (1) {
+		uint32_t voltage = get_system_power();
 		if (STM_MIN_VOLTAGEx10 <= voltage && voltage <= STM_MAX_VOLTAGEx10) {
 			break;
 		}
 
-		if (counter > 0x1000) {
+		if (is_error(RCC_ERROR) && counter > count_max) {
+			set_error(POWER_ERROR);
+			break;
+		} else if (!util_old_timer_wait(&timer)) {
 			set_error(POWER_ERROR);
 			break;
 		}
@@ -155,12 +186,13 @@ void system_post_load(void)
 		system_error_handler(
 			(get_first_error() == INTERNAL_ERROR) ?
 				LOAD_ERROR :
-				(SOUL_STATUS)get_first_error()
+				(SOUL_STATUS)get_first_error(),
+			NULL
 		);
 	}
 }
 
-void system_error_handler(SOUL_STATUS error)
+void system_error_handler(SOUL_STATUS error, void (*error_loop) (void))
 {
 	static bool called = false;
 	if (called) {
@@ -174,16 +206,175 @@ void system_error_handler(SOUL_STATUS error)
 		error = INTERNAL_ERROR;
 	}
 
+#if SYSTEM_BEDUG
+	printTagLog(SYSTEM_TAG, "system_error_handler called error=%u", error);
+#endif
+
+	/* Custom events begin */
 	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
 	reset_status(AUTO_NEED_VALVE_DOWN);
 	reset_status(AUTO_NEED_VALVE_UP);
+	/* Custom events end */
 
 	HAL_PWR_EnableBkUpAccess();
 	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, error);
 	HAL_PWR_DisableBkUpAccess();
 
-	uint32_t counter = 0x100;
-	while(--counter) {}
+	uint64_t counter = 0;
+	uint64_t count_max = HAL_RCC_GetHCLKFreq() * 10;
+	util_old_timer_t timer = {0};
+	util_old_timer_start(&timer, 10000);
+	while(1) {
+		if (error_loop) {
+			error_loop();
+		}
+
+		if (is_error(RCC_ERROR) && counter > count_max) {
+			set_error(POWER_ERROR);
+			break;
+		} else if (!util_old_timer_wait(&timer)) {
+			set_error(POWER_ERROR);
+			break;
+		}
+
+		counter++;
+	}
+
+#if SYSTEM_BEDUG
+	printTagLog(SYSTEM_TAG, "system reset");
+	counter = 100;
+	while(counter--);
+#endif
+
 	NVIC_SystemReset();
+}
+
+uint32_t get_system_power(void)
+{
+	if (!SYSTEM_ADC_VOLTAGE) {
+		return 0;
+	}
+	return (STM_ADC_MAX * STM_REF_VOLTAGEx10) / SYSTEM_ADC_VOLTAGE;
+}
+
+void system_reset_i2c_errata(void)
+{
+#if SYSTEM_BEDUG
+	printTagLog(SYSTEM_TAG, "RESET I2C (ERRATA)");
+#endif
+
+	HAL_I2C_DeInit(&EEPROM_I2C);
+
+	GPIO_TypeDef* I2C_PORT = GPIOB;
+	uint16_t I2C_SDA_Pin = GPIO_PIN_7;
+	uint16_t I2C_SCL_Pin = GPIO_PIN_6;
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin   = I2C_SCL_Pin | I2C_SCL_Pin;
+	GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_OD;
+	GPIO_InitStruct.Pull  = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(I2C_PORT, &GPIO_InitStruct);
+
+	EEPROM_I2C.Instance->CR1 &= (unsigned)~(0x0001);
+
+	GPIO_InitTypeDef GPIO_InitStructure = {0};
+	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_OD;
+	GPIO_InitStructure.Pull = GPIO_PULLUP;
+	GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
+
+
+	GPIO_InitStructure.Pin = I2C_SCL_Pin;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
+	HAL_GPIO_WritePin(I2C_PORT, (uint16_t)(GPIO_InitStructure.Pin), GPIO_PIN_SET);
+
+	GPIO_InitStructure.Pin = I2C_SDA_Pin;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
+	HAL_GPIO_WritePin(I2C_PORT, (uint16_t)(GPIO_InitStructure.Pin), GPIO_PIN_SET);
+
+	util_old_timer_t timer = {0};
+	util_old_timer_start(&timer, 10000);
+	while(GPIO_PIN_SET != HAL_GPIO_ReadPin(I2C_PORT, I2C_SCL_Pin)) {
+		if (!util_old_timer_wait(&timer)) {
+			system_error_handler(I2C_ERROR, NULL);
+		}
+		asm("nop");
+	}
+	util_old_timer_start(&timer, 10000);
+	while(GPIO_PIN_SET != HAL_GPIO_ReadPin(I2C_PORT, I2C_SDA_Pin)) {
+		if (!util_old_timer_wait(&timer)) {
+			system_error_handler(I2C_ERROR, NULL);
+		}
+		asm("nop");
+	}
+
+	HAL_GPIO_WritePin(I2C_PORT, I2C_SDA_Pin, GPIO_PIN_RESET);
+	util_old_timer_start(&timer, 10000);
+	while(GPIO_PIN_RESET != HAL_GPIO_ReadPin(I2C_PORT, I2C_SDA_Pin)) {
+		if (!util_old_timer_wait(&timer)) {
+			system_error_handler(I2C_ERROR, NULL);
+		}
+		asm("nop");
+	}
+
+	HAL_GPIO_WritePin(I2C_PORT, I2C_SCL_Pin, GPIO_PIN_RESET);
+	util_old_timer_start(&timer, 10000);
+	while(GPIO_PIN_RESET != HAL_GPIO_ReadPin(I2C_PORT, I2C_SCL_Pin)) {
+		if (!util_old_timer_wait(&timer)) {
+			system_error_handler(I2C_ERROR, NULL);
+		}
+		asm("nop");
+	}
+
+	HAL_GPIO_WritePin(I2C_PORT, I2C_SDA_Pin, GPIO_PIN_SET);
+	util_old_timer_start(&timer, 10000);
+	while(GPIO_PIN_SET != HAL_GPIO_ReadPin(I2C_PORT, I2C_SDA_Pin)) {
+		if (!util_old_timer_wait(&timer)) {
+			system_error_handler(I2C_ERROR, NULL);
+		}
+		asm("nop");
+	}
+
+	HAL_GPIO_WritePin(I2C_PORT, I2C_SCL_Pin, GPIO_PIN_SET);
+	util_old_timer_start(&timer, 10000);
+	while(GPIO_PIN_SET != HAL_GPIO_ReadPin(I2C_PORT, I2C_SCL_Pin)) {
+		if (!util_old_timer_wait(&timer)) {
+			system_error_handler(I2C_ERROR, NULL);
+		}
+		asm("nop");
+	}
+
+	GPIO_InitStructure.Mode = GPIO_MODE_AF_OD;
+
+	GPIO_InitStructure.Pin = I2C_SCL_Pin;
+	HAL_GPIO_Init(I2C_PORT, &GPIO_InitStructure);
+
+	GPIO_InitStructure.Pin = I2C_SDA_Pin;
+	HAL_GPIO_Init(I2C_PORT, &GPIO_InitStructure);
+
+	EEPROM_I2C.Instance->CR1 |= 0x8000;
+	asm("nop");
+	EEPROM_I2C.Instance->CR1 &= (unsigned)~0x8000;
+	asm("nop");
+
+	EEPROM_I2C.Instance->CR1 |= 0x0001;
+
+	HAL_I2C_Init(&EEPROM_I2C);
+}
+
+char* get_system_serial_str(void)
+{
+	uint32_t uid_base = 0x1FFFF7E8;
+
+	uint16_t *idBase0 = (uint16_t*)(uid_base);
+	uint16_t *idBase1 = (uint16_t*)(uid_base + 0x02);
+	uint32_t *idBase2 = (uint32_t*)(uid_base + 0x04);
+	uint32_t *idBase3 = (uint32_t*)(uid_base + 0x08);
+
+	static char str_uid[25] = {0};
+	memset((void*)str_uid, 0, sizeof(str_uid));
+	sprintf(str_uid, "%04X%04X%08lX%08lX", *idBase0, *idBase1, *idBase2, *idBase3);
+
+	return str_uid;
 }

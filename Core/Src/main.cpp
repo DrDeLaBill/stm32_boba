@@ -71,6 +71,14 @@ StorageAT* storage;
 UI ui;
 App app;
 
+SoulGuard<
+	RestartWatchdog,
+	PowerWatchdog,
+	StackWatchdog,
+	MemoryWatchdog,
+	SettingsWatchdog
+> soulGuard;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -131,16 +139,6 @@ int main(void)
 
 	SystemInfo();
 
-	SoulGuard<
-		RestartWatchdog,
-#if !TEST_ERRORS
-		PowerWatchdog,
-		StackWatchdog,
-		MemoryWatchdog,
-#endif
-		SettingsWatchdog
-	> soulGuard;
-
 	set_status(LOADING);
 
     storage = new StorageAT(
@@ -149,9 +147,15 @@ int main(void)
 		EEPROM_PAGE_SIZE
 	);
 
+    utl::Timer errTimer(30 * SECOND_MS);
+    errTimer.start();
 	while (has_errors() || is_status(LOADING)) {
 		soulGuard.defend();
 		ui.tick();
+
+    	if (!errTimer.wait()) {
+			system_error_handler((SOUL_STATUS)get_first_error(), error_loop);
+		}
 	}
 
     system_post_load();
@@ -173,10 +177,11 @@ int main(void)
     SOUL_STATUS error = ERRORS_START;
 #endif
 
-    bool foundError = false;
-    utl::Timer errTimer(30 * SECOND_MS);
-
+#ifdef DEBUG
+	static unsigned last_error = get_first_error();
+#endif
 	set_status(WORKING);
+	errTimer.start();
 	while (1)
 	{
 		utl::CodeStopwatch stopwatch(MAIN_TAG, 3 * GENERAL_TIMEOUT_MS);
@@ -194,24 +199,33 @@ int main(void)
 		}
 #endif
 
-		soulGuard.defend();
-
 		ui.tick();
 
-		if (foundError && !errTimer.wait()) {
-			system_error_handler((SOUL_STATUS)get_first_error());
+#ifdef DEBUG
+		unsigned error = get_first_error();
+		if (error && last_error != error) {
+			printTagLog(MAIN_TAG, "New error: %u", error);
+			last_error = error;
+		}
+#endif
+
+#if !TEST_ERRORS
+
+		soulGuard.defend();
+
+		if (!errTimer.wait()) {
+			system_error_handler((SOUL_STATUS)get_first_error(), error_loop);
 		}
 
 		if (has_errors() || is_status(LOADING)) {
-			if (!foundError) {
-				foundError = true;
-				errTimer.start();
-			}
 			continue;
 		}
-		foundError = false;
 
 		sensor_tick();
+
+		errTimer.start();
+
+#endif
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -269,6 +283,11 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+void error_loop()
+{
+	soulGuard.defend();
+}
+
 int _write(int, uint8_t *ptr, int len) {
 	(void)ptr;
 	(void)len;
@@ -303,7 +322,7 @@ void Error_Handler(void)
   /* User can add his own implementation to report the HAL error return state */
     b_assert(__FILE__, __LINE__, "The error handler has been called");
 	SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ERROR_HANDLER_CALLED;
-	system_error_handler(err);
+	system_error_handler(err, error_loop);
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -320,7 +339,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
 	b_assert((char*)file, line, "Wrong parameters value");
 	SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ASSERT_ERROR;
-	system_error_handler(err);
+	system_error_handler(err, error_loop);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

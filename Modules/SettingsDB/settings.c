@@ -68,28 +68,28 @@ const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
 };
 
 const uint16_t ANGLE_DEAD_BANDS[__arr_len(SENSITIVITY)] = {
-	15,
-	12,
-	10,
-	8,
-	6,
+	5,
+	5,
 	5,
 	4,
+	4,
 	3,
+	3,
+	2,
 	2,
 	1
 };
 
 const uint16_t ANGLE_PROP_BANDS[__arr_len(SENSITIVITY)] = {
-	150,
-	120,
-	100,
-	80,
-	60,
-	50,
+	45,
 	40,
+	38,
+	35,
+	34,
+	32,
 	30,
-	20,
+	25,
+	15,
 	10
 };
 
