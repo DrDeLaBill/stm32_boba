@@ -20,25 +20,18 @@
 #define SENSOR_MAX_ERRORS          (100)
 #define SENSOR_CONNECTION_DELAY_MS (300)
 
-#define SENSOR_FRAME_ID1           (0x02AB)
-#define SENSOR_FRAME_ID2           (0x02A7)
-#define SENSOR_FRAME_ID3           (0x02A8)
 #define SENSOR_DISTANCE_FRAME_ID   (0x02)
 
-#define SENSOR_FRAME_ANGLE         (0x02AC)
 #define SENSOR_FRAME_ANGLE_IDX     (3)
 
 #define SENSOR_MODE_NONE           (0)
 
-#define SENSOR_SETTINGS_STD_ID     (0x7ED)
-#define SENSOR_VALUE_STD_ID        (0)
-
 
 const uint16_t SENSOR_FRAME_IDS[] = {
-	SENSOR_FRAME_ID1,
-	SENSOR_FRAME_ID2,
-	SENSOR_FRAME_ID3,
-	SENSOR_FRAME_ANGLE
+	LINE_SENSOR_1_VALUE,
+	LINE_SENSOR_C_VALUE,
+	LINE_SENSOR_3_VALUE,
+	ANGLE_SENSOR_VALUE
 };
 
 typedef struct _sensor_t {
@@ -65,7 +58,7 @@ typedef struct _sensor_state_t {
 	uint32_t            tx_mailbox;
 	CAN_TxHeaderTypeDef tx_header;
 	uint8_t             tx_buffer[SENSOR_DATA_MAX_SIZE];
-	CAN_RxHeaderTypeDef rx_header;
+	uint16_t            rx_std_id;
 	uint8_t             rx_buffer[SENSOR_DATA_MAX_SIZE];
 
 	uint8_t             bigski_id;
@@ -87,21 +80,22 @@ static int16_t get_sensor_angle();
 static bool sensor_angle_available();
 
 static void _check_stop();
-static bool _recieve_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer);
+static bool _receive_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer);
+static bool _receive_angle(uint8_t* rx_buffer);
 static void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t* data);
 
 
 static const can_frame_t start_frames[] = {
-	{0x0050, 0x05, {0x09,}},
-	{0x0028, 0x08, {0x00, 0x9F, 0x1E, 0x0C, 0xFE, 0x01, 0x00, 0x00}},
-	{0x0050, 0x05, {0x09, 0x0B,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x02,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x01,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0xCD,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x02,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x19,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x15,}},
-	{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x16,}},
+	{CONTROL_INIT,          0x05, {0x09,}},
+//	{LINE_CONTROL_VALUE,    0x08, {0x00, 0x9F, 0x1E, 0x0C, 0xFE, 0x01, 0x00, 0x00}},
+//	{CONTROL_INIT,          0x05, {0x09, 0x0B,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x02,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x01,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0xCD,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x02,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x19,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x15,}},
+//	{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x16,}},
 };
 
 static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
@@ -213,28 +207,28 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
     	bool is_value = false;
     	switch (tmp_rx_header.StdId) {
-    	case SENSOR_FRAME_ANGLE:
-			sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].value =
-				((int16_t)tmp_rx_buffer[0] << 8) | (int16_t)tmp_rx_buffer[1];
-			util_old_timer_start(
-				&sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].connection_timer,
-				SENSOR_CONNECTION_DELAY_MS
-			);
-			is_value = true;
+    	case ANGLE_SENSOR_VALUE:
+    		is_value = _receive_angle(tmp_rx_buffer);
+    		break;
+    	case LINE_SENSOR_1_VALUE:
+    	case LINE_SENSOR_C_VALUE:
+    	case LINE_SENSOR_3_VALUE:
+    		is_value = _receive_distance(&tmp_rx_header, tmp_rx_buffer);
     		break;
     	default:
-    		is_value = _recieve_distance(&tmp_rx_header, tmp_rx_buffer);
-    		break;
+    		return;
     	}
+
     	if (is_value ||
-			!sensor_state.need_std_id ||
-			(tmp_rx_header.StdId != sensor_state.need_std_id)
+			sensor_state.need_std_id == NO_STD_ID ||
+			tmp_rx_header.StdId != sensor_state.need_std_id
 		) {
     		reset_status(CAN_FAULT);
     		return;
     	}
-		memcpy((void*)&sensor_state.rx_header, (void*)&tmp_rx_header, sizeof(tmp_rx_header));
+
 		memcpy(sensor_state.rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
+    	sensor_state.rx_std_id = (uint16_t)tmp_rx_header.StdId;
 		sensor_state.received = true;
     }
 	reset_status(CAN_FAULT);
@@ -258,15 +252,18 @@ void sensor_tick()
 
 bool sensor_available()
 {
-	if (get_sensor_target_mode() == SENSOR_MODE_ANGLE) {
+	switch (get_sensor_target_mode()) {
+	case SENSOR_MODE_ANGLE:
 		return sensor_angle_available();
-	}
-
-	if (get_sensor_target_mode() != SENSOR_MODE_BIGSKI) {
+	case SENSOR_MODE_BIGSKI:
 		return sensor2A7_available();
+	case SENSOR_MODE_SURFACE:
+	case SENSOR_MODE_STRING:
+		return sensor2AB_available() || sensor2A7_available() || sensor2A8_available();
+	default:
+		Error_Handler();
+		return false;
 	}
-
-	return sensor2AB_available() || sensor2A7_available() || sensor2A8_available();
 }
 
 int16_t get_sensor2AB_value()
@@ -438,7 +435,10 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 	sensor_state.tx_header.DLC                = dlc;
 	memset(sensor_state.tx_buffer, 0 , sizeof(sensor_state.tx_buffer));
 	memcpy(sensor_state.tx_buffer, data, __min(sizeof(sensor_state.tx_buffer), dlc));
-	HAL_CAN_AddTxMessage(&hcan, &sensor_state.tx_header, sensor_state.tx_buffer, &sensor_state.tx_mailbox);
+	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan, &sensor_state.tx_header, sensor_state.tx_buffer, &sensor_state.tx_mailbox);
+	if (status != HAL_OK) {
+		printTagLog("SENS", "CAN send error=%u std_id=%lu len=%lu", status, std_id, dlc);
+	}
 }
 
 
@@ -452,7 +452,7 @@ void _check_stop()
 	}
 }
 
-bool _recieve_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer)
+bool _receive_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer)
 {
 	bool res = false;
 	for (unsigned i = 0; i < __arr_len(sensor_state.sensors); i++) {
@@ -461,30 +461,35 @@ bool _recieve_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer)
 		) {
 			continue;
 		}
-		if (rx_header->StdId == SENSOR_FRAME_ANGLE) {
+		if (rx_header->StdId == ANGLE_SENSOR_VALUE) {
 		} else {
 			sensor_state.sensors[i].value     = ((int16_t)rx_buffer[1] << 8) | (int16_t)rx_buffer[2];
 			sensor_state.sensors[i].direction = rx_buffer[3];
 		}
 		res = true;
-#if SENSOR_BEDUG
-		printTagLog(
-			"SNS",
-			"distance[%X]=%d.%d",
-			(i == 0 ? SENSOR_FRAME_ID1 : i == 1 ? SENSOR_FRAME_ID2 : SENSOR_FRAME_ID3),
-			sensor_state.sensors[i].value / 100,
-			__abs(sensor_state.sensors[i].value % 100)
-		);
-#endif
 		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
 		break;
 	}
 	return res;
 }
 
-#define    DWT_CYCCNT    *(volatile unsigned long *)0xE0001004
-#define    DWT_CONTROL   *(volatile unsigned long *)0xE0001000
-#define    SCB_DEMCR     *(volatile unsigned long *)0xE000EDFC
+bool _receive_angle(uint8_t* rx_buffer)
+{
+	if (rx_buffer[0] != RELATIVE_VALUE) {
+		return false;
+	}
+	sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].value =
+		((int16_t)rx_buffer[1] << 8) | (int16_t)rx_buffer[2];
+	util_old_timer_start(
+		&sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].connection_timer,
+		SENSOR_CONNECTION_DELAY_MS
+	);
+	return true;
+}
+
+#define DWT_CYCCNT  (*(volatile unsigned long *)0xE0001004)
+#define DWT_CONTROL (*(volatile unsigned long *)0xE0001000)
+#define SCB_DEMCR   (*(volatile unsigned long *)0xE000EDFC)
 void _init_s(void)
 {
     SCB_DEMCR   |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -503,7 +508,7 @@ void _init_s(void)
 
 void _idle_s(void)
 {
-	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+	sensor_state.need_std_id = NO_STD_ID;
 
 	_check_stop();
 
@@ -528,11 +533,10 @@ void _idle_s(void)
 	} else if (sensor_state.received) {
 		fsm_gc_push_event(&sens_fsm, &recieved_e);
 	} else {
-		sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+		sensor_state.need_std_id = NO_STD_ID;
 	}
 
 	sensor_state.no_sensor = !sensor_available();
-
 	if (sensor_available()) {
 		reset_status(NO_SENSOR);
 		reset_status(NO_BIGSKI);
@@ -599,12 +603,12 @@ void _bigski1_s(void)
 {
 	int16_t value = -settings.bigski_target[sensor_state.bigski_id];
 	can_frame_t request =
-			{0x07EC, 0x06, {0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x05, (uint8_t)(value >> 8), (uint8_t)value}};
+			{LINE_CONTROL_SETTINGS, 0x06, {0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x05, (uint8_t)(value >> 8), (uint8_t)value}};
 
 	if (sensor_state.bigski_id >= __arr_len(BIGSKI_IDS)) {
 		sensor_state.bigski_id = 0;
 		can_frame_t mode_request =
-				{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x12, 0x00,}};
+			{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x12, 0x00,}};
 		_sensor_send_frame(mode_request.std_id, mode_request.dlc, mode_request.data);
 		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 		sensor_state.errors = 0;
@@ -623,7 +627,7 @@ void _bigski2_s(void)
 {
 	bool recieved = false;
 
-	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+	if (sensor_state.received && sensor_state.rx_std_id == LINE_SENSOR_SETTINGS) {
 		recieved = true;
 	} else {
 		sensor_state.received = false;
@@ -656,7 +660,7 @@ void _bigski3_s(void)
 {
 	bool recieved = false;
 
-	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+	if (sensor_state.received && sensor_state.rx_std_id == LINE_SENSOR_SETTINGS) {
 		recieved = true;
 	} else {
 		sensor_state.received = false;
@@ -689,7 +693,7 @@ void _bigski3_s(void)
 void _angle_s(void)
 {
 	sensor_state.initialized = true;
-	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+	sensor_state.need_std_id = NO_STD_ID;
 	sensor_state.curr_mode   = sensor_state.need_mode;
 	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
 	sensor_state.errors      = 0;
@@ -700,7 +704,7 @@ void _end1_s(void)
 {
 	bool recieved = false;
 
-	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+	if (sensor_state.received && sensor_state.rx_std_id == LINE_SENSOR_SETTINGS) {
 		recieved = true;
 	} else {
 		sensor_state.received = false;
@@ -725,7 +729,7 @@ void _end1_s(void)
 
 	int16_t target = -get_sensor_mode_target(sensor_state.need_mode);
 	can_frame_t request2 =
-		{0x07EC, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
+		{LINE_CONTROL_SETTINGS, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
 
 	_sensor_send_frame(request2.std_id, request2.dlc, request2.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
@@ -738,7 +742,7 @@ void _end2_s(void)
 {
 	bool recieved = false;
 
-	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+	if (sensor_state.received && sensor_state.rx_std_id == LINE_SENSOR_SETTINGS) {
 		recieved = true;
 	} else {
 		sensor_state.received = false;
@@ -762,7 +766,7 @@ void _end2_s(void)
 	}
 
 	can_frame_t request3 =
-		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x03, 0x06}};
+		{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x03, 0x06}};
 
 	_sensor_send_frame(request3.std_id, request3.dlc, request3.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
@@ -775,7 +779,7 @@ void _end3_s(void)
 {
 	bool recieved = false;
 
-	if (sensor_state.received && sensor_state.rx_header.StdId == SENSOR_SETTINGS_STD_ID) {
+	if (sensor_state.received && sensor_state.rx_std_id == LINE_SENSOR_SETTINGS) {
 		recieved = true;
 	} else {
 		sensor_state.received = false;
@@ -799,7 +803,7 @@ void _end3_s(void)
 	}
 
 	sensor_state.initialized = true;
-	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+	sensor_state.need_std_id = NO_STD_ID;
 	sensor_state.curr_mode   = sensor_state.need_mode;
 	sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
 	sensor_state.errors      = 0;
@@ -813,8 +817,24 @@ void _send_s(void)
 		return;
 	}
 
+	CAN_STD_ID std_id;
+	switch (get_sensor_mode()) {
+	case SENSOR_MODE_ANGLE:
+		std_id = ANGLE_CONTROL_STATUS;
+		break;
+	case SENSOR_MODE_SURFACE:
+	case SENSOR_MODE_STRING:
+	case SENSOR_MODE_BIGSKI:
+		std_id = LINE_CONTROL_STATUS;
+		break;
+	default:
+		set_error(INTERNAL_ERROR);
+		BEDUG_ASSERT(false, "Unknown sensor mode");
+		Error_Handler();
+		return;
+	}
 	uint8_t data[8] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	_sensor_send_frame(0x03F0, 0x08, data);
+	_sensor_send_frame(std_id, 0x08, data);
 
 	fsm_gc_push_event(&sens_fsm, &success_e);
 }
@@ -822,24 +842,35 @@ void _send_s(void)
 void surface_a(void)
 {
 	can_frame_t surface_request =
-		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x02,}};
+		{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x02,}};
 
-	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
+	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 
 	_sensor_send_frame(surface_request.std_id, surface_request.dlc, surface_request.data);
+	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+}
+
+void string_a(void)
+{
+	can_frame_t string_request =
+		{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x01,}};
+
+	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
+
+	_sensor_send_frame(string_request.std_id, string_request.dlc, string_request.data);
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 }
 
 void start_sensor_a(void)
 {
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
-	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
+	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 	sensor_state.errors      = 0;
 }
 
 void start_change_a(void)
 {
-	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
+	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 }
 
 void start_idle_a(void)
@@ -847,20 +878,9 @@ void start_idle_a(void)
 	fsm_gc_clear(&sens_fsm);
 }
 
-void string_a(void)
-{
-	can_frame_t string_request =
-		{0x07EC, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x01,}};
-
-	sensor_state.need_std_id = SENSOR_SETTINGS_STD_ID;
-
-	_sensor_send_frame(string_request.std_id, string_request.dlc, string_request.data);
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
-}
-
 void send_a(void)
 {
-	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+	sensor_state.need_std_id = NO_STD_ID;
 
 	int16_t value = get_sensor_value();
 	uint8_t data[8] = {
@@ -873,7 +893,23 @@ void send_a(void)
 		0x00,
 		0x0B
 	};
-	_sensor_send_frame(0x0028, 0x08, data);
+	CAN_STD_ID std_id;
+	switch (get_sensor_mode()) {
+	case SENSOR_MODE_ANGLE:
+		std_id = ANGLE_CONTROL_VALUE;
+		break;
+	case SENSOR_MODE_SURFACE:
+	case SENSOR_MODE_STRING:
+	case SENSOR_MODE_BIGSKI:
+		std_id = LINE_CONTROL_VALUE;
+		break;
+	default:
+		set_error(INTERNAL_ERROR);
+		BEDUG_ASSERT(false, "Unknown sensor mode");
+		Error_Handler();
+		return;
+	}
+	_sensor_send_frame(std_id, 0x08, data);
 
 	util_old_timer_start(&sensor_state.timer, SENSOR_COMMAND_DELAY_MS);
 }
@@ -881,7 +917,7 @@ void send_a(void)
 void recieve_a(void)
 {
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
-	sensor_state.need_std_id = SENSOR_VALUE_STD_ID;
+	sensor_state.need_std_id = NO_STD_ID;
 
 	sensor_state.errors   = 0;
 	sensor_state.received = false;

@@ -212,7 +212,11 @@ void showMode()
 		);
 		break;
 	case SENSOR_MODE_ANGLE:
-		bitmap = &angle_bitmap;
+		if (App::getActualValue() >= 0) {
+			bitmap = &right_angle_bitmap;
+		} else {
+			bitmap = &left_angle_bitmap;
+		}
 		break;
 	default:
 #ifdef DEBUG
@@ -316,7 +320,7 @@ void showFooter()
 			bitmaps[counter] = &string_bitmap;
 			break;
 		case SENSOR_MODE_ANGLE:
-			bitmaps[counter] = &angle_bitmap;
+			bitmaps[counter] = &right_angle_bitmap;
 			break;
 		case SENSOR_MODE_BIGSKI:
 			bitmaps[counter] = &bigski_bitmap;
@@ -794,7 +798,7 @@ void _no_sens_s(void)
 		scale
 	);
 
-	if (!is_status(NO_SENSOR)) {
+	if (sensor_available()) {
 		if (App::getAppMode() == APP_MODE_AUTO) {
 			fsm_gc_push_event(&ui_fsm, &auto_found_e);
 		} else {
@@ -855,7 +859,7 @@ void _manual_mode_s(void)
 	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
 	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
-	if (is_status(NO_SENSOR)) {
+	if (!sensor_available()) {
 		fsm_gc_push_event(&ui_fsm, &no_sens_e);
 	}
 	if (has_errors()) {
@@ -932,9 +936,7 @@ void _auto_mode_s(void)
 	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
 	showDirection(get_sensor_mode() == SENSOR_MODE_STRING);
 
-	if (App::getAppMode() == APP_MODE_MANUAL ||
-		is_status(NO_SENSOR)
-	) {
+	if (!sensor_available()) {
 		fsm_gc_push_event(&ui_fsm, &no_sens_e);
 	}
 	if (has_errors()) {
