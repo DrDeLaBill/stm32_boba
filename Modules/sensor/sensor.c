@@ -817,15 +817,20 @@ void _send_s(void)
 		return;
 	}
 
-	CAN_STD_ID std_id;
+	uint8_t line_data[] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	uint8_t angle_data[] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+	uint8_t* data = NULL;
+	CAN_STD_ID std_id = NO_STD_ID;
 	switch (get_sensor_mode()) {
 	case SENSOR_MODE_ANGLE:
 		std_id = ANGLE_CONTROL_STATUS;
+		data = angle_data;
 		break;
 	case SENSOR_MODE_SURFACE:
 	case SENSOR_MODE_STRING:
 	case SENSOR_MODE_BIGSKI:
 		std_id = LINE_CONTROL_STATUS;
+		data = line_data;
 		break;
 	default:
 		set_error(INTERNAL_ERROR);
@@ -833,7 +838,6 @@ void _send_s(void)
 		Error_Handler();
 		return;
 	}
-	uint8_t data[8] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	_sensor_send_frame(std_id, 0x08, data);
 
 	fsm_gc_push_event(&sens_fsm, &success_e);
@@ -880,28 +884,42 @@ void start_idle_a(void)
 
 void send_a(void)
 {
-	sensor_state.need_std_id = NO_STD_ID;
-
 	int16_t value = get_sensor_value();
-	uint8_t data[8] = {
+	uint8_t line_data[8] = {
 		(uint8_t)(value >> 8),
 		(uint8_t)(value),
 		0x00,
-		0x0C,
-		0xFE,
+		0x00,
+		0x00,
 		0x01,
 		0x00,
 		0x0B
 	};
+	uint8_t angle_data[8] = {
+		(uint8_t)(value >> 8),
+		(uint8_t)(value),
+		0x00,
+		0x00,
+		0x00,
+		0x01,
+		0x00,
+		0x0A
+	};
+
+	sensor_state.need_std_id = NO_STD_ID;
+
+	uint8_t* data = NULL;
 	CAN_STD_ID std_id;
 	switch (get_sensor_mode()) {
 	case SENSOR_MODE_ANGLE:
 		std_id = ANGLE_CONTROL_VALUE;
+		data = angle_data;
 		break;
 	case SENSOR_MODE_SURFACE:
 	case SENSOR_MODE_STRING:
 	case SENSOR_MODE_BIGSKI:
 		std_id = LINE_CONTROL_VALUE;
+		data = line_data;
 		break;
 	default:
 		set_error(INTERNAL_ERROR);
