@@ -80,6 +80,8 @@ SENSOR_MODE get_sensor_target_mode();
 
 STRING_DIRECTION get_sensor_direction();
 
+uint8_t get_sensor_mode_sensitive();
+
 
 #ifdef __cplusplus
 }

@@ -42,16 +42,16 @@ const uint32_t SENSITIVITY_DELAY_MS[__arr_len(SENSITIVITY)] = {
 };
 
 const uint16_t DEAD_BANDS_MMx10[__arr_len(SENSITIVITY)] = {
-	100, // 50,
+	50,
 	40,
 	36,
 	34,
 	30,
 	24,
 	20,
-	16,
-	12,
-	10
+	20, //16,
+	20, //12,
+	20, //10
 };
 
 const uint16_t PROP_BANDS_MMx10[__arr_len(SENSITIVITY)] = {

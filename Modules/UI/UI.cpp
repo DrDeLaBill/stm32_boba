@@ -776,6 +776,16 @@ void _no_sens_s(void)
 {
 	showMode();
 	showFooter();
+	showUp(is_status(MANUAL_NEED_VALVE_UP));
+	showDown(is_status(MANUAL_NEED_VALVE_DOWN));
+	showMiddle(__abs(App::getRealValue()) < App::getDeadBand());
+
+	buttons[BTN_UP_Pin].pressed() ?
+		set_status(MANUAL_NEED_VALVE_UP) :
+		reset_status(MANUAL_NEED_VALVE_UP);
+	buttons[BTN_DOWN_Pin].pressed() ?
+		set_status(MANUAL_NEED_VALVE_DOWN) :
+		reset_status(MANUAL_NEED_VALVE_DOWN);
 
 	char line[PHRASE_LEN_MAX] = {};
 	const char* phrase = t(T_NO_SENSOR, settings.language);
@@ -866,8 +876,12 @@ void _manual_mode_s(void)
 		fsm_gc_push_event(&ui_fsm, &error_e);
 	}
 
-	buttons[BTN_UP_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_UP) : reset_status(MANUAL_NEED_VALVE_UP);
-	buttons[BTN_DOWN_Pin].pressed() ? set_status(MANUAL_NEED_VALVE_DOWN) : reset_status(MANUAL_NEED_VALVE_DOWN);
+	buttons[BTN_UP_Pin].pressed() ?
+		set_status(MANUAL_NEED_VALVE_UP) :
+		reset_status(MANUAL_NEED_VALVE_UP);
+	buttons[BTN_DOWN_Pin].pressed() ?
+		set_status(MANUAL_NEED_VALVE_DOWN) :
+		reset_status(MANUAL_NEED_VALVE_DOWN);
 
 	static bool target_reseted = false;
 	if (buttons[BTN_ENTER_Pin].isHolded()) {

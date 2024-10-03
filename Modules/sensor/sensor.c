@@ -112,6 +112,8 @@ sensor_state_t sensor_state = {
 
 static void _init_s(void);
 static void _idle_s(void);
+static void _no_sensor_s(void);
+static void _error_s(void);
 static void _start_s(void);
 static void _change_s(void);
 static void _bigski1_s(void);
@@ -126,10 +128,12 @@ static void _send_s(void);
 static void start_sensor_a(void);
 static void start_change_a(void);
 static void start_idle_a(void);
+static void no_sensor_a(void);
 static void surface_a(void);
 static void string_a(void);
 static void send_a(void);
 static void recieve_a(void);
+static void error_idle_a(void);
 static void error_a(void);
 
 
@@ -147,53 +151,59 @@ FSM_GC_CREATE_EVENT(send_e,     0)
 FSM_GC_CREATE_EVENT(change_e,   1)
 FSM_GC_CREATE_EVENT(error_e,    2)
 
-FSM_GC_CREATE_STATE(init_s,    _init_s)
-FSM_GC_CREATE_STATE(idle_s,    _idle_s)
-FSM_GC_CREATE_STATE(start_s,   _start_s)
-FSM_GC_CREATE_STATE(change_s,  _change_s)
-FSM_GC_CREATE_STATE(bigski1_s, _bigski1_s)
-FSM_GC_CREATE_STATE(bigski2_s, _bigski2_s)
-FSM_GC_CREATE_STATE(bigski3_s, _bigski3_s)
-FSM_GC_CREATE_STATE(angle_s,   _angle_s)
-FSM_GC_CREATE_STATE(end1_s,    _end1_s)
-FSM_GC_CREATE_STATE(end2_s,    _end2_s)
-FSM_GC_CREATE_STATE(end3_s,    _end3_s)
-FSM_GC_CREATE_STATE(send_s,    _send_s)
+FSM_GC_CREATE_STATE(init_s,      _init_s)
+FSM_GC_CREATE_STATE(idle_s,      _idle_s)
+FSM_GC_CREATE_STATE(no_sensor_s, _no_sensor_s)
+FSM_GC_CREATE_STATE(error_s,     _error_s)
+FSM_GC_CREATE_STATE(start_s,     _start_s)
+FSM_GC_CREATE_STATE(change_s,    _change_s)
+FSM_GC_CREATE_STATE(bigski1_s,   _bigski1_s)
+FSM_GC_CREATE_STATE(bigski2_s,   _bigski2_s)
+FSM_GC_CREATE_STATE(bigski3_s,   _bigski3_s)
+FSM_GC_CREATE_STATE(angle_s,     _angle_s)
+FSM_GC_CREATE_STATE(end1_s,      _end1_s)
+FSM_GC_CREATE_STATE(end2_s,      _end2_s)
+FSM_GC_CREATE_STATE(end3_s,      _end3_s)
+FSM_GC_CREATE_STATE(send_s,      _send_s)
 
 FSM_GC_CREATE_TABLE(
 	sens_fsm_table,
-	{&init_s,   &success_e,  &start_s,    start_sensor_a},
+	{&init_s,      &success_e,  &start_s,     start_sensor_a},
 
-	{&idle_s,    &send_e,     &send_s,    send_a},
-	{&idle_s,    &change_e,   &change_s,  start_change_a},
-	{&idle_s,    &recieved_e, &idle_s,    recieve_a},
-	{&idle_s,    &error_e,    &start_s,   start_sensor_a},
+	{&idle_s,      &send_e,     &send_s,      send_a},
+	{&idle_s,      &change_e,   &change_s,    start_change_a},
+	{&idle_s,      &recieved_e, &idle_s,      recieve_a},
+	{&idle_s,      &error_e,    &no_sensor_s, no_sensor_a},
 
-	{&start_s,   &success_e,  &idle_s,    start_idle_a},
-	{&start_s,   &error_e,    &idle_s,    error_a},
+	{&no_sensor_s, &success_e,  &change_s,    start_change_a},
 
-	{&change_s,  &bigski1_e,  &bigski1_s, NULL},
-	{&change_s,  &surface_e,  &end1_s,    surface_a},
-	{&change_s,  &string_e,   &end1_s,    string_a},
-	{&change_s,  &angle_e,    &angle_s,   NULL},
+	{&error_s,     &success_e,  &no_sensor_s, no_sensor_a},
 
-	{&bigski1_s, &bigski1_e,  &bigski2_s, NULL},
-	{&bigski1_s, &bigski2_e,  &bigski3_s, NULL},
-	{&bigski2_s, &timeout_e,  &idle_s,    error_a},
-	{&bigski2_s, &success_e,  &bigski1_s, NULL},
-	{&bigski3_s, &timeout_e,  &idle_s,    error_a},
-	{&bigski3_s, &success_e,  &idle_s,    start_idle_a},
+	{&start_s,     &success_e,  &idle_s,      start_idle_a},
+	{&start_s,     &error_e,    &idle_s,      error_idle_a},
 
-	{&angle_s,   &success_e,  &idle_s,    start_idle_a},
+	{&change_s,    &bigski1_e,  &bigski1_s,   NULL},
+	{&change_s,    &surface_e,  &end1_s,      surface_a},
+	{&change_s,    &string_e,   &end1_s,      string_a},
+	{&change_s,    &angle_e,    &angle_s,     NULL},
 
-	{&end1_s,    &timeout_e,  &idle_s,    error_a},
-	{&end1_s,    &success_e,  &end2_s,    NULL},
-	{&end2_s,    &timeout_e,  &idle_s,    error_a},
-	{&end2_s,    &success_e,  &end3_s,    NULL},
-	{&end3_s,    &timeout_e,  &idle_s,    error_a},
-	{&end3_s,    &success_e,  &idle_s,    start_idle_a},
+	{&bigski1_s,   &bigski1_e,  &bigski2_s,   NULL},
+	{&bigski1_s,   &bigski2_e,  &bigski3_s,   NULL},
+	{&bigski2_s,   &timeout_e,  &idle_s,      error_idle_a},
+	{&bigski2_s,   &success_e,  &bigski1_s,   NULL},
+	{&bigski3_s,   &timeout_e,  &idle_s,      error_idle_a},
+	{&bigski3_s,   &success_e,  &idle_s,      start_idle_a},
 
-	{&send_s,    &success_e,  &idle_s,    start_idle_a},
+	{&angle_s,     &success_e,  &idle_s,      start_idle_a},
+
+	{&end1_s,      &timeout_e,  &idle_s,      error_idle_a},
+	{&end1_s,      &success_e,  &end2_s,      NULL},
+	{&end2_s,      &timeout_e,  &idle_s,      error_idle_a},
+	{&end2_s,      &success_e,  &end3_s,      NULL},
+	{&end3_s,      &timeout_e,  &idle_s,      error_idle_a},
+	{&end3_s,      &success_e,  &idle_s,      start_idle_a},
+
+	{&send_s,      &success_e,  &idle_s,      start_idle_a},
 )
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
@@ -216,7 +226,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     		is_value = _receive_distance(&tmp_rx_header, tmp_rx_buffer);
     		break;
     	default:
-    		return;
+    		break;
     	}
 
     	if (is_value ||
@@ -330,6 +340,7 @@ int16_t get_sensor_mode_target(SENSOR_MODE mode)
 
 void save_sensor_mode_target()
 {
+	sensor_state.initialized = false;
 	switch (get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
 		settings.surface_target += get_sensor2A7_value();
@@ -353,6 +364,7 @@ void save_sensor_mode_target()
 
 void reset_sensor_mode_target()
 {
+	sensor_state.initialized = false;
 	switch (get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
 		settings.surface_target = 0;
@@ -396,6 +408,8 @@ bool sensor_angle_available()
 
 void set_sensor_mode(SENSOR_MODE mode)
 {
+	sensor_state.initialized = false;
+
 	BEDUG_ASSERT(IS_SENSOR_MODE(mode), "Unknown sensor mode");
 	if (!IS_SENSOR_MODE(mode)) {
 		Error_Handler();
@@ -422,6 +436,23 @@ STRING_DIRECTION get_sensor_direction()
 	return STR_MIDDLE;
 }
 
+uint8_t get_sensor_mode_sensitive()
+{
+	switch(get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		return settings.surface_snstv;
+	case SENSOR_MODE_STRING:
+		return settings.string_snstv;
+	case SENSOR_MODE_BIGSKI:
+		return settings.bigski_snstv;
+	case SENSOR_MODE_ANGLE:
+		return settings.angle_snstv;
+	default:
+		BEDUG_ASSERT(false, "Unknown mode");
+		Error_Handler();
+		return 0;
+	}
+}
 
 void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t* data)
 {
@@ -440,7 +471,6 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 		printTagLog("SENS", "CAN send error=%u std_id=%lu len=%lu", status, std_id, dlc);
 	}
 }
-
 
 void _check_stop()
 {
@@ -518,33 +548,37 @@ void _idle_s(void)
 
 	if (sensor_state.errors > SENSOR_MAX_ERRORS) {
 		fsm_gc_push_event(&sens_fsm, &error_e);
-	} else if (
-		!sensor_state.initialized ||
-		sensor_state.need_mode   != sensor_state.curr_mode ||
-		sensor_state.curr_target != get_sensor_mode_target(sensor_state.need_mode) ||
-		sensor_state.no_sensor   != !sensor_available()
-	) {
+	}
+
+	if (!sensor_available()) {
+		fsm_gc_push_event(&sens_fsm, &error_e);
+	}
+
+	if (!sensor_state.initialized) {
 		fsm_gc_push_event(&sens_fsm, &change_e);
-	} else if (
-		sensor_available() &&
-		!util_old_timer_wait(&(sensor_state.frame_timer))
-	) {
+	}
+
+	if (!!util_old_timer_wait(&(sensor_state.frame_timer))) {
 		fsm_gc_push_event(&sens_fsm, &send_e);
-	} else if (sensor_state.received) {
+	}
+
+	if (sensor_state.received) {
 		fsm_gc_push_event(&sens_fsm, &recieved_e);
-	} else {
-		sensor_state.need_std_id = NO_STD_ID;
 	}
 
 	sensor_state.no_sensor = !sensor_available();
+}
+
+void _no_sensor_s(void)
+{
 	if (sensor_available()) {
-		reset_status(NO_SENSOR);
-		reset_status(NO_BIGSKI);
-	} else {
-		sensor_state.errors = SENSOR_MAX_ERRORS + 1;
-		set_status(NO_SENSOR);
-		set_status(NO_BIGSKI);
+		fsm_gc_push_event(&sens_fsm, &success_e);
 	}
+}
+
+void _error_s(void)
+{
+	fsm_gc_push_event(&sens_fsm, &success_e);
 }
 
 void _start_s(void)
@@ -868,16 +902,33 @@ void string_a(void)
 void start_sensor_a(void)
 {
 	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+
 	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 	sensor_state.errors      = 0;
+
+	fsm_gc_clear(&sens_fsm);
 }
 
 void start_change_a(void)
 {
 	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
+	fsm_gc_clear(&sens_fsm);
 }
 
 void start_idle_a(void)
+{
+	sensor_state.need_std_id = NO_STD_ID;
+	fsm_gc_clear(&sens_fsm);
+}
+
+void error_idle_a(void)
+{
+	sensor_state.errors++;
+
+	fsm_gc_clear(&sens_fsm);
+}
+
+void no_sensor_a(void)
 {
 	fsm_gc_clear(&sens_fsm);
 }
@@ -939,11 +990,15 @@ void recieve_a(void)
 
 	sensor_state.errors   = 0;
 	sensor_state.received = false;
+
+	fsm_gc_clear(&sens_fsm);
 }
 
 void error_a(void)
 {
-	sensor_state.errors++;
+	sensor_state.errors = 0;
+
+	fsm_gc_clear(&sens_fsm);
 }
 
 

@@ -28,7 +28,7 @@ protected:
 
 	static constexpr uint32_t MEAS_DELAY_MS = 500;
 	static constexpr uint32_t SAMPLE_PWM_MS = 1100;
-	static constexpr uint32_t VALVE_MIN_TIME_MS = 100;
+	static constexpr uint32_t VALVE_MIN_TIME_MS = 90;
 	static constexpr uint32_t WORK_DELAY_BUFFER_MS = 100;
 
 	// Events:
@@ -77,6 +77,9 @@ protected:
 
 		fsm::Transition<auto_s,   auto_e,        auto_s,   auto_start_a>,
 		fsm::Transition<auto_s,   manual_e,      manual_s, manual_start_a>,
+		fsm::Transition<auto_s,   plate_up_e,    auto_s,   move_up_a>,
+		fsm::Transition<auto_s,   plate_down_e,  auto_s,   move_down_a>,
+		fsm::Transition<auto_s,   plate_stop_e,  auto_s,   plate_stop_a>,
 		fsm::Transition<auto_s,   error_e,       error_s,  error_start_a>,
 
 		fsm::Transition<up_s,     plate_stop_e,  manual_s, plate_stop_a>,
@@ -99,6 +102,7 @@ protected:
 	static utl::Timer sampleTimer;
 	static utl::Timer sensDelayTimer;
 	static utl::Timer workTimer;
+	static utl::Timer noiseTimer;
 
 	static SENSOR_MODE sensorMode;
 	static APP_MODE appMode;
@@ -114,6 +118,7 @@ protected:
 	static void down();
 	static void stop();
 
+	static uint16_t getAppDeadBand();
 	static bool isOnDeadBand();
 	static bool isOnPropBand();
 

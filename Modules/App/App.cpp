@@ -16,6 +16,7 @@ uint16_t App::propBand = 0;
 utl::Timer App::sampleTimer(App::SAMPLE_PWM_MS);
 utl::Timer App::sensDelayTimer(1);
 utl::Timer App::workTimer(1);
+utl::Timer App::noiseTimer(800);
 SENSOR_MODE App::sensorMode = SENSOR_MODE_SURFACE;
 APP_MODE App::appMode = APP_MODE_MANUAL;
 App::SENSOR_POSITION App::position = App::ON_INIT;
@@ -84,15 +85,16 @@ void App::changeSensorMode(SENSOR_MODE mode)
 
 uint16_t App::getDeadBand()
 {
+	uint8_t sensitive = get_sensor_mode_sensitive();
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
-		return DEAD_BANDS_MMx10[settings.surface_snstv];
+		return DEAD_BANDS_MMx10[sensitive];
 	case SENSOR_MODE_STRING:
-		return DEAD_BANDS_MMx10[settings.string_snstv];
+		return DEAD_BANDS_MMx10[sensitive];
 	case SENSOR_MODE_BIGSKI:
-		return DEAD_BANDS_MMx10[settings.bigski_snstv];
+		return DEAD_BANDS_MMx10[sensitive];
 	case SENSOR_MODE_ANGLE:
-		return ANGLE_DEAD_BANDS[settings.angle_snstv];
+		return ANGLE_DEAD_BANDS[sensitive];
 	default:
 		BEDUG_ASSERT(false, "Unknown mode");
 		fsm.push_event(error_e{});
@@ -125,14 +127,22 @@ void App::stop()
 	reset_status(AUTO_NEED_VALVE_UP);
 }
 
+uint16_t App::getAppDeadBand()
+{
+	if (position == ON_DEAD_BAND) {
+		return deadBand;
+	}
+	return deadBand / 2;
+}
+
 bool App::isOnDeadBand()
 {
-	return __abs(getActualValue()) <= deadBand;
+	return __abs(getActualValue()) <= getAppDeadBand();
 }
 
 bool App::isOnPropBand()
 {
-	return __abs(getActualValue()) > deadBand && __abs(getActualValue()) <= propBand;
+	return __abs(getActualValue()) <= propBand;
 }
 
 void App::_init_s::operator ()()
@@ -179,13 +189,26 @@ void App::_auto_s::operator ()()
 	}
 
 	if (!sensor_available()) {
-		stop();
+		if (is_status(MANUAL_NEED_VALVE_UP) && is_status(MANUAL_NEED_VALVE_DOWN)) {
+			stop();
+		} else if (is_status(MANUAL_NEED_VALVE_UP)) {
+			up();
+		} else if (is_status(MANUAL_NEED_VALVE_DOWN)) {
+			down();
+		} else {
+			stop();
+		}
 		return;
 	}
 
 	if (isOnDeadBand()) {
 		position = ON_DEAD_BAND;
+		noiseTimer.start();
 		stop();
+		return;
+	}
+
+	if (noiseTimer.wait()) {
 		return;
 	}
 
@@ -222,15 +245,32 @@ void App::_auto_s::operator ()()
 		return;
 	}
 
-	uint32_t k_percent = (__abs_dif(propBand, __abs(getActualValue())) * 100) / propBand;
+	const uint32_t MAX_PERCENTS[] = {
+		80,
+		80,
+		70,
+		60,
+		40,
+		40,
+		30,
+		20,
+		20,
+		10
+	};
+	uint32_t max_percent = MAX_PERCENTS[get_sensor_mode_sensitive()];
+	uint32_t k_percent = max_percent - (
+		(
+			__abs_dif(
+				__abs(propBand),
+				__abs(getActualValue())
+			) * max_percent
+		) / propBand
+	);
 	uint32_t time_ms = (k_percent * SAMPLE_PWM_MS) / 100;
 
-	if (!time_ms) {
-		return;
-	}
-
 	if (time_ms < VALVE_MIN_TIME_MS) {
-		time_ms = VALVE_MIN_TIME_MS;
+		stop();
+		return;
 	}
 
 	workTimer.changeDelay(time_ms);
@@ -284,29 +324,30 @@ void App::manual_start_a::operator ()()
 void App::auto_start_a::operator ()()
 {
 	uint32_t measureCount = 0;
+	uint8_t sensitive = get_sensor_mode_sensitive();
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
-		deadBand = DEAD_BANDS_MMx10[settings.surface_snstv];
-		propBand = PROP_BANDS_MMx10[settings.surface_snstv];
-		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.surface_snstv]);
+		deadBand = DEAD_BANDS_MMx10[sensitive];
+		propBand = PROP_BANDS_MMx10[sensitive];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.surface_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_STRING:
-		deadBand = DEAD_BANDS_MMx10[settings.string_snstv];
-		propBand = PROP_BANDS_MMx10[settings.string_snstv];
-		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.string_snstv]);
+		deadBand = DEAD_BANDS_MMx10[sensitive];
+		propBand = PROP_BANDS_MMx10[sensitive];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.string_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_BIGSKI:
-		deadBand = DEAD_BANDS_MMx10[settings.bigski_snstv];
-		propBand = PROP_BANDS_MMx10[settings.bigski_snstv];
-		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.bigski_snstv]);
+		deadBand = DEAD_BANDS_MMx10[sensitive];
+		propBand = PROP_BANDS_MMx10[sensitive];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.bigski_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_ANGLE:
-		deadBand = ANGLE_DEAD_BANDS[settings.angle_snstv];
-		propBand = ANGLE_PROP_BANDS[settings.angle_snstv];
-		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[settings.angle_snstv]);
+		deadBand = ANGLE_DEAD_BANDS[sensitive];
+		propBand = ANGLE_PROP_BANDS[sensitive];
+		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.angle_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	default:
