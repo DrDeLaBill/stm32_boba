@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "main.h"
-#include "soul.h"
+#include "gsystem.h"
 #include "settings.h"
 #include "translate.h"
 
@@ -33,7 +33,7 @@ void language_callback::click(uint16_t button)
 char* language_callback::value()
 {
 	static char value[MenuItem::VALUE_MAX_LEN] = "";
-	snprintf(value, sizeof(value), "%s", settings.language == ENGLISH ? __STR_DEF2__(ENGLISH) : __STR_DEF2__(RUSSIAN));
+	snprintf(value, sizeof(value), "%s", settings.language == ENGLISH ? __STR_DEF__(ENGLISH) : __STR_DEF__(RUSSIAN));
 	return value;
 }
 char* language_callback::label()  { return (char*)t(T_Language, settings.language); }

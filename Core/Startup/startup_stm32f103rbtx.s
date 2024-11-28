@@ -62,7 +62,6 @@ Reset_Handler:
 
 /* Call the clock system initialization function.*/
   bl  SystemInit
-  bl  STACK_WATCHDOG_FILL_RAM
 
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata

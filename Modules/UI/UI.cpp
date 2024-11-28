@@ -4,15 +4,16 @@
 
 #include <cstdio>
 #include <cstring>
+#include <unordered_map>
 
 #include "bmp.h"
 #include "glog.h"
-#include "soul.h"
 #include "main.h"
 #include "gutils.h"
 #include "sensor.h"
 #include "bmacro.h"
 #include "fsm_gc.h"
+#include "gsystem.h"
 #include "gstring.h"
 #include "display.h"
 #include "settings.h"
@@ -41,6 +42,9 @@
 	NAME[__min(strlen(NAME), sizeof(NAME) - 1)] = 0; \
 
 
+
+static const char TAG[] = "UI";
+static const uint32_t DEBOUNCE_MS = 20;
 
 static utl::circle_buffer<UI_CLICKS_SIZE, uint16_t> clicks;
 static std::unordered_map<uint16_t, Button> buttons = {
@@ -83,6 +87,10 @@ static uint16_t f3_color = DISPLAY_COLOR_WHITE;
 
 const char (*loadStr)[TRANSLATE_MAX_LEN] = T_LOADING;
 
+static void showUp(bool flag = false);
+static void showDown(bool flag = false);
+static void showMiddle(bool flag = false);
+
 static void showMode();
 static void showServiceHeader();
 static void showFooter();
@@ -90,10 +98,6 @@ static void showServiceFooter();
 static void showValue();
 static void showLoading();
 static void showDirection(bool flag = true);
-
-static void showUp(bool flag = false);
-static void showDown(bool flag = false);
-static void showMiddle(bool flag = false);
 
 
 static void _init_s        (void);
@@ -158,19 +162,19 @@ FSM_GC_CREATE_TABLE(
 )
 
 
-UI::UI()
+void ui_init()
 {
 	fsm_gc_init(&ui_fsm, ui_fsm_table, __arr_len(ui_fsm_table));
 }
 
-void UI::tick()
+void ui_tick()
 {
 	utl::CodeStopwatch watch("UI2", 300);
-	fsm_gc_proccess(&ui_fsm);
+	fsm_gc_process(&ui_fsm);
 }
 
 
-void UI::buttonsTick()
+void ui_btn_tick()
 {
 	utl::CodeStopwatch watch("UI1", 100);
 
@@ -259,7 +263,7 @@ void showServiceHeader()
 	uint16_t offset_x = display_width() / 2;
 	uint16_t offset_y = DISPLAY_HEADER_HEIGHT / 2;
 
-	if (get_last_error() || is_status(RCC_FAULT)) {
+	if (get_last_error() || is_status(SYS_TICK_FAULT)) {
 		font = &u8g2_font_8x13_t_cyrillic;
 		snprintf(line, sizeof(line), "%s", t(T_RESET_ERROR, settings.language));
 	} else {
@@ -461,12 +465,14 @@ void showValue()
 		char target[PHRASE_LEN_MAX] = {};
 		const char* phrase = t(T_TARGET, settings.language);
 		if (get_sensor_target_mode() == SENSOR_MODE_ANGLE) {
+			int16_t value = get_sensor_mode_target(get_sensor_mode());
 			snprintf(
 				target,
 				sizeof(target) - 1,
-				"%s: %d",
+				"%s: %d.%d",
 				phrase,
-				get_sensor_mode_target(get_sensor_mode())
+				value / 100,
+				__abs(value % 100)
 			);
 		} else {
 			snprintf(
@@ -751,8 +757,7 @@ void _init_s(void)
 
 void _load_s(void)
 {
-	if (!is_status(LOADING) &&
-		is_status(WORKING) &&
+	if (is_system_ready() &&
 		!is_status(NEED_LOAD_SETTINGS) &&
 		!is_status(NEED_SAVE_SETTINGS)
 	) {

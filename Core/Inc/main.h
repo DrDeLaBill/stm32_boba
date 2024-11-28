@@ -54,9 +54,6 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
-void error_loop(void);
-int _write(int file, uint8_t *ptr, int len);
-
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -120,14 +117,6 @@ extern UART_HandleTypeDef        huart1;
 // Display
 extern SPI_HandleTypeDef         hspi1;
 #define DISPLAY_SPI              (hspi1)
-
-// Buttons
-extern TIM_HandleTypeDef         htim4;
-#define BTN_TIM                  (htim4)
-
-// App
-extern TIM_HandleTypeDef         htim3;
-#define APP_TIM                  (htim3)
 
 // RTC
 extern RTC_HandleTypeDef         hrtc;

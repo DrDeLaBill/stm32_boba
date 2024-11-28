@@ -9,6 +9,7 @@
 #include "soul.h"
 #include "gutils.h"
 #include "fsm_gc.h"
+#include "gsystem.h"
 #include "hal_defs.h"
 #include "settings.h"
 
@@ -35,9 +36,9 @@ const uint16_t SENSOR_FRAME_IDS[] = {
 };
 
 typedef struct _sensor_t {
-	int16_t             value;
-	util_old_timer_t    connection_timer;
-	STRING_DIRECTION    direction;
+	int16_t          value;
+	gtimer_t         connection_timer;
+	STRING_DIRECTION direction;
 } sensor_t;
 
 typedef struct _sensor_state_t {
@@ -51,8 +52,8 @@ typedef struct _sensor_state_t {
 	uint16_t            need_std_id;
 
 	unsigned            errors;
-	util_old_timer_t    timer;
-	util_old_timer_t    frame_timer;
+	gtimer_t            timer;
+	gtimer_t            frame_timer;
 
 	bool                received;
 	uint32_t            tx_mailbox;
@@ -134,7 +135,6 @@ static void string_a(void);
 static void send_a(void);
 static void recieve_a(void);
 static void error_idle_a(void);
-static void error_a(void);
 
 
 FSM_GC_CREATE(sens_fsm)
@@ -257,7 +257,7 @@ void sensor_tick()
 	if (!sens_fsm._initialized) {
 		fsm_gc_init(&sens_fsm, sens_fsm_table, __arr_len(sens_fsm_table));
 	}
-	fsm_gc_proccess(&sens_fsm);
+	fsm_gc_process(&sens_fsm);
 }
 
 bool sensor_available()
@@ -388,22 +388,22 @@ void reset_sensor_mode_target()
 
 bool sensor2AB_available()
 {
-	return util_old_timer_wait(&sensor_state.sensors[0].connection_timer);
+	return gtimer_wait(&sensor_state.sensors[0].connection_timer);
 }
 
 bool sensor2A7_available()
 {
-	return util_old_timer_wait(&sensor_state.sensors[1].connection_timer);
+	return gtimer_wait(&sensor_state.sensors[1].connection_timer);
 }
 
 bool sensor2A8_available()
 {
-	return util_old_timer_wait(&sensor_state.sensors[2].connection_timer);
+	return gtimer_wait(&sensor_state.sensors[2].connection_timer);
 }
 
 bool sensor_angle_available()
 {
-	return util_old_timer_wait(&sensor_state.sensors[3].connection_timer);
+	return gtimer_wait(&sensor_state.sensors[3].connection_timer);
 }
 
 void set_sensor_mode(SENSOR_MODE mode)
@@ -474,11 +474,11 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 
 void _check_stop()
 {
-	if (sensor_state.enabled == is_status(LOADING)) {
-		is_status(LOADING) ?
-			HAL_CAN_DeactivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
-			HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
-		sensor_state.enabled = !is_status(LOADING);
+	if (sensor_state.enabled != is_system_ready()) {
+		is_system_ready() ?
+			HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
+			HAL_CAN_DeactivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+		sensor_state.enabled = is_system_ready();
 	}
 }
 
@@ -497,7 +497,7 @@ bool _receive_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer)
 			sensor_state.sensors[i].direction = rx_buffer[3];
 		}
 		res = true;
-		util_old_timer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
+		gtimer_start(&sensor_state.sensors[i].connection_timer, SENSOR_CONNECTION_DELAY_MS);
 		break;
 	}
 	return res;
@@ -510,7 +510,7 @@ bool _receive_angle(uint8_t* rx_buffer)
 	}
 	sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].value =
 		((int16_t)rx_buffer[1] << 8) | (int16_t)rx_buffer[2];
-	util_old_timer_start(
+	gtimer_start(
 		&sensor_state.sensors[SENSOR_FRAME_ANGLE_IDX].connection_timer,
 		SENSOR_CONNECTION_DELAY_MS
 	);
@@ -542,7 +542,7 @@ void _idle_s(void)
 
 	_check_stop();
 
-	if (is_status(LOADING)) {
+	if (!is_system_ready()) {
 		return;
 	}
 
@@ -558,7 +558,7 @@ void _idle_s(void)
 		fsm_gc_push_event(&sens_fsm, &change_e);
 	}
 
-	if (!!util_old_timer_wait(&(sensor_state.frame_timer))) {
+	if (!!gtimer_wait(&(sensor_state.frame_timer))) {
 		fsm_gc_push_event(&sens_fsm, &send_e);
 	}
 
@@ -585,7 +585,7 @@ void _start_s(void)
 {
 	static unsigned counter = 0;
 
-	if (!util_old_timer_wait(&sensor_state.timer)) {
+	if (!gtimer_wait(&sensor_state.timer)) {
 		counter = 0;
 		fsm_gc_push_event(&sens_fsm, &error_e);
 		return;
@@ -607,7 +607,7 @@ void _start_s(void)
 	);
 	counter++;
 
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 	sensor_state.errors = 0;
 }
 
@@ -644,13 +644,13 @@ void _bigski1_s(void)
 		can_frame_t mode_request =
 			{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x12, 0x00,}};
 		_sensor_send_frame(mode_request.std_id, mode_request.dlc, mode_request.data);
-		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+		gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 		sensor_state.errors = 0;
 
 		fsm_gc_push_event(&sens_fsm, &bigski2_e);
 	} else {
 		_sensor_send_frame(request.std_id, request.dlc, request.data);
-		util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+		gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 		sensor_state.errors = 0;
 
 		fsm_gc_push_event(&sens_fsm, &bigski1_e);
@@ -667,7 +667,7 @@ void _bigski2_s(void)
 		sensor_state.received = false;
 	}
 
-	if (!util_old_timer_wait(&sensor_state.timer)) {
+	if (!gtimer_wait(&sensor_state.timer)) {
 		fsm_gc_push_event(&sens_fsm, &timeout_e);
 		return;
 	}
@@ -700,7 +700,7 @@ void _bigski3_s(void)
 		sensor_state.received = false;
 	}
 
-	if (!util_old_timer_wait(&sensor_state.timer)) {
+	if (!gtimer_wait(&sensor_state.timer)) {
 		fsm_gc_push_event(&sens_fsm, &timeout_e);
 		return;
 	}
@@ -744,7 +744,7 @@ void _end1_s(void)
 		sensor_state.received = false;
 	}
 
-	if (!util_old_timer_wait(&sensor_state.timer)) {
+	if (!gtimer_wait(&sensor_state.timer)) {
 		fsm_gc_push_event(&sens_fsm, &timeout_e);
 		return;
 	}
@@ -766,7 +766,7 @@ void _end1_s(void)
 		{LINE_CONTROL_SETTINGS, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
 
 	_sensor_send_frame(request2.std_id, request2.dlc, request2.data);
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 	sensor_state.errors = 0;
 
 	fsm_gc_push_event(&sens_fsm, &success_e);
@@ -782,7 +782,7 @@ void _end2_s(void)
 		sensor_state.received = false;
 	}
 
-	if (!util_old_timer_wait(&sensor_state.timer)) {
+	if (!gtimer_wait(&sensor_state.timer)) {
 		fsm_gc_push_event(&sens_fsm, &timeout_e);
 		return;
 	}
@@ -803,7 +803,7 @@ void _end2_s(void)
 		{LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x03, 0x06}};
 
 	_sensor_send_frame(request3.std_id, request3.dlc, request3.data);
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 	sensor_state.errors = 0;
 
 	fsm_gc_push_event(&sens_fsm, &success_e);
@@ -819,7 +819,7 @@ void _end3_s(void)
 		sensor_state.received = false;
 	}
 
-	if (!util_old_timer_wait(&sensor_state.timer)) {
+	if (!gtimer_wait(&sensor_state.timer)) {
 		fsm_gc_push_event(&sens_fsm, &timeout_e);
 		return;
 	}
@@ -847,7 +847,7 @@ void _end3_s(void)
 
 void _send_s(void)
 {
-	if (util_old_timer_wait(&sensor_state.timer)) {
+	if (gtimer_wait(&sensor_state.timer)) {
 		return;
 	}
 
@@ -885,7 +885,7 @@ void surface_a(void)
 	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 
 	_sensor_send_frame(surface_request.std_id, surface_request.dlc, surface_request.data);
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 }
 
 void string_a(void)
@@ -896,12 +896,12 @@ void string_a(void)
 	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 
 	_sensor_send_frame(string_request.std_id, string_request.dlc, string_request.data);
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 }
 
 void start_sensor_a(void)
 {
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 
 	sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
 	sensor_state.errors      = 0;
@@ -980,23 +980,16 @@ void send_a(void)
 	}
 	_sensor_send_frame(std_id, 0x08, data);
 
-	util_old_timer_start(&sensor_state.timer, SENSOR_COMMAND_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_COMMAND_DELAY_MS);
 }
 
 void recieve_a(void)
 {
-	util_old_timer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
+	gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 	sensor_state.need_std_id = NO_STD_ID;
 
 	sensor_state.errors   = 0;
 	sensor_state.received = false;
-
-	fsm_gc_clear(&sens_fsm);
-}
-
-void error_a(void)
-{
-	sensor_state.errors = 0;
 
 	fsm_gc_clear(&sens_fsm);
 }

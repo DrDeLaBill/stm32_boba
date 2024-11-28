@@ -203,7 +203,7 @@ const char* t(const char phrase[][TRANSLATE_MAX_LEN], uint8_t lang)
 
 const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 {
-	if (error <= ERRORS_START && error >= ERRORS_END && error != RCC_FAULT) {
+	if (error <= ERRORS_START && error >= ERRORS_END && error != SYS_TICK_FAULT) {
 		return t(T_UNKNOWN_ERROR, lang);
 	};
 
@@ -219,8 +219,8 @@ const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 		return t(T_MEMORY_ACCESS_ERROR, lang);
 	case USAGE_FAULT:
 		return t(T_ILLEGAL_STATE, lang);
-	case RCC_FAULT:
-	case RCC_ERROR:
+	case SYS_TICK_FAULT:
+	case SYS_TICK_ERROR:
 		return t(T_RCC_ERROR, lang);
 	case STACK_ERROR:
 		return t(T_STACK_ERROR, lang);
@@ -234,6 +234,8 @@ const char* get_string_error(SOUL_STATUS error, uint8_t lang)
 		return t(T_ASSERT_ERROR, lang);
 	case ERROR_HANDLER_CALLED:
 		return t(T_ERROR_HANDLER_CALLED, lang);
+	case RTC_ERROR:
+		return t(T_RESET_ERROR, lang);
 #endif
 	case POWER_ERROR:
 		return t(T_POWER_ERROR, lang);

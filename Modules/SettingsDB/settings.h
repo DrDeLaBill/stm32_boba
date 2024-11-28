@@ -116,6 +116,8 @@ void settings_repair(settings_t* other);
 
 void settings_show();
 
+void settings_update();
+
 
 #ifdef __cplusplus
 }

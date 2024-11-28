@@ -25,7 +25,6 @@
 #include "i2c.h"
 #include "rtc.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -34,14 +33,11 @@
 #include "soul.h"
 #include "sensor.h"
 #include "bmacro.h"
-#include "system.h"
+#include "gsystem.h"
 #include "at24cm01.h"
 #include "hal_defs.h"
 
 #include "App.h"
-#include "SoulGuard.h"
-#include "StorageAT.h"
-#include "StorageDriver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -63,21 +59,9 @@
 
 /* USER CODE BEGIN PV */
 
+#ifdef DEBUG
 static constexpr char MAIN_TAG[] = "MAIN";
-
-StorageDriver storageDriver;
-StorageAT* storage;
-
-UI ui;
-App app;
-
-SoulGuard<
-	RestartWatchdog,
-	PowerWatchdog,
-	StackWatchdog,
-	MemoryWatchdog,
-	SettingsWatchdog
-> soulGuard;
+#endif
 
 /* USER CODE END PV */
 
@@ -107,8 +91,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  if (is_error(RCC_ERROR)) {
-	  system_clock_hsi_config();
+  if (is_error(SYS_TICK_ERROR)) {
+	  system_hsi_config();
   } else {
   /* USER CODE END Init */
 
@@ -127,105 +111,27 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_CRC_Init();
-  MX_TIM4_Init();
-  MX_TIM3_Init();
   MX_RTC_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
-	gprint("\n\n\n");
-	printTagLog(MAIN_TAG, "The device is loading");
+    // Buttons TIM start
+    ui_init();
 
-	SystemInfo();
+    system_registrate(ui_tick,         40,  true);
+    system_registrate(sensor_tick,     40,  true);
+    system_registrate(app_tick,        100, true);
+	system_registrate(settings_update, 50,  true);
+    system_registrate(ui_btn_tick,     10,  false);
 
-	set_status(LOADING);
-
-    storage = new StorageAT(
-		eeprom_get_size() / STORAGE_PAGE_SIZE,
-		&storageDriver,
-		EEPROM_PAGE_SIZE
-	);
-
-    utl::Timer errTimer(30 * SECOND_MS);
-    errTimer.start();
-	while (has_errors() || is_status(LOADING)) {
-		soulGuard.defend();
-		ui.tick();
-
-    	if (!errTimer.wait()) {
-			system_error_handler((SOUL_STATUS)get_first_error(), error_loop);
-		}
-	}
-
-    system_post_load();
+    set_system_timeout(10 * SECOND_MS);
+    system_start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-    // Buttons TIM start
-    HAL_TIM_Base_Start_IT(&BTN_TIM);
-
-    // App TIM start
-    HAL_TIM_Base_Start_IT(&APP_TIM);
-
-    printTagLog(MAIN_TAG, "The device has been loaded");
-
-#if TEST_ERRORS
-    utl::Timer timer(1000);
-    SOUL_STATUS error = ERRORS_START;
-#endif
-
-#ifdef DEBUG
-	static unsigned last_error = get_first_error();
-#endif
-	set_status(WORKING);
-	errTimer.start();
-	while (1)
-	{
-		utl::CodeStopwatch stopwatch(MAIN_TAG, 3 * GENERAL_TIMEOUT_MS);
-
-#if TEST_ERRORS
-		if (!timer.wait()) {
-			timer.start();
-			reset_error(error);
-			static unsigned* ptr = (unsigned*)&error;
-			(*ptr) += 1;
-			if (error == ERRORS_END) {
-				error = (SOUL_STATUS)((unsigned)ERRORS_START + 1);
-			}
-			set_error(error);
-		}
-#endif
-
-		ui.tick();
-
-#ifdef DEBUG
-		unsigned error = get_first_error();
-		if (error && last_error != error) {
-			printTagLog(MAIN_TAG, "New error: %u", error);
-			last_error = error;
-		}
-#endif
-
-#if !TEST_ERRORS
-
-		soulGuard.defend();
-
-		if (!errTimer.wait()) {
-			system_error_handler((SOUL_STATUS)get_first_error(), error_loop);
-		}
-
-		if (has_errors() || is_status(LOADING)) {
-			continue;
-		}
-
-		sensor_tick();
-
-		errTimer.start();
-
-#endif
+	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -256,13 +162,13 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
-	Error_Handler();
+    Error_Handler();
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-							  |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -270,44 +176,91 @@ void SystemClock_Config(void)
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
-	Error_Handler();
+    Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_ADC;
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
-	Error_Handler();
+    Error_Handler();
   }
 }
 
 /* USER CODE BEGIN 4 */
-
-void error_loop()
+void system_hse_config(void)
 {
-	soulGuard.defend();
+	SystemClock_Config();
 }
 
-int _write(int, uint8_t *ptr, int len) {
-	(void)ptr;
-	(void)len;
-#ifdef DEBUG
-    HAL_UART_Transmit(&BEDUG_UART, (uint8_t *)ptr, static_cast<uint16_t>(len), GENERAL_TIMEOUT_MS);
-    for (int DataIdx = 0; DataIdx < len; DataIdx++) {
-        ITM_SendChar(*ptr++);
-    }
-    return len;
-#endif
-    return 0;
+void system_ready_check(void) {}
+
+void system_error_loop()
+{
+	static bool initialized = false;
+	static uint32_t delay_ms = 300;
+	static system_timer_t led_timer = {};
+
+	if (!initialized) {
+		GPIO_InitTypeDef GPIO_InitStruct = {};
+
+		__HAL_RCC_GPIOB_CLK_ENABLE();
+
+		GPIO_InitStruct.Pin = VALVE_UP_Pin|VALVE_DOWN_Pin;
+		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+		GPIO_InitStruct.Pull = GPIO_NOPULL;
+		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+		HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
+		reset_status(AUTO_NEED_VALVE_DOWN);
+		reset_status(AUTO_NEED_VALVE_UP);
+
+		__HAL_RCC_GPIOC_CLK_ENABLE();
+
+		GPIO_InitStruct.Pin = LED_CENTER_Pin|LED_DOWN_Pin|LED_MID_Pin|LED_UP_Pin;
+		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+		GPIO_InitStruct.Pull = GPIO_NOPULL;
+		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+		HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+		HAL_GPIO_WritePin(GPIOC, LED_CENTER_Pin|LED_DOWN_Pin|LED_MID_Pin|LED_UP_Pin, GPIO_PIN_SET);
+
+		system_timer_start(&led_timer, TIM2, delay_ms);
+
+		initialized = true;
+	}
+
+
+	if (!system_timer_wait(&led_timer)) {
+		system_timer_start(&led_timer, TIM2, delay_ms);
+		HAL_GPIO_TogglePin(GPIOC, LED_CENTER_Pin);
+		HAL_GPIO_TogglePin(GPIOC, LED_DOWN_Pin);
+		HAL_GPIO_TogglePin(GPIOC, LED_MID_Pin);
+		HAL_GPIO_TogglePin(GPIOC, LED_UP_Pin);
+	}
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+char* get_custom_status_name(SOUL_STATUS status)
 {
-    if(htim->Instance == BTN_TIM.Instance) {
-    	ui.buttonsTick();
-    } else if (htim->Instance == APP_TIM.Instance) {
-    	app.proccess();
-    }
+	static char name[35] = { 0 };
+	memset(name, 0, sizeof(name));
+
+	switch (status) {
+	SYSTEM_CASE_STATUS(name, NEED_SERVICE_BACK)
+	SYSTEM_CASE_STATUS(name, NEED_SERVICE_SAVE)
+	SYSTEM_CASE_STATUS(name, NEED_SERVICE_UPDATE)
+	SYSTEM_CASE_STATUS(name, MANUAL_NEED_VALVE_UP)
+	SYSTEM_CASE_STATUS(name, MANUAL_NEED_VALVE_DOWN)
+	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_UP)
+	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_DOWN)
+	default:
+		snprintf(name, sizeof(name) - 1, "%s", get_custom_status_name(status));
+		break;
+	}
+
+	return name;
 }
 
 /* USER CODE END 4 */
@@ -319,10 +272,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
+#ifdef DEBUG
     b_assert(__FILE__, __LINE__, "The error handler has been called");
-	SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ERROR_HANDLER_CALLED;
-	system_error_handler(err, error_loop);
+#endif
+    SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ERROR_HANDLER_CALLED;
+	system_error_handler(err);
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -337,9 +291,11 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
+#ifdef DEBUG
 	b_assert((char*)file, line, "Wrong parameters value");
+#endif
 	SOUL_STATUS err = has_errors() ? (SOUL_STATUS)get_first_error() : ASSERT_ERROR;
-	system_error_handler(err, error_loop);
+	system_error_handler(err);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

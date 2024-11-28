@@ -7,7 +7,7 @@
 #include <limits>
 
 #include "main.h"
-#include "soul.h"
+#include "gsystem.h"
 #include "display.h"
 
 

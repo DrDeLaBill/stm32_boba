@@ -21,6 +21,8 @@ typedef enum _APP_MODE {
 } APP_MODE;
 
 
+void app_tick();
+
 struct App
 {
 protected:
@@ -130,7 +132,7 @@ public:
 
 	App();
 
-	void proccess();
+	void process();
 
 	static int16_t getRealValue();
 	static int16_t getActualValue();

@@ -4,11 +4,13 @@
 
 #include "glog.h"
 #include "main.h"
-#include "soul.h"
 #include "sensor.h"
+#include "gsystem.h"
 #include "settings.h"
 #include "hal_defs.h"
 
+
+static App app;
 
 fsm::FiniteStateMachine<App::fsm_table> App::fsm;
 uint16_t App::deadBand = 0;
@@ -23,10 +25,14 @@ App::SENSOR_POSITION App::position = App::ON_INIT;
 App::buffer_t App::value_buffer;
 
 
+void app_tick()
+{
+	app.process();
+}
 
 App::App(): measureTimer(MEAS_DELAY_MS) {}
 
-void App::proccess()
+void App::process()
 {
 	fsm.proccess();
 
@@ -35,11 +41,12 @@ void App::proccess()
 	}
 	measureTimer.start();
 
-	value_buffer.pop_back();
+	if (!value_buffer.empty()) {
+		value_buffer.pop_back();
+	}
 
 	int16_t value = get_sensor_value();
 	if (get_sensor_mode() == SENSOR_MODE_ANGLE) {
-		value -= (int16_t)((value > 180) ? 360 : 0);
 		value -= settings.angle_target;
 	}
 	value_buffer.push_front(value);
@@ -149,7 +156,7 @@ void App::_init_s::operator ()()
 {
 	stop();
 
-	if (is_status(LOADING)) {
+	if (!is_system_ready()) {
 		return;
 	}
 

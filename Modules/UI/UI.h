@@ -4,34 +4,12 @@
 #define _UI_H_
 
 
-#include <memory>
-#include <utility>
-#include <cstdint>
-#include <unordered_map>
-
-
 #define UI_BEDUG (false)
 
 
-struct UI
-{
-private:
-	static constexpr uint32_t DEBOUNCE_MS = 20;
-
-public:
-	static constexpr char TAG[] = "UI";
-
-	static void showUp(bool flag = false);
-	static void showDown(bool flag = false);
-	static void showMiddle(bool flag = false);
-
-	UI();
-
-	void tick();
-
-	void buttonsTick();
-
-};
+void ui_init();
+void ui_tick();
+void ui_btn_tick();
 
 
 #endif
