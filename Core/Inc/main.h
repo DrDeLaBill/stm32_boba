@@ -27,7 +27,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -57,63 +57,55 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define LED_CENTER_Pin GPIO_PIN_2
-#define LED_CENTER_GPIO_Port GPIOC
-#define LED_DOWN_Pin GPIO_PIN_3
-#define LED_DOWN_GPIO_Port GPIOC
-#define DISP_RST_Pin GPIO_PIN_4
-#define DISP_RST_GPIO_Port GPIOA
-#define LED_MID_Pin GPIO_PIN_4
-#define LED_MID_GPIO_Port GPIOC
-#define LED_UP_Pin GPIO_PIN_5
-#define LED_UP_GPIO_Port GPIOC
-#define VALVE_UP_Pin GPIO_PIN_12
-#define VALVE_UP_GPIO_Port GPIOB
-#define VALVE_DOWN_Pin GPIO_PIN_13
-#define VALVE_DOWN_GPIO_Port GPIOB
-#define RESERVED2_Pin GPIO_PIN_14
-#define RESERVED2_GPIO_Port GPIOB
-#define RESERVED3_Pin GPIO_PIN_15
-#define RESERVED3_GPIO_Port GPIOB
-#define BTN_F1_Pin GPIO_PIN_6
+#define FLASH2_CS_Pin GPIO_PIN_1
+#define FLASH2_CS_GPIO_Port GPIOA
+#define FLASH1_CS_Pin GPIO_PIN_4
+#define FLASH1_CS_GPIO_Port GPIOA
+#define BTN_F1_Pin GPIO_PIN_5
 #define BTN_F1_GPIO_Port GPIOC
-#define BTN_DOWN_Pin GPIO_PIN_7
-#define BTN_DOWN_GPIO_Port GPIOC
-#define BTN_UP_Pin GPIO_PIN_8
-#define BTN_UP_GPIO_Port GPIOC
-#define BTN_ENTER_Pin GPIO_PIN_9
-#define BTN_ENTER_GPIO_Port GPIOC
-#define DISP_CS_Pin GPIO_PIN_8
-#define DISP_CS_GPIO_Port GPIOA
-#define DISP_RS_Pin GPIO_PIN_9
-#define DISP_RS_GPIO_Port GPIOA
-#define DISP_BL_Pin GPIO_PIN_10
-#define DISP_BL_GPIO_Port GPIOA
-#define BTN_MODE_Pin GPIO_PIN_10
-#define BTN_MODE_GPIO_Port GPIOC
-#define BTN_F2_Pin GPIO_PIN_11
-#define BTN_F2_GPIO_Port GPIOC
-#define BTN_F3_Pin GPIO_PIN_12
-#define BTN_F3_GPIO_Port GPIOC
-#define BTN_F3_EXTI_IRQn EXTI15_10_IRQn
-#define ALARM_Pin GPIO_PIN_8
+#define ALARM_Pin GPIO_PIN_2
 #define ALARM_GPIO_Port GPIOB
-#define RESERVED1_Pin GPIO_PIN_9
-#define RESERVED1_GPIO_Port GPIOB
+#define LED_DOWN_Pin GPIO_PIN_10
+#define LED_DOWN_GPIO_Port GPIOB
+#define LED_MID_Pin GPIO_PIN_11
+#define LED_MID_GPIO_Port GPIOB
+#define VALVE_UP_SD_Pin GPIO_PIN_12
+#define VALVE_UP_SD_GPIO_Port GPIOB
+#define VALVE_UP_IN_Pin GPIO_PIN_13
+#define VALVE_UP_IN_GPIO_Port GPIOB
+#define VALVE_DOWN_SD_Pin GPIO_PIN_14
+#define VALVE_DOWN_SD_GPIO_Port GPIOB
+#define VALVE_DOWN_IN_Pin GPIO_PIN_15
+#define VALVE_DOWN_IN_GPIO_Port GPIOB
+#define BTN_DOWN_Pin GPIO_PIN_6
+#define BTN_DOWN_GPIO_Port GPIOC
+#define BTN_UP_Pin GPIO_PIN_7
+#define BTN_UP_GPIO_Port GPIOC
+#define BTN_ENTER_Pin GPIO_PIN_8
+#define BTN_ENTER_GPIO_Port GPIOC
+#define CS_Pin GPIO_PIN_8
+#define CS_GPIO_Port GPIOA
+#define RESET_Pin GPIO_PIN_9
+#define RESET_GPIO_Port GPIOA
+#define LED_Pin GPIO_PIN_10
+#define LED_GPIO_Port GPIOA
+#define DC_Pin GPIO_PIN_15
+#define DC_GPIO_Port GPIOA
+#define BTN_MODE_Pin GPIO_PIN_4
+#define BTN_MODE_GPIO_Port GPIOB
+#define BTN_F2_Pin GPIO_PIN_5
+#define BTN_F2_GPIO_Port GPIOB
+#define BTN_F3_Pin GPIO_PIN_6
+#define BTN_F3_GPIO_Port GPIOB
+#define LED_CENTER_Pin GPIO_PIN_8
+#define LED_CENTER_GPIO_Port GPIOB
+#define LED_UP_Pin GPIO_PIN_9
+#define LED_UP_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
 // General settings
 #define GENERAL_TIMEOUT_MS       ((uint32_t)100)
-
-// EEPROM
-extern I2C_HandleTypeDef         hi2c2;
-#define EEPROM_I2C               (hi2c2)
-
-// BEDUG UART
-extern UART_HandleTypeDef        huart1;
-#define BEDUG_UART               (huart1)
-
 // Display
 extern SPI_HandleTypeDef         hspi1;
 #define DISPLAY_SPI              (hspi1)

@@ -101,7 +101,7 @@ static const can_frame_t start_frames[] = {
 
 static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
 
-extern CAN_HandleTypeDef hcan;
+extern CAN_HandleTypeDef hcan1;
 
 sensor_state_t sensor_state = {
 	.initialized = false,
@@ -206,7 +206,7 @@ FSM_GC_CREATE_TABLE(
 	{&send_s,      &success_e,  &idle_s,      start_idle_a},
 )
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
 {
 	_check_stop();
 
@@ -214,7 +214,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 	CAN_RxHeaderTypeDef tmp_rx_header = {0};
 	uint8_t             tmp_rx_buffer[SENSOR_DATA_MAX_SIZE] = {0};
-    if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
+    if(HAL_CAN_GetRxMessage(hcan1, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
     	bool is_value = false;
     	switch (tmp_rx_header.StdId) {
     	case ANGLE_SENSOR_VALUE:
@@ -244,9 +244,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	reset_status(CAN_FAULT);
 }
 
-void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan1)
 {
-	(void)hcan;
+	(void)hcan1;
 
 	sensor_state.errors++;
 	set_status(CAN_FAULT);
@@ -466,7 +466,7 @@ void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t
 	sensor_state.tx_header.DLC                = dlc;
 	memset(sensor_state.tx_buffer, 0 , sizeof(sensor_state.tx_buffer));
 	memcpy(sensor_state.tx_buffer, data, __min(sizeof(sensor_state.tx_buffer), dlc));
-	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan, &sensor_state.tx_header, sensor_state.tx_buffer, &sensor_state.tx_mailbox);
+	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &sensor_state.tx_header, sensor_state.tx_buffer, &sensor_state.tx_mailbox);
 	if (status != HAL_OK) {
 		printTagLog("SENS", "CAN send error=%u std_id=%lu len=%lu", status, std_id, dlc);
 	}
@@ -476,8 +476,8 @@ void _check_stop()
 {
 	if (sensor_state.enabled != is_system_ready()) {
 		is_system_ready() ?
-			HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
-			HAL_CAN_DeactivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+			HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
+			HAL_CAN_DeactivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
 		sensor_state.enabled = is_system_ready();
 	}
 }
@@ -525,8 +525,8 @@ void _init_s(void)
     SCB_DEMCR   |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
 
-	HAL_CAN_Start(&hcan);
-	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+	HAL_CAN_Start(&hcan1);
+	HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
 
 	sensor_state.need_mode   = SENSOR_MODE_SURFACE;
 	sensor_state.curr_mode   = SENSOR_MODE_SURFACE;

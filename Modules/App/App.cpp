@@ -1,7 +1,6 @@
 /* Copyright © 2024 Georgy E. All rights reserved. */
 
-#include "App.h"
-
+#include <App.hpp>
 #include "glog.h"
 #include "main.h"
 #include "sensor.h"
@@ -112,24 +111,34 @@ uint16_t App::getDeadBand()
 
 void App::up()
 {
-	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_DOWN_SD_GPIO_Port, VALVE_DOWN_SD_Pin, GPIO_PIN_RESET);
+
+	HAL_GPIO_WritePin(VALVE_UP_SD_GPIO_Port, VALVE_UP_SD_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_UP_IN_GPIO_Port, VALVE_UP_IN_Pin, GPIO_PIN_SET);
+
 	reset_status(AUTO_NEED_VALVE_DOWN);
 	set_status(AUTO_NEED_VALVE_UP);
 }
 
 void App::down()
 {
-	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_UP_SD_GPIO_Port, VALVE_UP_SD_Pin, GPIO_PIN_RESET);
+
+	HAL_GPIO_WritePin(VALVE_DOWN_IN_GPIO_Port, VALVE_DOWN_IN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_DOWN_SD_GPIO_Port, VALVE_DOWN_SD_Pin, GPIO_PIN_SET);
+
 	reset_status(AUTO_NEED_VALVE_UP);
 	set_status(AUTO_NEED_VALVE_DOWN);
 }
 
 void App::stop()
 {
-	HAL_GPIO_WritePin(VALVE_DOWN_GPIO_Port, VALVE_DOWN_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(VALVE_UP_GPIO_Port, VALVE_UP_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_DOWN_SD_GPIO_Port, VALVE_DOWN_SD_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_DOWN_IN_GPIO_Port, VALVE_DOWN_IN_Pin, GPIO_PIN_RESET);
+
+	HAL_GPIO_WritePin(VALVE_UP_SD_GPIO_Port, VALVE_UP_SD_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_IN_GPIO_Port, VALVE_UP_IN_Pin, GPIO_PIN_RESET);
+
 	reset_status(AUTO_NEED_VALVE_DOWN);
 	reset_status(AUTO_NEED_VALVE_UP);
 }
