@@ -35,11 +35,12 @@
 #include "sensor.h"
 #include "bmacro.h"
 #include "gsystem.h"
-#include "ili9341.h"
 #include "hal_defs.h"
 
 #include "App.hpp"
 #include "buttons.hpp"
+
+#include "st7796.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -84,7 +85,7 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	system_pre_load();
+	system_init();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -120,7 +121,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
     HAL_Delay(100);
 
-    ILI9341_Init();
+    ST7796_Init();
 
     system_registrate(MX_TouchGFX_Process, 0,   true);
     system_registrate(sensor_tick,         40,  true);
@@ -201,7 +202,12 @@ void system_hse_config(void)
 	SystemClock_Config();
 }
 
-void system_ready_check(void) {}
+bool is_software_ready(void)
+{
+	return is_status(SETTINGS_INITIALIZED) &&
+           !is_status(NEED_LOAD_SETTINGS)  &&
+		   !is_status(NEED_SAVE_SETTINGS);
+}
 
 void system_error_loop()
 {
@@ -256,8 +262,9 @@ char* get_custom_status_name(SOUL_STATUS status)
 	SYSTEM_CASE_STATUS(name, MANUAL_NEED_VALVE_DOWN)
 	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_UP)
 	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_DOWN)
+	SYSTEM_CASE_STATUS(name, DISPLAY_ERROR)
 	default:
-		snprintf(name, sizeof(name) - 1, "%s", get_custom_status_name(status));
+		snprintf(name, sizeof(name) - 1, "%s", SOUL_UNKNOWN_STATUS);
 		break;
 	}
 

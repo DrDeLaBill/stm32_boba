@@ -47,9 +47,11 @@ build*
 *.hex
 *.launch
 backup_*.ioc
+
+# TouchGFX
 TouchGFX/simulator*
 TouchGFX/build*
 TouchGFX/config*
-TouchGFX/generated/fonts/src/*.txt
+TouchGFX/generated/fonts/*.txt
 TouchGFX/generated/user.config
 *.cache

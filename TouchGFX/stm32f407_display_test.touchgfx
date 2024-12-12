@@ -1,0 +1,150 @@
+{
+  "Application": {
+    "Screens": [
+      {
+        "Name": "Main",
+        "Includes": "",
+        "Components": [
+          {
+            "Type": "Box",
+            "Name": "background",
+            "Width": 320,
+            "Height": 480,
+            "Color": {
+              "Red": 217,
+              "Green": 211,
+              "Blue": 206
+            }
+          },
+          {
+            "Type": "RepeatButton",
+            "Name": "btnMode",
+            "Y": 390,
+            "Width": 106,
+            "Height": 90,
+            "Pressed": "background.png",
+            "Released": "mode.png",
+            "Delay": 200,
+            "Interval": 1000
+          },
+          {
+            "Type": "RepeatButton",
+            "Name": "btnSettings",
+            "X": 214,
+            "Y": 390,
+            "Width": 106,
+            "Height": 90,
+            "Pressed": "background.png",
+            "Released": "settings.png",
+            "Delay": 200,
+            "Interval": 1000
+          },
+          {
+            "Type": "RepeatButton",
+            "Name": "btnSensors",
+            "X": 107,
+            "Y": 390,
+            "Width": 106,
+            "Height": 90,
+            "Pressed": "background.png",
+            "Released": "sensors.png",
+            "Delay": 200,
+            "Interval": 1000
+          },
+          {
+            "Type": "TextArea",
+            "Name": "textArea1",
+            "X": 133,
+            "Y": 240,
+            "Width": 81,
+            "Height": 65,
+            "TextId": "__SingleUse_3OIF",
+            "TextRotation": "0",
+            "AutoSize": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "textArea1_1",
+            "X": 133,
+            "Y": 175,
+            "Width": 81,
+            "Height": 65,
+            "TextId": "__SingleUse_4XFA",
+            "TextRotation": "0",
+            "AutoSize": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "textArea2",
+            "X": 248,
+            "Y": 272,
+            "Width": 39,
+            "Height": 36,
+            "TextId": "__SingleUse_3SEZ",
+            "TextRotation": "0",
+            "AutoSize": true
+          }
+        ],
+        "Interactions": [],
+        "CustomActions": [
+          {
+            "Name": "btnModeAction"
+          }
+        ]
+      }
+    ],
+    "CustomContainerDefinitions": [],
+    "Name": "MyApplication",
+    "Resolution": {
+      "Width": 320,
+      "Height": 480
+    },
+    "SelectedColorDepth": 16,
+    "StartupScreenName": "Main",
+    "SelectedStartupLanguage": "GB",
+    "TouchGfxPath": "../Middlewares/ST/touchgfx",
+    "UIPath": ".",
+    "AvailableColorDepths": [
+      16
+    ],
+    "AvailableLCDs": {
+      "16": "LCD16bpp"
+    },
+    "AvailableSections": [
+      "ExtFlashSection",
+      "IntFlashSection"
+    ],
+    "AvailableResolutions": [
+      {
+        "Width": 320,
+        "Height": 480
+      }
+    ],
+    "PhysicalButtons": [],
+    "FrameworkFeatures": {
+      "LCD16bpp": {
+        "Id": "LCD16bpp",
+        "IsEnabled": true
+      }
+    },
+    "GenerateAssetsCommand": "make -f simulator/gcc/Makefile assets -j8",
+    "PostGenerateCommand": "touchgfx update_project --project-file=simulator/msvs/Application.vcxproj",
+    "PostGenerateTargetCommand": "touchgfx update_project",
+    "CompileSimulatorCommand": "make -f simulator/gcc/Makefile -j8",
+    "RunSimulatorCommand": "build\\bin\\simulator.exe",
+    "LandscapeSkinX": 0,
+    "LandscapeSkinY": 0,
+    "PortraitSkinX": 0,
+    "PortraitSkinY": 0,
+    "DisplayOrientation": "Portrait",
+    "Family": "STM32F4",
+    "SubFamily": "STM32F405/415",
+    "Toolchain": "STM32CubeIDE",
+    "Platform": "m4",
+    "ProjectFile": "../stm32_boba.ioc",
+    "OptionalComponentsRoot": "../Middlewares/ST/touchgfx_components",
+    "OptionalComponents": [],
+    "AdditionalFeatures": []
+  },
+  "Version": "4.24.1"
+}
