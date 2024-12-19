@@ -55,3 +55,4 @@ TouchGFX/config*
 TouchGFX/generated/fonts/*.txt
 TouchGFX/generated/user.config
 *.cache
+*.temp

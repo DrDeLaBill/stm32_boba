@@ -38,7 +38,6 @@
 #include "hal_defs.h"
 
 #include "App.hpp"
-#include "buttons.hpp"
 
 #include "st7796.h"
 /* USER CODE END Includes */
@@ -119,15 +118,20 @@ int main(void)
   MX_RTC_Init();
   MX_TouchGFX_Init();
   /* USER CODE BEGIN 2 */
-    HAL_Delay(100);
-
     ST7796_Init();
 
-    system_registrate(MX_TouchGFX_Process, 0,   true);
-    system_registrate(sensor_tick,         40,  true);
-    system_registrate(app_tick,            100, true);
-	system_registrate(settings_update,     50,  true);
-    system_registrate(ui_btn_tick,         10,  false);
+    system_register(MX_TouchGFX_Process, 1,   true);
+    system_register(sensor_tick,         40,  true);
+    system_register(app_tick,            100, true);
+	system_register(settings_update,     50,  true);
+
+    system_add_button(BTN_F1_GPIO_Port,    BTN_F1_Pin,    true);
+	system_add_button(BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true);
+	system_add_button(BTN_UP_GPIO_Port,    BTN_UP_Pin,    true);
+	system_add_button(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin, true);
+	system_add_button(BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true);
+	system_add_button(BTN_F2_GPIO_Port,    BTN_F2_Pin,    true);
+	system_add_button(BTN_F3_GPIO_Port,    BTN_F3_Pin,    true);
 
     HAL_TIM_Base_Start_IT(&htim3);
 
