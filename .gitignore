@@ -56,3 +56,7 @@ TouchGFX/generated/fonts/*.txt
 TouchGFX/generated/user.config
 *.cache
 *.temp
+
+# For current project
+CMakeLists.txt
+search.cmake

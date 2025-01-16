@@ -255,7 +255,10 @@ void ST7796_DrawBitmap(uint16_t w, uint16_t h, uint8_t *s)
 	__HAL_SPI_ENABLE(&DISPLAY_SPI);
 #endif
 	ConvHL(s, (int32_t)w*h*2);
-	HAL_SPI_Transmit_DMA(&DISPLAY_SPI, (uint8_t*)s, w * h *2);
+	HAL_StatusTypeDef status = HAL_SPI_Transmit_DMA(&DISPLAY_SPI, (uint8_t*)s, w * h *2);
+	if (status != HAL_OK) {
+		system_error_handler(DISPLAY_ERROR);
+	}
 #if 0
 	__HAL_SPI_DISABLE(&DISPLAY_SPI);
 	DISPLAY_SPI.Instance->CR2 &= ~(SPI_DATASIZE_16BIT); // Set 8 bit mode
@@ -322,7 +325,10 @@ void LCD_IO_WriteMultipleData(uint8_t *pData, uint32_t Size)
 	CS_L();
 //	HAL_SPI_Transmit(&DISPLAY_SPI, (uint8_t*)pData, Size * 2, HAL_MAX_DELAY);
 	spiDmaTransferComplete = 0;
-	HAL_SPI_Transmit_DMA(&DISPLAY_SPI, pData, Size*2 );
+	HAL_StatusTypeDef status = HAL_SPI_Transmit_DMA(&DISPLAY_SPI, pData, Size*2);
+	if (status != HAL_OK) {
+		system_error_handler(DISPLAY_ERROR);
+	}
 	//HAL_SPI_Transmit_DMA(&DISPLAY_SPI, (uint8_t*)pData, Size );
 	while(spiDmaTransferComplete == 0);
 	CS_H();

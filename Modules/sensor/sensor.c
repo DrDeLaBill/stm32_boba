@@ -78,8 +78,6 @@ static int16_t get_sensor2AB_value();
 static int16_t get_sensor_average();
 static int16_t get_sensor_angle();
 
-static bool sensor_angle_available();
-
 static void _check_stop();
 static bool _receive_distance(CAN_RxHeaderTypeDef* rx_header, uint8_t* rx_buffer);
 static bool _receive_angle(uint8_t* rx_buffer);
@@ -266,10 +264,10 @@ bool sensor_available()
 	case SENSOR_MODE_ANGLE:
 		return sensor_angle_available();
 	case SENSOR_MODE_BIGSKI:
-		return sensor2A7_available();
+		return sensor_2A7_available();
 	case SENSOR_MODE_SURFACE:
 	case SENSOR_MODE_STRING:
-		return sensor2AB_available() || sensor2A7_available() || sensor2A8_available();
+		return sensor_2AB_available() || sensor_2A7_available() || sensor_2A8_available();
 	default:
 		Error_Handler();
 		return false;
@@ -307,7 +305,12 @@ int16_t get_sensor_angle()
 
 int16_t get_sensor_value()
 {
-	switch (sensor_state.curr_mode) {
+	return get_sensor_mode_value(sensor_state.curr_mode);
+}
+
+int16_t get_sensor_mode_value(SENSOR_MODE mode)
+{
+	switch (mode) {
 	case SENSOR_MODE_SURFACE:
 	case SENSOR_MODE_STRING:
 		return get_sensor2A7_value();
@@ -386,19 +389,24 @@ void reset_sensor_mode_target()
 	}
 }
 
-bool sensor2AB_available()
+bool sensor_2AB_available()
 {
 	return gtimer_wait(&sensor_state.sensors[0].connection_timer);
 }
 
-bool sensor2A7_available()
+bool sensor_2A7_available()
 {
 	return gtimer_wait(&sensor_state.sensors[1].connection_timer);
 }
 
-bool sensor2A8_available()
+bool sensor_2A8_available()
 {
 	return gtimer_wait(&sensor_state.sensors[2].connection_timer);
+}
+
+bool sensor_distance_available()
+{
+	return sensor_2AB_available() || sensor_2A7_available() || sensor_2A8_available();
 }
 
 bool sensor_angle_available()
@@ -451,6 +459,34 @@ uint8_t get_sensor_mode_sensitive()
 		BEDUG_ASSERT(false, "Unknown mode");
 		Error_Handler();
 		return 0;
+	}
+}
+
+void set_sensor_mode_sensitive(uint8_t sensitivity)
+{
+	if (sensitivity > SENSITIVITY[__arr_len(SENSITIVITY)-1] ||
+		sensitivity < SENSITIVITY[0]
+	) {
+		BEDUG_ASSERT(false, "Unacceptable SENSITIVITY");
+		return;
+	}
+	switch(get_sensor_mode()) {
+	case SENSOR_MODE_SURFACE:
+		settings.surface_snstv = sensitivity;
+		break;
+	case SENSOR_MODE_STRING:
+		settings.string_snstv = sensitivity;
+		break;
+	case SENSOR_MODE_BIGSKI:
+		settings.bigski_snstv = sensitivity;
+		break;
+	case SENSOR_MODE_ANGLE:
+		settings.angle_snstv = sensitivity;
+		break;
+	default:
+		BEDUG_ASSERT(false, "Unknown mode");
+		Error_Handler();
+		return;
 	}
 }
 

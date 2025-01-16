@@ -59,7 +59,6 @@ protected:
     touchgfx::PainterRGB565 lineBtn2Painter;
     touchgfx::Container angleMode;
     touchgfx::Box emptyAngleBackground;
-    touchgfx::Box emptyAngle;
     touchgfx::Container angleBox;
     touchgfx::Box angleBackground;
     touchgfx::Box backgroundAngleCleaner;
@@ -68,7 +67,6 @@ protected:
     touchgfx::Image angle;
     touchgfx::Container distanceMode;
     touchgfx::Box emptyDistanceBackground;
-    touchgfx::Box emptyDistance;
     touchgfx::Container distanceBox;
     touchgfx::Box distanceBackground;
     touchgfx::Box backgroundDistanceCleaner;
@@ -77,6 +75,7 @@ protected:
     touchgfx::Image distance;
     touchgfx::Image distanceModeImg;
     touchgfx::Image stringModeImg;
+    touchgfx::Box emptyValue;
 
     /*
      * Wildcard Buffers

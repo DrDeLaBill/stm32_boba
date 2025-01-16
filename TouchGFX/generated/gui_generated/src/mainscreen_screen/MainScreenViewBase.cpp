@@ -60,7 +60,7 @@ MainScreenViewBase::MainScreenViewBase() :
     lineBtn2.setLineEndingStyle(touchgfx::Line::ROUND_CAP_ENDING);
     add(lineBtn2);
 
-    backgroundRelative.setPosition(54, 124, 186, 113);
+    backgroundRelative.setPosition(0, 93, 240, 167);
     backgroundRelative.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     add(backgroundRelative);
 
@@ -91,6 +91,13 @@ MainScreenViewBase::MainScreenViewBase() :
     emptyRealtive.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     emptyRealtive.setVisible(false);
     add(emptyRealtive);
+
+    autoText.setXY(166, 16);
+    autoText.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
+    autoText.setLinespacing(0);
+    autoText.setTypedText(touchgfx::TypedText(T___SINGLEUSE_9XLD));
+    autoText.setVisible(false);
+    add(autoText);
 
     angleMode.setPosition(0, 0, 300, 370);
     angleMode.setVisible(false);
@@ -139,11 +146,11 @@ MainScreenViewBase::MainScreenViewBase() :
     distance.setBitmap(touchgfx::Bitmap(BITMAP_DISTANCE_ID));
     distanceMode.add(distance);
 
-    distanceModeImg.setXY(113, 0);
+    distanceModeImg.setXY(80, 0);
     distanceModeImg.setBitmap(touchgfx::Bitmap(BITMAP_DISTANCE_MODE_ID));
     distanceMode.add(distanceModeImg);
 
-    stringModeImg.setXY(113, 0);
+    stringModeImg.setXY(82, 0);
     stringModeImg.setBitmap(touchgfx::Bitmap(BITMAP_STRING_MODE_ID));
     stringModeImg.setVisible(false);
     distanceMode.add(stringModeImg);

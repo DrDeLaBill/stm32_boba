@@ -4,6 +4,7 @@
 
 FONT_TABLE_LOCATION_FLASH_PRAGMA
 KEEP extern const touchgfx::GlyphNode glyphs_Inkfree_40_4bpp[] FONT_TABLE_LOCATION_FLASH_ATTRIBUTE = {
+    {     0, 0x0020,   0,   0,   0,   0,  11,   0,   0, 0x00 },
     {     0, 0x002D,  11,   4,  13,   1,  14,   0,   0, 0x00 },
     {    24, 0x002E,   5,   6,   5,   2,   8,   0,   0, 0x00 },
     {    42, 0x0030,  19,  28,  25,   2,  23,   0,   0, 0x00 },
@@ -24,7 +25,11 @@ KEEP extern const touchgfx::GlyphNode glyphs_Inkfree_40_4bpp[] FONT_TABLE_LOCATI
     {  5134, 0x0052,  33,  31,  28,  -7,  25,   0,   0, 0x00 },
     {  5661, 0x0054,  28,  28,  27,   0,  28,   0,   0, 0x00 },
     {  6053, 0x005A,  20,  27,  27,   3,  24,   0,   0, 0x00 },
-    {  6323, 0x00B0,  15,  16,  33,   1,  17,   0,   0, 0x00 }
+    {  6323, 0x0065,  17,  21,  20,   1,  19,   0,   0, 0x00 },
+    {  6512, 0x0074,  20,  26,  25,   0,  20,   0,   0, 0x00 },
+    {  6772, 0x0077,  27,  23,  20,   0,  29,   0,   0, 0x00 },
+    {  7094, 0x0078,  16,  24,  22,   0,  16,   0,   0, 0x00 },
+    {  7286, 0x00B0,  15,  16,  33,   1,  17,   0,   0, 0x00 }
 };
 
 // Inkfree_40_4bpp
@@ -42,6 +47,6 @@ touchgfx::GeneratedFont& getFont_Inkfree_40_4bpp();
 
 touchgfx::GeneratedFont& getFont_Inkfree_40_4bpp()
 {
-    static touchgfx::GeneratedFont Inkfree_40_4bpp(glyphs_Inkfree_40_4bpp, 21, 46, 40, 0, 0, 4, 1, 7, 1, unicodes_Inkfree_40_4bpp, kerning_Inkfree_40_4bpp, 63, 0, 0, 0);
+    static touchgfx::GeneratedFont Inkfree_40_4bpp(glyphs_Inkfree_40_4bpp, 26, 46, 40, 0, 0, 4, 1, 7, 1, unicodes_Inkfree_40_4bpp, kerning_Inkfree_40_4bpp, 63, 0, 0, 0);
     return Inkfree_40_4bpp;
 }

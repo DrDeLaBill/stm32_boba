@@ -60,32 +60,28 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
     lineBtn2.setLineEndingStyle(touchgfx::Line::ROUND_CAP_ENDING);
     add(lineBtn2);
 
-    angleMode.setPosition(10, 10, 220, 240);
+    angleMode.setPosition(0, 0, 240, 260);
     angleMode.setVisible(false);
-    emptyAngleBackground.setPosition(0, 0, 220, 240);
+    emptyAngleBackground.setPosition(0, 0, 240, 260);
     emptyAngleBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     angleMode.add(emptyAngleBackground);
 
-    emptyAngle.setPosition(70, 143, 80, 15);
-    emptyAngle.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
-    angleMode.add(emptyAngle);
-
-    angleBox.setPosition(0, 0, 220, 240);
-    angleBackground.setPosition(0, 0, 220, 240);
+    angleBox.setPosition(0, 0, 240, 260);
+    angleBackground.setPosition(0, 0, 240, 260);
     angleBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     angleBox.add(angleBackground);
 
-    backgroundAngleCleaner.setPosition(1, 118, 151, 64);
+    backgroundAngleCleaner.setPosition(1, 118, 175, 67);
     backgroundAngleCleaner.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     angleBox.add(backgroundAngleCleaner);
 
-    textDegree.setXY(183, 127);
+    textDegree.setXY(192, 127);
     textDegree.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     textDegree.setLinespacing(0);
     textDegree.setTypedText(touchgfx::TypedText(T___SINGLEUSE_3458));
     angleBox.add(textDegree);
 
-    angleValue.setXY(83, 127);
+    angleValue.setXY(93, 127);
     angleValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     angleValue.setLinespacing(0);
     Unicode::snprintf(angleValueBuffer, ANGLEVALUE_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_H146).getText());
@@ -102,31 +98,27 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
 
     add(angleMode);
 
-    distanceMode.setPosition(10, 10, 220, 240);
-    emptyDistanceBackground.setPosition(0, 0, 220, 240);
+    distanceMode.setPosition(0, 0, 240, 260);
+    emptyDistanceBackground.setPosition(0, 0, 240, 260);
     emptyDistanceBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     distanceMode.add(emptyDistanceBackground);
 
-    emptyDistance.setPosition(70, 143, 80, 15);
-    emptyDistance.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
-    distanceMode.add(emptyDistance);
-
-    distanceBox.setPosition(0, 0, 220, 240);
-    distanceBackground.setPosition(0, 0, 220, 240);
+    distanceBox.setPosition(0, 0, 240, 260);
+    distanceBackground.setPosition(0, 0, 240, 260);
     distanceBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     distanceBox.add(distanceBackground);
 
-    backgroundDistanceCleaner.setPosition(0, 116, 152, 69);
+    backgroundDistanceCleaner.setPosition(0, 116, 176, 69);
     backgroundDistanceCleaner.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     distanceBox.add(backgroundDistanceCleaner);
 
-    textCM.setXY(176, 144);
+    textCM.setXY(186, 144);
     textCM.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     textCM.setLinespacing(0);
     textCM.setTypedText(touchgfx::TypedText(T___SINGLEUSE_VHMD));
     distanceBox.add(textCM);
 
-    distanceValue.setXY(83, 127);
+    distanceValue.setXY(93, 127);
     distanceValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     distanceValue.setLinespacing(0);
     Unicode::snprintf(distanceValueBuffer, DISTANCEVALUE_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_7VM5).getText());
@@ -151,6 +143,11 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
     distanceMode.add(stringModeImg);
 
     add(distanceMode);
+
+    emptyValue.setPosition(80, 153, 80, 15);
+    emptyValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
+    emptyValue.setVisible(false);
+    add(emptyValue);
 }
 
 ValuesScreenViewBase::~ValuesScreenViewBase()

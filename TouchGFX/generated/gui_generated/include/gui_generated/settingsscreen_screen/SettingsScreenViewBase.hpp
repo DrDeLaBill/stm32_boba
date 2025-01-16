@@ -12,7 +12,7 @@
 #include <touchgfx/widgets/canvas/Line.hpp>
 #include <touchgfx/widgets/canvas/PainterRGB565.hpp>
 #include <touchgfx/containers/Container.hpp>
-#include <touchgfx/widgets/TextArea.hpp>
+#include <touchgfx/widgets/TextAreaWithWildcard.hpp>
 #include <touchgfx/widgets/Image.hpp>
 
 class SettingsScreenViewBase : public touchgfx::View<SettingsScreenPresenter>
@@ -21,15 +21,34 @@ public:
     SettingsScreenViewBase();
     virtual ~SettingsScreenViewBase();
     virtual void setupScreen();
+    virtual void handleTickEvent();
+    virtual void afterTransition();
+
+    /*
+     * Custom Actions
+     */
+    virtual void goToLoadScrean();
 
     /*
      * Virtual Action Handlers
      */
+    virtual void goBackAndSave()
+    {
+        // Override and implement this function in SettingsScreen
+    }
     virtual void clickLeft()
     {
         // Override and implement this function in SettingsScreen
     }
     virtual void clickRight()
+    {
+        // Override and implement this function in SettingsScreen
+    }
+    virtual void update()
+    {
+        // Override and implement this function in SettingsScreen
+    }
+    virtual void begin()
     {
         // Override and implement this function in SettingsScreen
     }
@@ -52,8 +71,15 @@ protected:
     touchgfx::Line lineBtn2;
     touchgfx::PainterRGB565 lineBtn2Painter;
     touchgfx::Container sensitivityContainer;
-    touchgfx::TextArea sensitivityValue;
+    touchgfx::Box sensitivityBackground;
+    touchgfx::TextAreaWithOneWildcard sensitivityValue;
     touchgfx::Image sensitivityImage;
+
+    /*
+     * Wildcard Buffers
+     */
+    static const uint16_t SENSITIVITYVALUE_SIZE = 10;
+    touchgfx::Unicode::UnicodeChar sensitivityValueBuffer[SENSITIVITYVALUE_SIZE];
 
 private:
 
@@ -72,6 +98,12 @@ private:
      * Callback Handler Declarations
      */
     void buttonCallbackHandler(const touchgfx::AbstractButton& src);
+
+    /*
+     * Tick Counter Declarations
+     */
+    static const uint32_t TICK_UPDATE_INTERVAL = 5;
+    uint32_t frameCountUpdateInterval;
 
 };
 

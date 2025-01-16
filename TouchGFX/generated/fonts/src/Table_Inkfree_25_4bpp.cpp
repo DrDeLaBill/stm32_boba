@@ -4,6 +4,7 @@
 
 FONT_TABLE_LOCATION_FLASH_PRAGMA
 KEEP extern const touchgfx::GlyphNode glyphs_Inkfree_25_4bpp[] FONT_TABLE_LOCATION_FLASH_ATTRIBUTE = {
+    {     0, 0x0020,   0,   0,   0,   0,   7,   0,   0, 0x00 },
     {     0, 0x002D,   8,   3,   7,   0,   9,   0,   0, 0x00 },
     {    12, 0x002E,   4,   4,   3,   1,   5,   0,   0, 0x00 },
     {    20, 0x0030,  12,  17,  14,   1,  14,   0,   0, 0x00 },
@@ -17,9 +18,18 @@ KEEP extern const touchgfx::GlyphNode glyphs_Inkfree_25_4bpp[] FONT_TABLE_LOCATI
     {  1039, 0x0038,  16,  20,  17,   1,  17,   0,   0, 0x00 },
     {  1199, 0x0039,  13,  19,  17,   1,  16,   0,   0, 0x00 },
     {  1332, 0x003F,  12,  16,  16,   0,  12,   0,   0, 0x00 },
-    {  1428, 0x0063,   9,  12,  12,   0,   9,   0,   0, 0x00 },
-    {  1488, 0x006D,  16,  13,  12,   1,  19,   0,   0, 0x00 },
-    {  1592, 0x00B0,  10,  11,  21,   0,  11,   0,   0, 0x00 }
+    {  1428, 0x0041,  15,  19,  16,   0,  16,   0,   0, 0x00 },
+    {  1580, 0x004E,  12,  15,  15,   3,  17,   0,   0, 0x00 },
+    {  1670, 0x004F,  16,  16,  16,   1,  18,   0,   0, 0x00 },
+    {  1798, 0x0054,  18,  17,  17,   0,  18,   0,   0, 0x00 },
+    {  1951, 0x0055,  15,  18,  15,   1,  16,   0,   0, 0x00 },
+    {  2095, 0x0063,   9,  12,  12,   0,   9,   0,   0, 0x00 },
+    {  2155, 0x0065,  10,  12,  12,   1,  12,   0,   0, 0x00 },
+    {  2215, 0x006D,  16,  13,  12,   1,  19,   0,   0, 0x00 },
+    {  2319, 0x0074,  13,  16,  16,   0,  12,   0,   0, 0x00 },
+    {  2431, 0x0077,  17,  13,  12,   0,  18,   0,   0, 0x00 },
+    {  2548, 0x0078,  10,  14,  13,   0,  10,   0,   0, 0x00 },
+    {  2618, 0x00B0,  10,  11,  21,   0,  11,   0,   0, 0x00 }
 };
 
 // Inkfree_25_4bpp
@@ -37,6 +47,6 @@ touchgfx::GeneratedFont& getFont_Inkfree_25_4bpp();
 
 touchgfx::GeneratedFont& getFont_Inkfree_25_4bpp()
 {
-    static touchgfx::GeneratedFont Inkfree_25_4bpp(glyphs_Inkfree_25_4bpp, 16, 29, 25, 0, 0, 4, 1, 0, 0, unicodes_Inkfree_25_4bpp, kerning_Inkfree_25_4bpp, 63, 0, 0, 0);
+    static touchgfx::GeneratedFont Inkfree_25_4bpp(glyphs_Inkfree_25_4bpp, 26, 29, 25, 0, 0, 4, 1, 0, 1, unicodes_Inkfree_25_4bpp, kerning_Inkfree_25_4bpp, 63, 0, 0, 0);
     return Inkfree_25_4bpp;
 }

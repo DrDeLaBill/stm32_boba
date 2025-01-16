@@ -57,7 +57,7 @@ SensorListViewBase::SensorListViewBase() :
     backgroundAngle.setVisible(false);
     angleContainer.add(backgroundAngle);
 
-    emptyAngleContainer.setPosition(0, 0, 300, 70);
+    emptyAngleContainer.setPosition(0, 0, 220, 60);
     empty1_2_1.setPosition(20, 30, 40, 10);
     empty1_2_1.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     emptyAngleContainer.add(empty1_2_1);
@@ -73,6 +73,7 @@ SensorListViewBase::SensorListViewBase() :
     angleContainer.add(emptyAngleContainer);
 
     visibleAngleContainer.setPosition(0, 0, 220, 60);
+    visibleAngleContainer.setVisible(false);
     angleBack.setPosition(80, 12, 105, 39);
     angleBack.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     visibleAngleContainer.add(angleBack);
@@ -106,7 +107,6 @@ SensorListViewBase::SensorListViewBase() :
     distanceContainer.add(backgroundDistance);
 
     emptyDistanceContainer.setPosition(0, 0, 220, 60);
-    emptyDistanceContainer.setVisible(false);
     empty1_2.setPosition(20, 30, 40, 10);
     empty1_2.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     emptyDistanceContainer.add(empty1_2);
@@ -122,6 +122,7 @@ SensorListViewBase::SensorListViewBase() :
     distanceContainer.add(emptyDistanceContainer);
 
     visibleDistanceContainer.setPosition(0, 0, 220, 60);
+    visibleDistanceContainer.setVisible(false);
     distanceBack.setPosition(80, 12, 105, 39);
     distanceBack.setColor(touchgfx::Color::getColorFromRGB(185, 179, 174));
     visibleDistanceContainer.add(distanceBack);
@@ -149,15 +150,15 @@ SensorListViewBase::SensorListViewBase() :
 
     add(distanceContainer);
 
-    angleMode.setPosition(10, 10, 220, 240);
+    angleMode.setPosition(0, 0, 240, 260);
+    angleMode.setVisible(false);
     angle_1.setXY(0, 0);
     angle_1.setBitmap(touchgfx::Bitmap(BITMAP_ANGLE_ID));
     angleMode.add(angle_1);
 
     add(angleMode);
 
-    distanceMode.setPosition(10, 10, 220, 240);
-    distanceMode.setVisible(false);
+    distanceMode.setPosition(0, 0, 240, 260);
     distance_1.setXY(0, 0);
     distance_1.setBitmap(touchgfx::Bitmap(BITMAP_DISTANCE_ID));
     distanceMode.add(distance_1);

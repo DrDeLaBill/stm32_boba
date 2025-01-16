@@ -86,35 +86,39 @@ void ValuesScreenView::updateSensorData()
 	touchgfx::Unicode::UnicodeChar* textBuffer;
 	touchgfx::TextAreaWithOneWildcard* text;
 	touchgfx::Box* backgroundCleaner;
+	touchgfx::Container* valueBox;
 	uint16_t size;
-	switch (get_sensor_mode()) {
-	case SENSOR_MODE_STRING:
-
-	case SENSOR_MODE_SURFACE:
-	case SENSOR_MODE_BIGSKI:
-		distanceMode.setVisible(true);
-		angleMode.setVisible(false);
+	int value      = 0;
+	bool available = false;
+	if (distanceMode.isVisible()) {
+		valueBox          = &distanceBox;
 		textBuffer        = distanceValueBuffer;
 		text              = &distanceValue;
 		size              = DISTANCEVALUE_SIZE;
 		backgroundCleaner = &backgroundDistanceCleaner;
-		break;
-	case SENSOR_MODE_ANGLE:
-		angleMode.setVisible(true);
-		distanceMode.setVisible(false);
+		available         = sensor_distance_available();
+		value             = get_sensor_mode_value(SENSOR_MODE_SURFACE);
+	} else {
+		valueBox          = &angleBox;
 		textBuffer        = angleValueBuffer;
 		text              = &angleValue;
 		size              = ANGLEVALUE_SIZE;
 		backgroundCleaner = &backgroundAngleCleaner;
-		break;
-	default:
-		set_error(UI_ERROR);
+		available         = sensor_angle_available();
+		value             = get_sensor_mode_value(SENSOR_MODE_ANGLE);
+	}
+
+	if (!available) {
+		emptyValue.setVisible(true);
+		valueBox->setVisible(false);
+		valueBox->invalidate();
 		return;
 	}
+	emptyValue.setVisible(false);
+	valueBox->setVisible(true);
 
 	int width1 = text->getTextWidth();
 	int x1     = text->getX();
-	int value  = get_sensor_value();
 	Unicode::snprintf(
 		textBuffer,
 		size - 1,
@@ -127,6 +131,8 @@ void ValuesScreenView::updateSensorData()
 	int x2     = x1 + width1 - width2;
 	text->setX(x2);
 	backgroundCleaner->invalidate();
+	emptyValue.invalidate();
+	valueBox->invalidate();
 	text->invalidate();
 #endif
 }

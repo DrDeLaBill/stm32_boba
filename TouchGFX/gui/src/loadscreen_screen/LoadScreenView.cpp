@@ -6,9 +6,13 @@
 #endif
 
 #ifndef SIMULATOR
-utl::Timer timer(5000);
+utl::Timer timer(2000);
 #endif
+#ifndef SIMULATOR
+LoadScreenView::LoadScreenView(): timer(2000)
+#else
 LoadScreenView::LoadScreenView()
+#endif
 {
 #ifndef SIMULATOR
 	timer.start();
@@ -29,7 +33,7 @@ void LoadScreenView::updateLoad()
 {
 	static float zAngle = 0;
 
-	if (!textureLoad.getAlpha()) {
+	if (!textureLoad.isVisible()) {
 		textureLoad.setVisible(true);
 		textName.setVisible(false);
 		textName.invalidate();
@@ -42,14 +46,15 @@ void LoadScreenView::updateLoad()
 
 void LoadScreenView::checkLoad()
 {
-#ifndef SIMULATOR
+#ifdef SIMULATOR
+	changeToMainScreen();
+#else
 	if (timer.wait()) {
 		return;
 	}
+
 	if (is_system_ready()) {
 		changeToMainScreen();
 	}
-#else
-	changeToMainScreen();
 #endif
 }

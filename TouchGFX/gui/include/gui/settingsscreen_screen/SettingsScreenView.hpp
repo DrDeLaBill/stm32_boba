@@ -12,6 +12,10 @@ public:
     virtual void setupScreen();
     virtual void tearDownScreen();
 protected:
+    unsigned sensitivity;
+    virtual void begin();
+    virtual void update();
+    virtual void goBackAndSave();
 };
 
 #endif // SETTINGSSCREENVIEW_HPP

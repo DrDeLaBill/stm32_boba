@@ -126,7 +126,7 @@ int main(void)
     system_register(MX_TouchGFX_Process, 1,   true);
     system_register(sensor_tick,         40,  true);
     system_register(app_tick,            100, true);
-	  system_register(settings_update,     50,  true);
+    system_register(settings_update,     50,  true);
 
     system_add_button(BTN_F1_GPIO_Port,    BTN_F1_Pin,    true);
 	system_add_button(BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true);

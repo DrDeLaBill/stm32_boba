@@ -12,9 +12,9 @@
 #include <touchgfx/widgets/canvas/Line.hpp>
 #include <touchgfx/widgets/canvas/PainterRGB565.hpp>
 #include <touchgfx/widgets/TextAreaWithWildcard.hpp>
+#include <touchgfx/widgets/TextArea.hpp>
 #include <touchgfx/containers/Container.hpp>
 #include <touchgfx/widgets/Image.hpp>
-#include <touchgfx/widgets/TextArea.hpp>
 #include <touchgfx/widgets/canvas/Shape.hpp>
 
 class MainScreenViewBase : public touchgfx::View<MainScreenPresenter>
@@ -64,6 +64,7 @@ protected:
     touchgfx::TextAreaWithOneWildcard textAbsolute;
     touchgfx::Box emptyAbsolute;
     touchgfx::Box emptyRealtive;
+    touchgfx::TextArea autoText;
     touchgfx::Container angleMode;
     touchgfx::Image angle;
     touchgfx::TextArea textDegree;

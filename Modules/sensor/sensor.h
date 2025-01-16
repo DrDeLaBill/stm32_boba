@@ -64,11 +64,15 @@ typedef enum _FRAME_DATA_CMD {
 
 
 void sensor_tick();
-bool sensor2AB_available();
-bool sensor2A7_available();
-bool sensor2A8_available();
+bool sensor_2AB_available();
+bool sensor_2A7_available();
+bool sensor_2A8_available();
+bool sensor_distance_available();
+bool sensor_angle_available();
 bool sensor_available();
+
 int16_t get_sensor_value();
+int16_t get_sensor_mode_value(SENSOR_MODE mode);
 
 int16_t get_sensor_mode_target(SENSOR_MODE mode);
 void save_sensor_mode_target();
@@ -81,7 +85,7 @@ SENSOR_MODE get_sensor_target_mode();
 STRING_DIRECTION get_sensor_direction();
 
 uint8_t get_sensor_mode_sensitive();
-
+void set_sensor_mode_sensitive(uint8_t sensitivity);
 
 #ifdef __cplusplus
 }

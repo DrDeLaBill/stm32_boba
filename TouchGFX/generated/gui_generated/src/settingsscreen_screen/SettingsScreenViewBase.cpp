@@ -8,7 +8,8 @@
 #include <texts/TextKeysAndLanguages.hpp>
 
 SettingsScreenViewBase::SettingsScreenViewBase() :
-    buttonCallback(this, &SettingsScreenViewBase::buttonCallbackHandler)
+    buttonCallback(this, &SettingsScreenViewBase::buttonCallbackHandler),
+    frameCountUpdateInterval(0)
 {
     touchgfx::CanvasWidgetRenderer::setupBuffer(canvasBuffer, CANVAS_BUFFER_SIZE);
     
@@ -62,9 +63,16 @@ SettingsScreenViewBase::SettingsScreenViewBase() :
     sensitivityContainer.setPosition(10, 10, 220, 240);
     add(sensitivityContainer);
 
-    sensitivityValue.setXY(113, 160);
+    sensitivityBackground.setPosition(96, 160, 49, 29);
+    sensitivityBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
+    add(sensitivityBackground);
+
+    sensitivityValue.setXY(115, 160);
     sensitivityValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
     sensitivityValue.setLinespacing(0);
+    Unicode::snprintf(sensitivityValueBuffer, SENSITIVITYVALUE_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_XSCB).getText());
+    sensitivityValue.setWildcard(sensitivityValueBuffer);
+    sensitivityValue.resizeToCurrentText();
     sensitivityValue.setTypedText(touchgfx::TypedText(T___SINGLEUSE_SBQI));
     add(sensitivityValue);
 
@@ -87,10 +95,10 @@ void SettingsScreenViewBase::buttonCallbackHandler(const touchgfx::AbstractButto
 {
     if (&src == &btnBack)
     {
-        //goBack
-        //When btnBack clicked change screen to MainScreen
-        //Go to MainScreen with no screen transition
-        application().gotoMainScreenScreenNoTransition();
+        //goBackAndSave
+        //When btnBack clicked call virtual function
+        //Call goBackAndSave
+        goBackAndSave();
     }
     if (&src == &btnLeft)
     {
@@ -106,4 +114,33 @@ void SettingsScreenViewBase::buttonCallbackHandler(const touchgfx::AbstractButto
         //Call clickRight
         clickRight();
     }
+}
+
+void SettingsScreenViewBase::goToLoadScrean()
+{
+    //goToLoadScrean
+    //When goToLoadScrean is called change screen to LoadScreen
+    //Go to LoadScreen with no screen transition
+    application().gotoLoadScreenScreenNoTransition();
+}
+
+void SettingsScreenViewBase::handleTickEvent()
+{
+    frameCountUpdateInterval++;
+    if(frameCountUpdateInterval == TICK_UPDATE_INTERVAL)
+    {
+        //update
+        //When every N tick call virtual function
+        //Call update
+        update();
+        frameCountUpdateInterval = 0;
+    }
+}
+
+void SettingsScreenViewBase::afterTransition()
+{
+    //begin
+    //When screen transition ends call virtual function
+    //Call begin
+    begin();
 }

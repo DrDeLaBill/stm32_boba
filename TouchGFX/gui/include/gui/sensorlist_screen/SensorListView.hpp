@@ -12,6 +12,7 @@ public:
     virtual void setupScreen();
     virtual void tearDownScreen();
 protected:
+    unsigned listCnt;
     virtual void updateValues();
 };
 

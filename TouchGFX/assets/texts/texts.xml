@@ -4,10 +4,23 @@
     <Language Id="GB" />
   </Languages>
   <Texts>
-    <TextGroup Id="GroupMain" />
+    <TextGroup Id="GroupMain">
+      <Text Id="ResourceId1" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">New Text</Translation>
+      </Text>
+    </TextGroup>
     <TextGroup Id="Unsorted">
+      <Text Id="__SingleUse_XSCB" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">1</Translation>
+      </Text>
+      <Text Id="1" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">New Text</Translation>
+      </Text>
+      <Text Id="__SingleUse_9XLD" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">AUTO</Translation>
+      </Text>
       <Text Id="__SingleUse_SBQI" Alignment="Left" TypographyId="Small">
-        <Translation Language="GB">0</Translation>
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_H146" Alignment="Left" TypographyId="Default">
         <Translation Language="GB">0.0</Translation>
