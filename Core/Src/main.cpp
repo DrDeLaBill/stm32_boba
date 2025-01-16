@@ -49,7 +49,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TEST_ERRORS (0)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -70,6 +69,7 @@ static constexpr char MAIN_TAG[] = "MAIN";
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+extern "C" void touchgfxSignalVSync(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -83,6 +83,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 	system_init();
   /* USER CODE END 1 */
@@ -118,12 +119,14 @@ int main(void)
   MX_RTC_Init();
   MX_TouchGFX_Init();
   /* USER CODE BEGIN 2 */
+    HAL_TIM_Base_Start_IT(&DISPLAY_TIM);
+
     ST7796_Init();
 
     system_register(MX_TouchGFX_Process, 1,   true);
     system_register(sensor_tick,         40,  true);
     system_register(app_tick,            100, true);
-	system_register(settings_update,     50,  true);
+	  system_register(settings_update,     50,  true);
 
     system_add_button(BTN_F1_GPIO_Port,    BTN_F1_Pin,    true);
 	system_add_button(BTN_DOWN_GPIO_Port,  BTN_DOWN_Pin,  true);
@@ -132,8 +135,6 @@ int main(void)
 	system_add_button(BTN_MODE_GPIO_Port,  BTN_MODE_Pin,  true);
 	system_add_button(BTN_F2_GPIO_Port,    BTN_F2_Pin,    true);
 	system_add_button(BTN_F3_GPIO_Port,    BTN_F3_Pin,    true);
-
-    HAL_TIM_Base_Start_IT(&htim3);
 
     set_system_timeout(10 * SECOND_MS);
     system_start();
@@ -267,6 +268,7 @@ char* get_custom_status_name(SOUL_STATUS status)
 	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_UP)
 	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_DOWN)
 	SYSTEM_CASE_STATUS(name, DISPLAY_ERROR)
+	SYSTEM_CASE_STATUS(name, UI_ERROR)
 	default:
 		snprintf(name, sizeof(name) - 1, "%s", SOUL_UNKNOWN_STATUS);
 		break;
@@ -275,12 +277,10 @@ char* get_custom_status_name(SOUL_STATUS status)
 	return name;
 }
 
-extern "C" void touchgfxSignalVSync(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if (htim->Instance == TIM3) {
+	if (htim->Instance == DISPLAY_TIM.Instance) {
 		touchgfxSignalVSync();
-	    HAL_TIM_Base_Start_IT(&htim3);
 	}
 }
 

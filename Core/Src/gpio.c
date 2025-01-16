@@ -51,16 +51,18 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, FLASH2_CS_Pin|FLASH1_CS_Pin|CS_Pin|RESET_Pin
-                          |LED_Pin|DC_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, FLASH2_CS_Pin|RESET_Pin|LED_Pin|DC_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, FLASH1_CS_Pin|CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, ALARM_Pin|LED_DOWN_Pin|LED_MID_Pin|VALVE_UP_SD_Pin
                           |VALVE_UP_IN_Pin|VALVE_DOWN_SD_Pin|VALVE_DOWN_IN_Pin|LED_CENTER_Pin
                           |LED_UP_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PAPin PAPin PAPin PAPin
-                           PAPin PAPin */
+  /*Configure GPIO pins : FLASH2_CS_Pin FLASH1_CS_Pin CS_Pin RESET_Pin
+                           LED_Pin DC_Pin */
   GPIO_InitStruct.Pin = FLASH2_CS_Pin|FLASH1_CS_Pin|CS_Pin|RESET_Pin
                           |LED_Pin|DC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -68,15 +70,15 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PCPin PCPin PCPin PCPin */
+  /*Configure GPIO pins : BTN_F1_Pin BTN_DOWN_Pin BTN_UP_Pin BTN_ENTER_Pin */
   GPIO_InitStruct.Pin = BTN_F1_Pin|BTN_DOWN_Pin|BTN_UP_Pin|BTN_ENTER_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PBPin PBPin PBPin PBPin
-                           PBPin PBPin PBPin PBPin
-                           PBPin */
+  /*Configure GPIO pins : ALARM_Pin LED_DOWN_Pin LED_MID_Pin VALVE_UP_SD_Pin
+                           VALVE_UP_IN_Pin VALVE_DOWN_SD_Pin VALVE_DOWN_IN_Pin LED_CENTER_Pin
+                           LED_UP_Pin */
   GPIO_InitStruct.Pin = ALARM_Pin|LED_DOWN_Pin|LED_MID_Pin|VALVE_UP_SD_Pin
                           |VALVE_UP_IN_Pin|VALVE_DOWN_SD_Pin|VALVE_DOWN_IN_Pin|LED_CENTER_Pin
                           |LED_UP_Pin;
@@ -85,10 +87,10 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PBPin PBPin PBPin */
+  /*Configure GPIO pins : BTN_MODE_Pin BTN_F2_Pin BTN_F3_Pin */
   GPIO_InitStruct.Pin = BTN_MODE_Pin|BTN_F2_Pin|BTN_F3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }

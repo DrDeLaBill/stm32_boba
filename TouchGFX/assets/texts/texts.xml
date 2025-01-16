@@ -4,23 +4,73 @@
     <Language Id="GB" />
   </Languages>
   <Texts>
-    <TextGroup Id="Group1" />
+    <TextGroup Id="GroupMain" />
     <TextGroup Id="Unsorted">
-      <Text Id="__SingleUse_3SEZ" Alignment="Left" TypographyId="Typography_00">
+      <Text Id="__SingleUse_SBQI" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">0</Translation>
+      </Text>
+      <Text Id="__SingleUse_H146" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">0.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_JPZL" Alignment="Right" TypographyId="Default">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_3458" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">°</Translation>
+      </Text>
+      <Text Id="__SingleUse_VHMD" Alignment="Left" TypographyId="Small">
         <Translation Language="GB">cm</Translation>
       </Text>
-      <Text Id="__SingleUse_4XFA" Alignment="Left" TypographyId="Default">
+      <Text Id="__SingleUse_7VM5" Alignment="Left" TypographyId="Default">
         <Translation Language="GB">0.0</Translation>
       </Text>
-      <Text Id="__SingleUse_3OIF" Alignment="Left" TypographyId="Default">
+      <Text Id="__SingleUse_82IS" Alignment="Right" TypographyId="Default">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_9C61" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">°</Translation>
+      </Text>
+      <Text Id="__SingleUse_YR1I" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">cm</Translation>
+      </Text>
+      <Text Id="__SingleUse_6WKX" Alignment="Left" TypographyId="Small">
         <Translation Language="GB">0.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_0NER" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_YV99" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">0.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_1AQ5" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_EKNA" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">°</Translation>
+      </Text>
+      <Text Id="__SingleUse_SNUX" Alignment="Left" TypographyId="Large">
+        <Translation Language="GB">HORIZONT</Translation>
+      </Text>
+      <Text Id="__SingleUse_5PG5" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">0.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_X3Y3" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">0.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_3SEZ" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">cm</Translation>
+      </Text>
+      <Text Id="__SingleUse_4XFA" Alignment="Right" TypographyId="Default">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_3OIF" Alignment="Right" TypographyId="Default">
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
     </TextGroup>
   </Texts>
   <Typographies>
-    <Typography Id="Default" Font="Inkfree.ttf" Size="60" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
-    <Typography Id="Large" Font="verdana.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
-    <Typography Id="Small" Font="verdana.ttf" Size="10" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
-    <Typography Id="Typography_00" Font="Inkfree.ttf" Size="35" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Default" Font="Inkfree.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="-" WildcardCharacterRanges="0-9" />
+    <Typography Id="Large" Font="Inkfree.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Small" Font="Inkfree.ttf" Size="25" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="-" WildcardCharacterRanges="0-9" />
   </Typographies>
 </TextDatabase>

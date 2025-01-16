@@ -48,8 +48,7 @@ typedef enum {
 } LCD_Horizontal_t;
 
 extern void Error_Handler(void);
-extern SPI_HandleTypeDef hspi1;
-#define DISPLAY_SPI (hspi1)
+
 static __IO uint8_t spiDmaTransferComplete;
 
 void ILI9341_Reset(void);

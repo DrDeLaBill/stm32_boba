@@ -23,7 +23,7 @@ void touchgfxDisplayDriverTransmitBlock(uint8_t* pixels, uint16_t x, uint16_t y,
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	if (hspi->Instance == SPI1) {
+	if (hspi->Instance == DISPLAY_SPI.Instance) {
 		ST7796_EndOfDrawBitmap();
 		isTransmittingData = 0;
 		DisplayDriver_TransferCompleteCallback();

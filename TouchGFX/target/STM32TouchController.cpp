@@ -25,6 +25,7 @@
 #include <STM32TouchController.hpp>
 
 #include "main.h"
+#include "gsystem.h"
 
 void STM32TouchController::init()
 {
@@ -46,19 +47,19 @@ bool STM32TouchController::sampleTouch(int32_t& x, int32_t& y)
      * By default sampleTouch is called every tick, this can be adjusted by HAL::setTouchSampleRate(int8_t);
      *
      */
-	if (HAL_GPIO_ReadPin(BTN_F1_GPIO_Port, BTN_F1_Pin)) {
-		x = 53;
-		y = 435;
+	if (system_button_pressed(BTN_F1_GPIO_Port, BTN_F1_Pin)) {
+		x = 40;
+		y = 310;
 		return true;
 	}
-	if (HAL_GPIO_ReadPin(BTN_F2_GPIO_Port, BTN_F2_Pin)) {
-		x = 160;
-		y = 435;
+	if (system_button_pressed(BTN_F2_GPIO_Port, BTN_F2_Pin)) {
+		x = 120;
+		y = 310;
 		return true;
 	}
-	if (HAL_GPIO_ReadPin(BTN_F3_GPIO_Port, BTN_F3_Pin)) {
-		x = 266;
-		y = 435;
+	if (system_button_pressed(BTN_F3_GPIO_Port, BTN_F3_Pin)) {
+		x = 200;
+		y = 310;
 		return true;
 	}
     return false;

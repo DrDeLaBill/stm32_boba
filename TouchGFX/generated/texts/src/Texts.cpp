@@ -60,8 +60,11 @@ extern const touchgfx::TypedText::TypedTextData* const typedTextDatabaseArray[];
 
 TEXT_LOCATION_FLASH_PRAGMA
 KEEP extern const touchgfx::Unicode::UnicodeChar texts_all_languages[] TEXT_LOCATION_FLASH_ATTRIBUTE = {
-    0x30, 0x2e, 0x30, 0x0, // @0 "0.0"
-    0x63, 0x6d, 0x0 // @4 "cm"
+    0x48, 0x4f, 0x52, 0x49, 0x5a, 0x4f, 0x4e, 0x54, 0x0, // @0 "HORIZONT"
+    0x2, 0x0, // @9 "<>"
+    0x30, 0x2e, 0x30, 0x0, // @11 "0.0"
+    0x63, 0x6d, 0x0, // @15 "cm"
+    0xb0, 0x0 // @18 "?"
 };
 
 TEXT_LOCATION_FLASH_PRAGMA

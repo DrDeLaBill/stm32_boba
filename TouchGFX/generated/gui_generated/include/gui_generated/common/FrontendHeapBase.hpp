@@ -12,8 +12,16 @@
 #include <gui/common/FrontendApplication.hpp>
 #include <gui/model/Model.hpp>
 
-#include <gui/main_screen/MainView.hpp>
-#include <gui/main_screen/MainPresenter.hpp>
+#include <gui/loadscreen_screen/LoadScreenView.hpp>
+#include <gui/loadscreen_screen/LoadScreenPresenter.hpp>
+#include <gui/mainscreen_screen/MainScreenView.hpp>
+#include <gui/mainscreen_screen/MainScreenPresenter.hpp>
+#include <gui/sensorlist_screen/SensorListView.hpp>
+#include <gui/sensorlist_screen/SensorListPresenter.hpp>
+#include <gui/valuesscreen_screen/ValuesScreenView.hpp>
+#include <gui/valuesscreen_screen/ValuesScreenPresenter.hpp>
+#include <gui/settingsscreen_screen/SettingsScreenView.hpp>
+#include <gui/settingsscreen_screen/SettingsScreenPresenter.hpp>
 
 
 /**
@@ -36,8 +44,12 @@ public:
      * A list of all view types. Must end with meta::Nil.
      * @note All view types used in the application MUST be added to this list!
      */
-    typedef touchgfx::meta::TypeList< MainView,
-            touchgfx::meta::Nil
+    typedef touchgfx::meta::TypeList< LoadScreenView,
+            touchgfx::meta::TypeList< MainScreenView,
+            touchgfx::meta::TypeList< SensorListView,
+            touchgfx::meta::TypeList< ValuesScreenView,
+            touchgfx::meta::TypeList< SettingsScreenView,
+            touchgfx::meta::Nil > > > >
             > GeneratedViewTypes;
 
     /**
@@ -49,8 +61,12 @@ public:
      * A list of all presenter types. Must end with meta::Nil.
      * @note All presenter types used in the application MUST be added to this list!
      */
-    typedef touchgfx::meta::TypeList< MainPresenter,
-            touchgfx::meta::Nil
+    typedef touchgfx::meta::TypeList< LoadScreenPresenter,
+            touchgfx::meta::TypeList< MainScreenPresenter,
+            touchgfx::meta::TypeList< SensorListPresenter,
+            touchgfx::meta::TypeList< ValuesScreenPresenter,
+            touchgfx::meta::TypeList< SettingsScreenPresenter,
+            touchgfx::meta::Nil > > > >
             > GeneratedPresenterTypes;
 
     /**
@@ -73,7 +89,7 @@ public:
 
     virtual void gotoStartScreen(FrontendApplication& app)
     {
-        app.gotoMainScreenNoTransition();
+        app.gotoLoadScreenScreenNoTransition();
     }
 protected:
     FrontendHeapBase(touchgfx::AbstractPartition& presenters, touchgfx::AbstractPartition& views, touchgfx::AbstractPartition& transitions, FrontendApplication& app)

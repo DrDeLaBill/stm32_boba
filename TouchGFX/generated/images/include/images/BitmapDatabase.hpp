@@ -6,10 +6,19 @@
 #include <touchgfx/hal/Types.hpp>
 #include <touchgfx/Bitmap.hpp>
 
-const uint16_t BITMAP_BACKGROUND_ID = 0;
-const uint16_t BITMAP_MODE_ID = 1;
-const uint16_t BITMAP_SENSORS_ID = 2;
-const uint16_t BITMAP_SETTINGS_ID = 3;
+const uint16_t BITMAP_ANGLE_ID = 0;
+const uint16_t BITMAP_BACK_ID = 1;
+const uint16_t BITMAP_BACKGROUND_ID = 2;
+const uint16_t BITMAP_DISTANCE_ID = 3;
+const uint16_t BITMAP_DISTANCE_MODE_ID = 4;
+const uint16_t BITMAP_LEFT_ID = 5;
+const uint16_t BITMAP_LOAD_ID = 6;
+const uint16_t BITMAP_MODE_ID = 7;
+const uint16_t BITMAP_RIGHT_ID = 8;
+const uint16_t BITMAP_SENSITIVITY_ID = 9;
+const uint16_t BITMAP_SENSORS_ID = 10;
+const uint16_t BITMAP_SETTINGS_ID = 11;
+const uint16_t BITMAP_STRING_MODE_ID = 12;
 
 namespace BitmapDatabase
 {

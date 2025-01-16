@@ -16,16 +16,14 @@ struct Typography
     static const touchgfx::FontId DEFAULT = 0;
     static const touchgfx::FontId LARGE = 1;
     static const touchgfx::FontId SMALL = 2;
-    static const touchgfx::FontId TYPOGRAPHY_00 = 3;
 };
 
 struct TypographyFontIndex
 {
-    static const touchgfx::FontId DEFAULT = 0;       // Inkfree_60_4bpp
-    static const touchgfx::FontId LARGE = 1;         // verdana_40_4bpp
-    static const touchgfx::FontId SMALL = 2;         // verdana_10_4bpp
-    static const touchgfx::FontId TYPOGRAPHY_00 = 3; // Inkfree_35_4bpp
-    static const uint16_t NUMBER_OF_FONTS = 4;
+    static const touchgfx::FontId DEFAULT = 0; // Inkfree_40_4bpp
+    static const touchgfx::FontId LARGE = 0;   // Inkfree_40_4bpp
+    static const touchgfx::FontId SMALL = 1;   // Inkfree_25_4bpp
+    static const uint16_t NUMBER_OF_FONTS = 2;
 };
 
 class ApplicationFontProvider : public touchgfx::FontProvider

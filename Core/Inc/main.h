@@ -107,8 +107,8 @@ void Error_Handler(void);
 // General settings
 #define GENERAL_TIMEOUT_MS       ((uint32_t)100)
 // Display
-extern SPI_HandleTypeDef         hspi1;
-#define DISPLAY_SPI              (hspi1)
+extern SPI_HandleTypeDef         hspi3;
+#define DISPLAY_SPI              (hspi3)
 
 // RTC
 extern RTC_HandleTypeDef         hrtc;
@@ -116,6 +116,8 @@ extern RTC_HandleTypeDef         hrtc;
 // ADC
 extern ADC_HandleTypeDef         hadc1;
 
+extern TIM_HandleTypeDef         htim3;
+#define DISPLAY_TIM              (htim3)
 
 /* USER CODE END Private defines */
 
