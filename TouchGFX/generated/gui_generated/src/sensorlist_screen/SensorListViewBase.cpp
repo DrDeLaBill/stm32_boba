@@ -208,3 +208,11 @@ void SensorListViewBase::handleTickEvent()
         frameCountUpdateValuesInterval = 0;
     }
 }
+
+void SensorListViewBase::clickEnter()
+{
+    //clickEnter
+    //When clickEnter is called change screen to MainScreen
+    //Go to MainScreen with no screen transition
+    application().gotoMainScreenScreenNoTransition();
+}

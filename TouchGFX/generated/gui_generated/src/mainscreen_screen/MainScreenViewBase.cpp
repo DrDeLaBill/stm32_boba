@@ -205,3 +205,11 @@ void MainScreenViewBase::handleTickEvent()
         frameCountUpdateSensorDataInterval = 0;
     }
 }
+
+void MainScreenViewBase::setLoadScrean()
+{
+    //setLoadScrean
+    //When setLoadScrean is called change screen to LoadScreen
+    //Go to LoadScreen with no screen transition
+    application().gotoLoadScreenScreenNoTransition();
+}

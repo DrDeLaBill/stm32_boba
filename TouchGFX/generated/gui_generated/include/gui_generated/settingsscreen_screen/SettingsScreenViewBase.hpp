@@ -74,12 +74,17 @@ protected:
     touchgfx::Box sensitivityBackground;
     touchgfx::TextAreaWithOneWildcard sensitivityValue;
     touchgfx::Image sensitivityImage;
+    touchgfx::Container regulationContainer;
+    touchgfx::Box regulationBackground;
+    touchgfx::TextAreaWithOneWildcard regulationValue;
 
     /*
      * Wildcard Buffers
      */
     static const uint16_t SENSITIVITYVALUE_SIZE = 10;
     touchgfx::Unicode::UnicodeChar sensitivityValueBuffer[SENSITIVITYVALUE_SIZE];
+    static const uint16_t REGULATIONVALUE_SIZE = 10;
+    touchgfx::Unicode::UnicodeChar regulationValueBuffer[REGULATIONVALUE_SIZE];
 
 private:
 

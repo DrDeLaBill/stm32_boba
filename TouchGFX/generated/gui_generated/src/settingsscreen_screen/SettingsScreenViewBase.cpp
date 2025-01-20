@@ -60,12 +60,10 @@ SettingsScreenViewBase::SettingsScreenViewBase() :
     lineBtn2.setLineEndingStyle(touchgfx::Line::ROUND_CAP_ENDING);
     add(lineBtn2);
 
-    sensitivityContainer.setPosition(10, 10, 220, 240);
-    add(sensitivityContainer);
-
+    sensitivityContainer.setPosition(0, 0, 240, 260);
     sensitivityBackground.setPosition(96, 160, 49, 29);
     sensitivityBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
-    add(sensitivityBackground);
+    sensitivityContainer.add(sensitivityBackground);
 
     sensitivityValue.setXY(115, 160);
     sensitivityValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
@@ -74,11 +72,30 @@ SettingsScreenViewBase::SettingsScreenViewBase() :
     sensitivityValue.setWildcard(sensitivityValueBuffer);
     sensitivityValue.resizeToCurrentText();
     sensitivityValue.setTypedText(touchgfx::TypedText(T___SINGLEUSE_SBQI));
-    add(sensitivityValue);
+    sensitivityContainer.add(sensitivityValue);
 
     sensitivityImage.setXY(70, 60);
     sensitivityImage.setBitmap(touchgfx::Bitmap(BITMAP_SENSITIVITY_ID));
-    add(sensitivityImage);
+    sensitivityContainer.add(sensitivityImage);
+
+    add(sensitivityContainer);
+
+    regulationContainer.setPosition(0, 0, 240, 260);
+    regulationContainer.setVisible(false);
+    regulationBackground.setPosition(96, 160, 49, 29);
+    regulationBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
+    regulationContainer.add(regulationBackground);
+
+    regulationValue.setXY(104, 160);
+    regulationValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
+    regulationValue.setLinespacing(0);
+    Unicode::snprintf(regulationValueBuffer, REGULATIONVALUE_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_LEG2).getText());
+    regulationValue.setWildcard(regulationValueBuffer);
+    regulationValue.resizeToCurrentText();
+    regulationValue.setTypedText(touchgfx::TypedText(T___SINGLEUSE_0SH4));
+    regulationContainer.add(regulationValue);
+
+    add(regulationContainer);
 }
 
 SettingsScreenViewBase::~SettingsScreenViewBase()

@@ -98,6 +98,10 @@ void SensorListView::updateValues()
 		set_error(UI_ERROR);
 		return;
 	}
+	distanceMode.invalidate();
+	angleMode.invalidate();
+	distanceModeImg.invalidate();
+	stringModeImg.invalidate();
 
 	visibleDistanceContainer.setVisible(false);
 	visibleAngleContainer.setVisible(false);
@@ -117,8 +121,8 @@ void SensorListView::updateValues()
 			distanceValueBuffer,
 			DISTANCEVALUE_SIZE - 1,
 			"%d.%d",
-			value / 10,
-			__abs(value % 10)
+			value / SENSOR_DIV_POINT,
+			__abs(value % SENSOR_DIV_POINT)
 		);
 		distanceValue.resizeToCurrentText();
 		int width2 = distanceValue.getTextWidth();
@@ -140,13 +144,21 @@ void SensorListView::updateValues()
 		int value  = get_sensor_mode_value(SENSOR_MODE_ANGLE);
 		int width1 = angleValue.getTextWidth();
 		int x1     = angleValue.getX();
-		Unicode::snprintf(
-			angleValueBuffer,
-			ANGLEVALUE_SIZE - 1,
-			"%d.%d",
-			value / 10,
-			__abs(value % 10)
-		);
+		if (value == SENSOR_ERROR) {
+			Unicode::snprintf(
+				angleValueBuffer,
+				ANGLEVALUE_SIZE - 1,
+				"ERROR"
+			);
+		} else {
+			Unicode::snprintf(
+				angleValueBuffer,
+				ANGLEVALUE_SIZE - 1,
+				"%d.%d",
+				value / SENSOR_DIV_POINT,
+				__abs(value % SENSOR_DIV_POINT)
+			);
+		}
 		angleValue.resizeToCurrentText();
 		int width2 = angleValue.getTextWidth();
 		int x2     = x1 + width1 - width2;
@@ -182,6 +194,7 @@ void SensorListView::updateValues()
 			system_button_clicked(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin)
 		) {
 			set_sensor_mode(SENSOR_MODE_SURFACE);
+			clickEnter();
 		}
 		break;
 	case 1:
@@ -191,6 +204,7 @@ void SensorListView::updateValues()
 			system_button_clicked(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin)
 		) {
 			set_sensor_mode(SENSOR_MODE_ANGLE);
+			clickEnter();
 		}
 		break;
 	case 2:

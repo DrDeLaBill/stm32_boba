@@ -117,7 +117,6 @@ protected:
 
 	static void up();
 	static void down();
-	static void stop();
 
 	static uint16_t getAppDeadBand();
 	static bool isOnDeadBand();
@@ -127,7 +126,7 @@ private:
 	utl::Timer measureTimer;
 
 public:
-	static constexpr int16_t SENSOR_VALUE_ERR = std::numeric_limits<int16_t>::max();
+	static constexpr int16_t SENSOR_VALUE_ERR = SENSOR_ERROR;
 
 	App();
 
@@ -143,6 +142,7 @@ public:
 
 	static uint16_t getDeadBand();
 
+	static void stopEngine();
 };
 
 

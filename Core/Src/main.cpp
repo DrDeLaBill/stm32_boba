@@ -223,21 +223,20 @@ void system_error_loop()
 	if (!initialized) {
 		GPIO_InitTypeDef GPIO_InitStruct = {};
 
+		App::stopEngine();
+
 		__HAL_RCC_GPIOB_CLK_ENABLE();
-		GPIO_InitStruct.Pin   = VALVE_UP_IN_Pin|VALVE_UP_SD_Pin|VALVE_DOWN_SD_Pin|
-				                VALVE_DOWN_IN_Pin|ALARM_Pin|LED_DOWN_Pin|LED_CENTER_Pin|
+		GPIO_InitStruct.Pin   = VALVE_UP_HIN_Pin|VALVE_UP_LIN_Pin|VALVE_DOWN_LIN_Pin|
+				                VALVE_DOWN_HIN_Pin|ALARM_Pin|LED_DOWN_Pin|LED_CENTER_Pin|
 								LED_UP_Pin|LED_MID_Pin;
 		GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
 		GPIO_InitStruct.Pull  = GPIO_NOPULL;
 		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(GPIOB, VALVE_UP_IN_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOB, VALVE_UP_SD_Pin, GPIO_PIN_RESET);;
-		HAL_GPIO_WritePin(GPIOB, VALVE_DOWN_SD_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOB, VALVE_DOWN_IN_Pin, GPIO_PIN_RESET);
+
+		App::stopEngine();
+
 		HAL_GPIO_WritePin(GPIOB, ALARM_Pin, GPIO_PIN_SET);
-		reset_status(AUTO_NEED_VALVE_DOWN);
-		reset_status(AUTO_NEED_VALVE_UP);
 
 		system_timer_start(&led_timer, TIM2, delay_ms);
 
@@ -267,6 +266,8 @@ char* get_custom_status_name(SOUL_STATUS status)
 	SYSTEM_CASE_STATUS(name, MANUAL_NEED_VALVE_DOWN)
 	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_UP)
 	SYSTEM_CASE_STATUS(name, AUTO_NEED_VALVE_DOWN)
+	SYSTEM_CASE_STATUS(name, NEED_RESET_SENSOR)
+	SYSTEM_CASE_STATUS(name, SENSOR_REGULATE_FAULT)
 	SYSTEM_CASE_STATUS(name, DISPLAY_ERROR)
 	SYSTEM_CASE_STATUS(name, UI_ERROR)
 	default:

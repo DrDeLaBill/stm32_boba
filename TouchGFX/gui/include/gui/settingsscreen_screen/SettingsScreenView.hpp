@@ -12,7 +12,11 @@ public:
     virtual void setupScreen();
     virtual void tearDownScreen();
 protected:
-    unsigned sensitivity;
+    unsigned settingsPage;
+
+    unsigned sensitivity_idx;
+    unsigned regulation_mm;
+
     virtual void begin();
     virtual void update();
     virtual void goBackAndSave();

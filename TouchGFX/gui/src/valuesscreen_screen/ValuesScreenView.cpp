@@ -119,13 +119,21 @@ void ValuesScreenView::updateSensorData()
 
 	int width1 = text->getTextWidth();
 	int x1     = text->getX();
-	Unicode::snprintf(
-		textBuffer,
-		size - 1,
-		"%d.%d",
-		value / 10,
-		__abs(value % 10)
-	);
+	if (value == SENSOR_ERROR) {
+		Unicode::snprintf(
+			textBuffer,
+			size - 1,
+			"ERROR"
+		);
+	} else {
+		Unicode::snprintf(
+			textBuffer,
+			size - 1,
+			"%d.%d",
+			value / SENSOR_DIV_POINT,
+			__abs(value % SENSOR_DIV_POINT)
+		);
+	}
 	text->resizeToCurrentText();
 	int width2 = text->getTextWidth();
 	int x2     = x1 + width1 - width2;

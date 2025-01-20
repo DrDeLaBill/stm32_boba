@@ -62,6 +62,9 @@ typedef enum _FRAME_DATA_CMD {
                               (MODE) == SENSOR_MODE_BIGSKI || \
 							  (MODE) == SENSOR_MODE_ANGLE)
 
+#define SENSOR_DIV_POINT     (100)
+#define SENSOR_ERROR         (0xFFFF)
+
 
 void sensor_tick();
 bool sensor_2AB_available();
@@ -85,7 +88,11 @@ SENSOR_MODE get_sensor_target_mode();
 STRING_DIRECTION get_sensor_direction();
 
 uint8_t get_sensor_mode_sensitive();
-void set_sensor_mode_sensitive(uint8_t sensitivity);
+uint8_t get_sensor_mode_sensitive_index();
+void set_sensor_mode_sensitive(uint8_t sensitivity_idx);
+
+uint8_t get_sensor_mode_regulation_mm();
+void set_sensor_mode_regulation(uint8_t regulation_mm);
 
 #ifdef __cplusplus
 }

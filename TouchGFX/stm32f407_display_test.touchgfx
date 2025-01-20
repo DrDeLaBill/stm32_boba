@@ -430,11 +430,26 @@
               "ScreenTransitionType": "ScreenTransitionNone",
               "ActionComponent": "SettingsScreen"
             }
+          },
+          {
+            "InteractionName": "setLoadScrean",
+            "Trigger": {
+              "Type": "TriggerWhen",
+              "ActionCustomTypeName": "Call MainScreen setLoadScrean"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "LoadScreen"
+            }
           }
         ],
         "CustomActions": [
           {
             "Name": "btnModeAction"
+          },
+          {
+            "Name": "setLoadScrean"
           }
         ]
       },
@@ -852,6 +867,23 @@
               "Type": "ActionCustom",
               "FunctionName": "updateValues"
             }
+          },
+          {
+            "InteractionName": "clickEnter",
+            "Trigger": {
+              "Type": "TriggerWhen",
+              "ActionCustomTypeName": "Call SensorList clickEnter"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "MainScreen"
+            }
+          }
+        ],
+        "CustomActions": [
+          {
+            "Name": "clickEnter"
           }
         ]
       },
@@ -1278,53 +1310,93 @@
           {
             "Type": "Container",
             "Name": "sensitivityContainer",
-            "X": 10,
-            "Y": 10,
-            "Width": 220,
-            "Height": 240,
+            "Width": 240,
+            "Height": 260,
             "LockPosition": true,
-            "Components": []
+            "Components": [
+              {
+                "Type": "Box",
+                "Name": "sensitivityBackground",
+                "X": 96,
+                "Y": 160,
+                "Width": 49,
+                "Height": 29,
+                "LockPosition": true,
+                "Color": {
+                  "Red": 217,
+                  "Green": 211,
+                  "Blue": 206
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sensitivityValue",
+                "X": 115,
+                "Y": 160,
+                "Width": 11,
+                "Height": 29,
+                "LockPosition": true,
+                "TextId": "__SingleUse_SBQI",
+                "TextRotation": "0",
+                "AutoSize": true,
+                "Wildcard1": {
+                  "TextId": "__SingleUse_XSCB",
+                  "UseBuffer": true,
+                  "BufferSize": 10
+                }
+              },
+              {
+                "Type": "Image",
+                "Name": "sensitivityImage",
+                "X": 70,
+                "Y": 60,
+                "Width": 100,
+                "Height": 100,
+                "LockPosition": true,
+                "RelativeFilename": "sensitivity.png"
+              }
+            ]
           },
           {
-            "Type": "Box",
-            "Name": "sensitivityBackground",
-            "X": 96,
-            "Y": 160,
-            "Width": 49,
-            "Height": 29,
+            "Type": "Container",
+            "Name": "regulationContainer",
+            "Width": 240,
+            "Height": 260,
+            "Visible": false,
             "LockPosition": true,
-            "Color": {
-              "Red": 217,
-              "Green": 211,
-              "Blue": 206
-            }
-          },
-          {
-            "Type": "TextArea",
-            "Name": "sensitivityValue",
-            "X": 115,
-            "Y": 160,
-            "Width": 11,
-            "Height": 29,
-            "LockPosition": true,
-            "TextId": "__SingleUse_SBQI",
-            "TextRotation": "0",
-            "AutoSize": true,
-            "Wildcard1": {
-              "TextId": "__SingleUse_XSCB",
-              "UseBuffer": true,
-              "BufferSize": 10
-            }
-          },
-          {
-            "Type": "Image",
-            "Name": "sensitivityImage",
-            "X": 70,
-            "Y": 60,
-            "Width": 100,
-            "Height": 100,
-            "LockPosition": true,
-            "RelativeFilename": "sensitivity.png"
+            "Components": [
+              {
+                "Type": "Box",
+                "Name": "regulationBackground",
+                "X": 96,
+                "Y": 160,
+                "Width": 49,
+                "Height": 29,
+                "LockPosition": true,
+                "Color": {
+                  "Red": 217,
+                  "Green": 211,
+                  "Blue": 206
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "regulationValue",
+                "X": 104,
+                "Y": 160,
+                "Width": 33,
+                "Height": 29,
+                "LockPosition": true,
+                "TextId": "__SingleUse_0SH4",
+                "TextRotation": "0",
+                "AutoSize": true,
+                "Wildcard1": {
+                  "TextId": "__SingleUse_LEG2",
+                  "UseBuffer": true,
+                  "BufferSize": 10
+                }
+              }
+            ]
           }
         ],
         "Interactions": [

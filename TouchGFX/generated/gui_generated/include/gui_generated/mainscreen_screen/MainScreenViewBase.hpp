@@ -33,6 +33,7 @@ public:
         // Override and implement this function in Screen1
     }
     
+    virtual void setLoadScrean();
 
     /*
      * Virtual Action Handlers

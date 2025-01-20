@@ -65,18 +65,18 @@ void Error_Handler(void);
 #define BTN_F1_GPIO_Port GPIOC
 #define ALARM_Pin GPIO_PIN_2
 #define ALARM_GPIO_Port GPIOB
-#define LED_DOWN_Pin GPIO_PIN_10
-#define LED_DOWN_GPIO_Port GPIOB
+#define LED_UP_Pin GPIO_PIN_10
+#define LED_UP_GPIO_Port GPIOB
 #define LED_MID_Pin GPIO_PIN_11
 #define LED_MID_GPIO_Port GPIOB
-#define VALVE_UP_SD_Pin GPIO_PIN_12
-#define VALVE_UP_SD_GPIO_Port GPIOB
-#define VALVE_UP_IN_Pin GPIO_PIN_13
-#define VALVE_UP_IN_GPIO_Port GPIOB
-#define VALVE_DOWN_SD_Pin GPIO_PIN_14
-#define VALVE_DOWN_SD_GPIO_Port GPIOB
-#define VALVE_DOWN_IN_Pin GPIO_PIN_15
-#define VALVE_DOWN_IN_GPIO_Port GPIOB
+#define VALVE_UP_LIN_Pin GPIO_PIN_12
+#define VALVE_UP_LIN_GPIO_Port GPIOB
+#define VALVE_UP_HIN_Pin GPIO_PIN_13
+#define VALVE_UP_HIN_GPIO_Port GPIOB
+#define VALVE_DOWN_LIN_Pin GPIO_PIN_14
+#define VALVE_DOWN_LIN_GPIO_Port GPIOB
+#define VALVE_DOWN_HIN_Pin GPIO_PIN_15
+#define VALVE_DOWN_HIN_GPIO_Port GPIOB
 #define BTN_DOWN_Pin GPIO_PIN_6
 #define BTN_DOWN_GPIO_Port GPIOC
 #define BTN_UP_Pin GPIO_PIN_7
@@ -99,8 +99,8 @@ void Error_Handler(void);
 #define BTN_F3_GPIO_Port GPIOB
 #define LED_CENTER_Pin GPIO_PIN_8
 #define LED_CENTER_GPIO_Port GPIOB
-#define LED_UP_Pin GPIO_PIN_9
-#define LED_UP_GPIO_Port GPIOB
+#define LED_DOWN_Pin GPIO_PIN_9
+#define LED_DOWN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -89,7 +89,23 @@ void MainScreenView::updateSensorData()
 		set_error(UI_ERROR);
 		return;
 	}
+	distanceMode.invalidate();
+	angleMode.invalidate();
+	distanceModeImg.invalidate();
+	stringModeImg.invalidate();
 
+	if (system_button_pressed(BTN_UP_GPIO_Port, BTN_UP_Pin)) {
+		set_status(MANUAL_NEED_VALVE_UP);
+	} else {
+		reset_status(MANUAL_NEED_VALVE_UP);
+	}
+	if (system_button_pressed(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin)) {
+		set_status(MANUAL_NEED_VALVE_DOWN);
+	} else {
+		reset_status(MANUAL_NEED_VALVE_DOWN);
+	}
+
+	backgroundRelative.invalidate();
 	if (sensor_available()) {
 		textRelative.setVisible(true);
 		textAbsolute.setVisible(true);
@@ -99,34 +115,60 @@ void MainScreenView::updateSensorData()
 		int value  = get_sensor_value();
 		int width1 = textRelative.getTextWidth();
 		int x1     = textRelative.getX();
-		Unicode::snprintf(
-			textRelativeBuffer,
-			TEXTRELATIVE_SIZE - 1,
-			"%d.%d",
-			value / 10,
-			__abs(value % 10)
-		);
+		if (value == SENSOR_ERROR) {
+			Unicode::snprintf(
+				textRelativeBuffer,
+				TEXTRELATIVE_SIZE - 1,
+				"ERROR"
+			);
+		} else {
+			Unicode::snprintf(
+				textRelativeBuffer,
+				TEXTRELATIVE_SIZE - 1,
+				"%d.%d",
+				value / SENSOR_DIV_POINT,
+				__abs(value % SENSOR_DIV_POINT)
+			);
+		}
 		textRelative.resizeToCurrentText();
 		int width2 = textRelative.getTextWidth();
 		int x2     = x1 + width1 - width2;
 		textRelative.setX(x2);
 		textRelative.invalidate();
 
-		value  = get_sensor_mode_target(get_sensor_mode());
+		if (value != SENSOR_ERROR) {
+			value += get_sensor_mode_target(get_sensor_mode());
+		}
 		width1 = textAbsolute.getTextWidth();
 		x1     = textAbsolute.getX();
-		Unicode::snprintf(
-			textAbsoluteBuffer,
-			TEXTABSOLUTE_SIZE - 1,
-			"%d.%d",
-			value / 10,
-			__abs(value % 10)
-		);
+		if (value == SENSOR_ERROR) {
+			Unicode::snprintf(
+				textAbsoluteBuffer,
+				TEXTABSOLUTE_SIZE - 1,
+				""
+			);
+		} else {
+			Unicode::snprintf(
+				textAbsoluteBuffer,
+				TEXTABSOLUTE_SIZE - 1,
+				"%d.%d",
+				value / SENSOR_DIV_POINT,
+				__abs(value % SENSOR_DIV_POINT)
+			);
+		}
 		textAbsolute.resizeToCurrentText();
 		width2 = textAbsolute.getTextWidth();
 		x2     = x1 + width1 - width2;
 		textAbsolute.setX(x2);
 		textAbsolute.invalidate();
+
+		value  = get_sensor_value();
+		if (angleMode.isVisible()) {
+			degreeRight.setVisible(value > get_sensor_mode_sensitive());
+			degreeLeft.setVisible(-value > get_sensor_mode_sensitive());
+			degreeLeft.invalidate();
+			degreeRight.invalidate();
+		}
 
 		if (system_button_clicked(BTN_MODE_GPIO_Port, BTN_MODE_Pin)) {
 			App::setAppMode(App::getAppMode() == APP_MODE_AUTO ? APP_MODE_MANUAL : APP_MODE_AUTO);
@@ -141,19 +183,13 @@ void MainScreenView::updateSensorData()
 
 		if (system_button_clicked(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin)) {
 			save_sensor_mode_target();
+			set_status(NEED_SAVE_SETTINGS);
+			setLoadScrean();
 		}
 		if (system_button_holded(BTN_ENTER_GPIO_Port, BTN_ENTER_Pin)) {
 			reset_sensor_mode_target();
-		}
-		if (system_button_pressed(BTN_UP_GPIO_Port, BTN_UP_Pin)) {
-			set_status(MANUAL_NEED_VALVE_UP);
-		} else {
-			reset_status(MANUAL_NEED_VALVE_UP);
-		}
-		if (system_button_pressed(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin)) {
-			set_status(MANUAL_NEED_VALVE_DOWN);
-		} else {
-			reset_status(MANUAL_NEED_VALVE_DOWN);
+			set_status(NEED_SAVE_SETTINGS);
+			setLoadScrean();
 		}
 	} else {
 		textRelative.setVisible(false);
@@ -161,7 +197,5 @@ void MainScreenView::updateSensorData()
 		emptyRealtive.setVisible(true);
 		emptyAbsolute.setVisible(true);
 	}
-
-	backgroundRelative.invalidate();
 #endif
 }

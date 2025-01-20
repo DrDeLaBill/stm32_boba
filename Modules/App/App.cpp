@@ -94,13 +94,13 @@ uint16_t App::getDeadBand()
 	uint8_t sensitive = get_sensor_mode_sensitive();
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
-		return DEAD_BANDS_MMx10[sensitive];
+		return DEAD_BANDS_MMx10[sensitive] * 10;
 	case SENSOR_MODE_STRING:
-		return DEAD_BANDS_MMx10[sensitive];
+		return DEAD_BANDS_MMx10[sensitive] * 10;
 	case SENSOR_MODE_BIGSKI:
-		return DEAD_BANDS_MMx10[sensitive];
+		return DEAD_BANDS_MMx10[sensitive] * 10;
 	case SENSOR_MODE_ANGLE:
-		return ANGLE_DEAD_BANDS[sensitive];
+		return ANGLE_DEAD_BANDS[sensitive] * 100;
 	default:
 		BEDUG_ASSERT(false, "Unknown mode");
 		fsm.push_event(error_e{});
@@ -111,33 +111,50 @@ uint16_t App::getDeadBand()
 
 void App::up()
 {
-	HAL_GPIO_WritePin(VALVE_DOWN_SD_GPIO_Port, VALVE_DOWN_SD_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_DOWN_LIN_GPIO_Port, VALVE_DOWN_LIN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_HIN_GPIO_Port, VALVE_UP_HIN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_DOWN_GPIO_Port, LED_DOWN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, GPIO_PIN_RESET);
 
-	HAL_GPIO_WritePin(VALVE_UP_SD_GPIO_Port, VALVE_UP_SD_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(VALVE_UP_IN_GPIO_Port, VALVE_UP_IN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_UP_LIN_GPIO_Port, VALVE_UP_LIN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_DOWN_HIN_GPIO_Port, VALVE_DOWN_HIN_Pin, GPIO_PIN_SET);
 
 	reset_status(AUTO_NEED_VALVE_DOWN);
 	set_status(AUTO_NEED_VALVE_UP);
+
+	HAL_GPIO_WritePin(LED_UP_GPIO_Port, LED_UP_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, GPIO_PIN_SET);
 }
 
 void App::down()
 {
-	HAL_GPIO_WritePin(VALVE_UP_SD_GPIO_Port, VALVE_UP_SD_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_LIN_GPIO_Port, VALVE_UP_LIN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_HIN_GPIO_Port, VALVE_UP_HIN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_UP_GPIO_Port, LED_UP_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, GPIO_PIN_RESET);
 
-	HAL_GPIO_WritePin(VALVE_DOWN_IN_GPIO_Port, VALVE_DOWN_IN_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(VALVE_DOWN_SD_GPIO_Port, VALVE_DOWN_SD_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_DOWN_LIN_GPIO_Port, VALVE_DOWN_LIN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(VALVE_UP_HIN_GPIO_Port, VALVE_UP_HIN_Pin, GPIO_PIN_SET);
 
 	reset_status(AUTO_NEED_VALVE_UP);
 	set_status(AUTO_NEED_VALVE_DOWN);
+
+	HAL_GPIO_WritePin(LED_DOWN_GPIO_Port, LED_DOWN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, GPIO_PIN_SET);
 }
 
-void App::stop()
+void App::stopEngine()
 {
-	HAL_GPIO_WritePin(VALVE_DOWN_SD_GPIO_Port, VALVE_DOWN_SD_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(VALVE_DOWN_IN_GPIO_Port, VALVE_DOWN_IN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_DOWN_LIN_GPIO_Port, VALVE_DOWN_LIN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_LIN_GPIO_Port, VALVE_UP_LIN_Pin, GPIO_PIN_RESET);
 
-	HAL_GPIO_WritePin(VALVE_UP_SD_GPIO_Port, VALVE_UP_SD_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(VALVE_UP_IN_GPIO_Port, VALVE_UP_IN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_DOWN_HIN_GPIO_Port, VALVE_DOWN_HIN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(VALVE_UP_HIN_GPIO_Port, VALVE_UP_HIN_Pin, GPIO_PIN_RESET);
+
+	HAL_GPIO_WritePin(LED_UP_GPIO_Port, LED_UP_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_DOWN_GPIO_Port, LED_DOWN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, GPIO_PIN_RESET);
 
 	reset_status(AUTO_NEED_VALVE_DOWN);
 	reset_status(AUTO_NEED_VALVE_UP);
@@ -163,7 +180,7 @@ bool App::isOnPropBand()
 
 void App::_init_s::operator ()()
 {
-	stop();
+	stopEngine();
 
 	if (!is_system_ready()) {
 		return;
@@ -182,6 +199,12 @@ void App::_manual_s::operator ()()
 		fsm.push_event(plate_down_e{});
 	}
 
+	if (sensor_available()) {
+		bool status = isOnDeadBand();
+		HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, (GPIO_PinState)status);
+		HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, (GPIO_PinState)status);
+	}
+
 	if (has_errors()) {
 		fsm.push_event(error_e{});
 	}
@@ -194,7 +217,7 @@ void App::_auto_s::operator ()()
 	}
 
 	if (getActualValue() == SENSOR_VALUE_ERR) {
-		stop();
+		stopEngine();
 		return;
 	}
 
@@ -206,21 +229,24 @@ void App::_auto_s::operator ()()
 
 	if (!sensor_available()) {
 		if (is_status(MANUAL_NEED_VALVE_UP) && is_status(MANUAL_NEED_VALVE_DOWN)) {
-			stop();
+			stopEngine();
 		} else if (is_status(MANUAL_NEED_VALVE_UP)) {
 			up();
 		} else if (is_status(MANUAL_NEED_VALVE_DOWN)) {
 			down();
 		} else {
-			stop();
+			stopEngine();
 		}
 		return;
 	}
 
-	if (isOnDeadBand()) {
+	bool status = isOnDeadBand();
+	HAL_GPIO_WritePin(LED_CENTER_GPIO_Port, LED_CENTER_Pin, (GPIO_PinState)status);
+	HAL_GPIO_WritePin(LED_MID_GPIO_Port, LED_MID_Pin, (GPIO_PinState)status);
+	if (status) {
 		position = ON_DEAD_BAND;
 		noiseTimer.start();
-		stop();
+		stopEngine();
 		return;
 	}
 
@@ -248,7 +274,7 @@ void App::_auto_s::operator ()()
 	if (workTimer.wait()) {
 		return;
 	} else {
-		stop();
+		stopEngine();
 	}
 
 	if (sampleTimer.wait()) {
@@ -285,7 +311,7 @@ void App::_auto_s::operator ()()
 	uint32_t time_ms = (k_percent * SAMPLE_PWM_MS) / 100;
 
 	if (time_ms < VALVE_MIN_TIME_MS) {
-		stop();
+		stopEngine();
 		return;
 	}
 
@@ -327,7 +353,7 @@ void App::_error_s::operator ()()
 
 void App::manual_start_a::operator ()()
 {
-	stop();
+	stopEngine();
 
 	int16_t lastValue = 0;
 	if (!value_buffer.empty()) {
@@ -343,26 +369,26 @@ void App::auto_start_a::operator ()()
 	uint8_t sensitive = get_sensor_mode_sensitive();
 	switch(get_sensor_mode()) {
 	case SENSOR_MODE_SURFACE:
-		deadBand = DEAD_BANDS_MMx10[sensitive];
-		propBand = PROP_BANDS_MMx10[sensitive];
+		deadBand = DEAD_BANDS_MMx10[sensitive] * 10;
+		propBand = PROP_BANDS_MMx10[sensitive] * 10;
 		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.surface_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_STRING:
-		deadBand = DEAD_BANDS_MMx10[sensitive];
-		propBand = PROP_BANDS_MMx10[sensitive];
+		deadBand = DEAD_BANDS_MMx10[sensitive] * 10;
+		propBand = PROP_BANDS_MMx10[sensitive] * 10;
 		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.string_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_BIGSKI:
-		deadBand = DEAD_BANDS_MMx10[sensitive];
-		propBand = PROP_BANDS_MMx10[sensitive];
+		deadBand = DEAD_BANDS_MMx10[sensitive] * 10;
+		propBand = PROP_BANDS_MMx10[sensitive] * 10;
 		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.bigski_delay * WORK_DELAY_BUFFER_MS;
 		break;
 	case SENSOR_MODE_ANGLE:
-		deadBand = ANGLE_DEAD_BANDS[sensitive];
-		propBand = ANGLE_PROP_BANDS[sensitive];
+		deadBand = ANGLE_DEAD_BANDS[sensitive] * 100;
+		propBand = ANGLE_PROP_BANDS[sensitive] * 100;
 		sensDelayTimer.changeDelay(SENSITIVITY_DELAY_MS[sensitive]);
 		measureCount = settings.angle_delay * WORK_DELAY_BUFFER_MS;
 		break;
@@ -395,10 +421,10 @@ void App::move_down_a::operator ()()
 
 void App::plate_stop_a::operator ()()
 {
-	stop();
+	stopEngine();
 }
 
 void App::error_start_a::operator ()()
 {
-	stop();
+	stopEngine();
 }

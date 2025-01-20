@@ -23,6 +23,11 @@ public:
     virtual void handleTickEvent();
 
     /*
+     * Custom Actions
+     */
+    virtual void clickEnter();
+
+    /*
      * Virtual Action Handlers
      */
     virtual void updateValues()

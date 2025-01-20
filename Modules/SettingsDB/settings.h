@@ -30,16 +30,16 @@ extern "C" {
  * 0x0005 - Calibrate station
  * 0x0006 - Dispenser-mini
  */
-#define DEVICE_TYPE ((uint16_t)0x0004)
-#define SW_VERSION  ((uint8_t)0x01)
-#define FW_VERSION  ((uint8_t)0x01)
-#define CF_VERSION  ((uint8_t)0x01)
+#define DEVICE_TYPE                    ((uint16_t)0x0004)
+#define FW_VERSION                     ((uint8_t)0x01)
+#define BEDACODE                       ((uint32_t)0xBEDAC0DE)
 
 
 #define SETTINGS_BIGSKI_COUNT          (3)
 #define SETTINGS_BANDS_COUNT           (10)
 #define SETTNNGS_WORK_DELAY_DEFAULT_S  (0)
 #define SETTINGS_WORK_DELAY_MAX_S      (40)
+#define SETTINGS_REGULATION_MM_MAX     (100)
 
 
 extern const uint8_t  SENSITIVITY[SETTINGS_BANDS_COUNT];
@@ -57,14 +57,11 @@ typedef enum _SettingsStatus {
 
 
 typedef struct __attribute__((packed)) _settings_t  {
+	uint32_t bedacode;
     // Device type
 	uint16_t  dv_type;
-	// Software version
-    uint8_t   sw_id;
     // Firmware version
     uint8_t   fw_id;
-    // Configuration version
-    uint32_t  cf_id;
 
     // Language
     uint8_t   language;
@@ -75,6 +72,8 @@ typedef struct __attribute__((packed)) _settings_t  {
     uint8_t   surface_delay;
     // Last surface target sensor value
     int16_t   surface_target;
+    // Surface regulation window
+    uint8_t   surface_reg_wind_x10;
 
     // String mode sensitivity
     uint8_t   string_snstv;
@@ -82,6 +81,8 @@ typedef struct __attribute__((packed)) _settings_t  {
     uint8_t   string_delay;
     // Last string target sensor value
     int16_t   string_target;
+    // String regulation window
+    uint8_t   string_reg_wind_x10;
 
     // BIGSKI mode sensitivity
     uint8_t   bigski_snstv;
@@ -89,6 +90,8 @@ typedef struct __attribute__((packed)) _settings_t  {
     uint8_t   bigski_delay;
     // Last BIGSKI target sensor value
     int16_t   bigski_target[SETTINGS_BIGSKI_COUNT];
+    // BIGSKI regulation window
+    uint8_t   bigski_reg_wind_x10;
 
     // Angle mode sensitivity
     uint8_t   angle_snstv;
