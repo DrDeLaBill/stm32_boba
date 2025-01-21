@@ -990,6 +990,7 @@
                 "Name": "angleBox",
                 "Width": 240,
                 "Height": 260,
+                "Visible": false,
                 "LockPosition": true,
                 "Components": [
                   {
@@ -1083,6 +1084,7 @@
                 "Name": "distanceBox",
                 "Width": 240,
                 "Height": 260,
+                "Visible": false,
                 "LockPosition": true,
                 "Components": [
                   {
@@ -1177,7 +1179,6 @@
             "Y": 153,
             "Width": 80,
             "Height": 15,
-            "Visible": false,
             "LockPosition": true
           }
         ],
@@ -1192,28 +1193,6 @@
               "Type": "ActionGotoScreen",
               "ScreenTransitionType": "ScreenTransitionNone",
               "ActionComponent": "MainScreen"
-            }
-          },
-          {
-            "InteractionName": "clickLeft",
-            "Trigger": {
-              "Type": "TriggerClicked",
-              "TriggerComponent": "btnLeft"
-            },
-            "Action": {
-              "Type": "ActionCustom",
-              "FunctionName": "clickLeft"
-            }
-          },
-          {
-            "InteractionName": "clickRight",
-            "Trigger": {
-              "Type": "TriggerClicked",
-              "TriggerComponent": "btnRight"
-            },
-            "Action": {
-              "Type": "ActionCustom",
-              "FunctionName": "clickRight"
             }
           },
           {

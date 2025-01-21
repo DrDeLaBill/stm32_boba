@@ -12,8 +12,10 @@
 #include "gsystem.h"
 #include "hal_defs.h"
 #include "settings.h"
+#include "circle_buf_gc.h"
 
 
+#define SENSOR_BUFFER_COUNT        (15)
 #define SENSOR_DATA_MAX_SIZE       (8)
 #define SENSOR_FRAME_DELAY_MS      (400)
 #define SENSOR_COMMAND_DELAY_MS    (15)
@@ -40,20 +42,16 @@ typedef struct _sensor_dist_t {
     uint8_t          error_cnt;
     int16_t          sub_main;
     int16_t          sub_values[SENSOR_SUB_SENSORS_COUNT];
-    uint8_t          buffer[SENSOR_DATA_MAX_SIZE];
 } sensor_dist_t;
 
 typedef struct _sensor_angle_t {
     int16_t          value;
     gtimer_t         connection_timer;
-    uint8_t          buffer[SENSOR_DATA_MAX_SIZE];
 } sensor_angle_t;
 
 typedef struct _sensor_state_t {
     bool                initialized;
     bool                enabled;
-    bool                received;
-    bool                setup_received;
 
     sensor_dist_t       sens_2A7;
     sensor_dist_t       sens_2A8;
@@ -64,26 +62,18 @@ typedef struct _sensor_state_t {
     SENSOR_MODE         curr_mode;
     SENSOR_MODE         need_mode;
     int16_t             curr_target;
-    uint16_t            need_std_id;
 
+    uint32_t            last_error;
     unsigned            errors;
     gtimer_t            timer;
     gtimer_t            frame_timer;
-
-    uint16_t            last_std_id;
-    uint32_t            common_tx_mailbox;
-    CAN_TxHeaderTypeDef common_tx_header;
-    uint8_t             common_tx_buffer[SENSOR_DATA_MAX_SIZE];
-    uint16_t            common_rx_std_id;
-    uint8_t             common_rx_buffer[SENSOR_DATA_MAX_SIZE];
 
     uint8_t             bigski_id;
 } sensor_state_t;
 
 typedef struct _can_frame_t {
-    uint32_t std_id;
-    uint32_t dlc;
-    uint8_t  data[SENSOR_DATA_MAX_SIZE];
+	CAN_RxHeaderTypeDef header;
+	uint8_t data[SENSOR_DATA_MAX_SIZE];
 } can_frame_t;
 
 
@@ -93,64 +83,47 @@ static int16_t get_sensor2AB_value();
 static int16_t get_sensor_average();
 static int16_t get_sensor_angle();
 
+static void _can_enable_it();
+static void _can_disable_it();
 static void _can_enable_tick();
 static void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t* data);
+static can_frame_t get_frame(uint16_t std_id);
 
-
-static const can_frame_t start_frames[] = {
-    {CONTROL_INIT,          0x05, {0x09,}},
-//    {LINE_CONTROL_VALUE,    0x08, {0x00, 0x9F, 0x1E, 0x0C, 0xFE, 0x01, 0x00, 0x00}},
-//    {CONTROL_INIT,          0x05, {0x09, 0x0B,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x02,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x01,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0xCD,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x02,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x19,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x15,}},
-//    {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x00, 0x16,}},
-};
-
-static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
 
 extern CAN_HandleTypeDef hcan1;
+#define SENS_CAN         (hcan1)
+
+
+static const uint8_t BIGSKI_IDS[] = {0x00, 0x02, 0x04};
 
 sensor_state_t sensor_state = {
     .initialized       = false,
 	.enabled           = false,
-	.received          = false,
-	.setup_received    = false,
 
 	.sens_2A7          = {0},
 	.sens_2A8          = {0},
 	.sens_2AB          = {0},
 	.sens_angle        = {0},
-	.sens_sub_check        = {0},
+	.sens_sub_check    = {0},
 
     .curr_mode         = SENSOR_MODE_SURFACE,
     .need_mode         = SENSOR_MODE_SURFACE,
 	.curr_target       = 0,
-	.need_std_id       = NO_STD_ID,
 
 	.errors            = 0,
 	.timer             = {0},
 	.frame_timer       = {0},
 
-	.last_std_id       = NO_STD_ID,
-	.common_tx_mailbox = 0,
-	.common_tx_header  = {0},
-	.common_tx_buffer  = {0},
-	.common_rx_std_id  = 0,
-	.common_rx_buffer  = {0},
-
     .bigski_id         = 0,
 };
+static can_frame_t can_buffer[SENSOR_BUFFER_COUNT] = {0};
+static circle_buf_gc_t can_circle_buffer = {0};
 
 
 static void _init_s(void);
 static void _idle_s(void);
 static void _no_sensor_s(void);
 static void _error_s(void);
-static void _start_s(void);
 static void _change_s(void);
 static void _bigski1_s(void);
 static void _bigski2_s(void);
@@ -185,7 +158,6 @@ FSM_GC_CREATE_EVENT(surface_e,   0)
 FSM_GC_CREATE_EVENT(string_e,    0)
 FSM_GC_CREATE_EVENT(angle_e,     0)
 FSM_GC_CREATE_EVENT(send_e,      0)
-FSM_GC_CREATE_EVENT(check_e,     0)
 FSM_GC_CREATE_EVENT(change_e,    1)
 FSM_GC_CREATE_EVENT(error_e,     2)
 
@@ -193,7 +165,6 @@ FSM_GC_CREATE_STATE(init_s,      _init_s)
 FSM_GC_CREATE_STATE(idle_s,      _idle_s)
 FSM_GC_CREATE_STATE(no_sensor_s, _no_sensor_s)
 FSM_GC_CREATE_STATE(error_s,     _error_s)
-FSM_GC_CREATE_STATE(start_s,     _start_s)
 FSM_GC_CREATE_STATE(change_s,    _change_s)
 FSM_GC_CREATE_STATE(bigski1_s,   _bigski1_s)
 FSM_GC_CREATE_STATE(bigski2_s,   _bigski2_s)
@@ -206,7 +177,7 @@ FSM_GC_CREATE_STATE(send_s,      _send_s)
 
 FSM_GC_CREATE_TABLE(
     sens_fsm_table,
-    {&init_s,      &success_e,   &start_s,     start_sensor_a},
+    {&init_s,      &success_e,   &idle_s,      start_sensor_a},
 
     {&idle_s,      &send_e,      &send_s,      send_a},
     {&idle_s,      &change_e,    &change_s,    start_change_a},
@@ -218,9 +189,6 @@ FSM_GC_CREATE_TABLE(
     {&no_sensor_s, &sub_check_e, &no_sensor_s, sub_check_a},
 
     {&error_s,     &success_e,   &no_sensor_s, no_sensor_a},
-
-    {&start_s,     &success_e,   &idle_s,      start_idle_a},
-    {&start_s,     &error_e,     &idle_s,      error_idle_a},
 
     {&change_s,    &bigski1_e,   &bigski1_s,   NULL},
     {&change_s,    &surface_e,   &end1_s,      surface_a},
@@ -246,56 +214,35 @@ FSM_GC_CREATE_TABLE(
     {&send_s,      &success_e,   &idle_s,      start_idle_a},
 )
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    CAN_RxHeaderTypeDef tmp_rx_header = {0};
-    uint8_t             tmp_rx_buffer[SENSOR_DATA_MAX_SIZE] = {0};
-
-    if(HAL_CAN_GetRxMessage(hcan1, CAN_RX_FIFO0, &tmp_rx_header, tmp_rx_buffer) == HAL_OK) {
-        sensor_state.received = true;
-        switch (tmp_rx_header.StdId) {
-        case LINE_SENSOR_1_VALUE:
-            memcpy(sensor_state.sens_2A8.buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-            sensor_state.last_std_id = tmp_rx_header.StdId;
-            return;
-        case LINE_SENSOR_C_VALUE:
-            memcpy(sensor_state.sens_2A7.buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-            sensor_state.last_std_id = tmp_rx_header.StdId;
-            return;
-        case LINE_SENSOR_3_VALUE:
-            memcpy(sensor_state.sens_2AB.buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-            sensor_state.last_std_id = tmp_rx_header.StdId;
-            return;
-        case ANGLE_SENSOR_VALUE:
-            memcpy(sensor_state.sens_angle.buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-            sensor_state.last_std_id = tmp_rx_header.StdId;
-            return;
-        default:
-            sensor_state.received = false;
-            reset_status(CAN_FAULT);
-            break;
-        }
-        if (sensor_state.need_std_id == tmp_rx_header.StdId) {
-            memcpy(sensor_state.common_rx_buffer, tmp_rx_buffer, sizeof(tmp_rx_buffer));
-            sensor_state.common_rx_std_id = (uint16_t)tmp_rx_header.StdId;
-            sensor_state.setup_received = true;
-        }
-    } else {
-        set_status(CAN_FAULT);
-    }
+	can_frame_t tmp_buf = {0};
+	if (hcan->Instance == SENS_CAN.Instance) {
+		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &tmp_buf.header, tmp_buf.data) == HAL_OK) {
+			reset_status(CAN_FAULT);
+			circle_buf_gc_push_back(&can_circle_buffer, (uint8_t*)&tmp_buf);
+		} else {
+			set_status(CAN_FAULT);
+		}
+	}
 }
 
-void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan1)
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 {
-    (void)hcan1;
-
-    sensor_state.errors++;
-    set_status(CAN_FAULT);
+    (void)hcan;
+    sensor_state.last_error = HAL_CAN_GetError(hcan);
+    HAL_CAN_ResetError(hcan);
 }
 
 void sensor_tick()
 {
     if (!sens_fsm._initialized) {
+    	circle_buf_gc_init(
+			&can_circle_buffer,
+			(uint8_t*)&can_buffer,
+			sizeof(can_frame_t),
+			__arr_len(can_buffer)
+		);
         fsm_gc_init(&sens_fsm, sens_fsm_table, __arr_len(sens_fsm_table));
     }
     fsm_gc_process(&sens_fsm);
@@ -592,33 +539,86 @@ void set_sensor_mode_regulation(uint8_t regulation_mm)
 
 void _sensor_send_frame(const uint32_t std_id, const uint32_t dlc, const uint8_t* data)
 {
-    sensor_state.received = false;
+    static uint32_t            tx_mailbox = 0;
+    static CAN_TxHeaderTypeDef tx_header = {0};
+    static uint8_t             tx_buffer[SENSOR_DATA_MAX_SIZE] = {0};
+    tx_mailbox = 0;
+    memset((void*)&tx_header, 0, sizeof(tx_header));
+    memset((void*)tx_buffer, 0, sizeof(tx_buffer));
 
-    sensor_state.common_tx_header.RTR                = CAN_RTR_DATA;
-    sensor_state.common_tx_header.IDE                = CAN_ID_STD;
-    sensor_state.common_tx_header.TransmitGlobalTime = DISABLE;
-    sensor_state.common_tx_mailbox                   = 0;
-    sensor_state.common_tx_header.StdId              = std_id;
-    sensor_state.common_tx_header.DLC                = dlc;
-    memset(sensor_state.common_tx_buffer, 0 , sizeof(sensor_state.common_tx_buffer));
-    memcpy(sensor_state.common_tx_buffer, data, __min(sizeof(sensor_state.common_tx_buffer), dlc));
+    tx_header.RTR                = CAN_RTR_DATA;
+    tx_header.IDE                = CAN_ID_STD;
+    tx_header.TransmitGlobalTime = DISABLE;
+    tx_mailbox                   = 0;
+    tx_header.StdId              = std_id;
+    tx_header.DLC                = dlc;
+    memset(tx_buffer, 0 , sizeof(tx_buffer));
+    memcpy(tx_buffer, data, __min(sizeof(tx_buffer), dlc));
     HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(
-                                   &hcan1,
-                                   &sensor_state.common_tx_header,
-                                   sensor_state.common_tx_buffer,
-                                   &sensor_state.common_tx_mailbox
-                               );
+	   &SENS_CAN,
+	   &tx_header,
+	   tx_buffer,
+	   &tx_mailbox
+	);
     if (status != HAL_OK) {
-        printTagLog("SENS", "CAN send error=%u std_id=%lu len=%lu", status, std_id, dlc);
+        printTagLog(
+			"SENS",
+			"CAN send status=%u error=0x%08X std_id=%lu len=%lu",
+			status,
+			sensor_state.last_error,
+			std_id,
+			dlc
+		);
+        sensor_state.last_error = 0;
+        HAL_CAN_AbortTxRequest(&SENS_CAN, tx_mailbox);
     }
+}
+
+can_frame_t get_frame(uint16_t std_id)
+{
+	if (sensor_state.enabled) {
+		_can_disable_it();
+	}
+	bool found = false;
+	can_frame_t frame = {0};
+	for (unsigned i = 0; i < circle_buf_gc_count(&can_circle_buffer); i++) {
+		can_frame_t* tmp = (can_frame_t*)circle_buf_gc_front(&can_circle_buffer);
+		if (!tmp) {
+			break;
+		}
+		frame = *tmp;
+		circle_buf_gc_pop_front(&can_circle_buffer);
+		if (frame.header.StdId == std_id) {
+			found = true;
+			break;
+		}
+		circle_buf_gc_push_back(&can_circle_buffer, (uint8_t*)&frame);
+	}
+	if (!found) {
+		memset((uint8_t*)&frame, 0, sizeof(frame));
+	}
+	if (sensor_state.enabled) {
+		_can_enable_it();
+	}
+	return frame;
+}
+
+void _can_enable_it()
+{
+	HAL_CAN_ActivateNotification(&SENS_CAN, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+}
+
+void _can_disable_it()
+{
+	HAL_CAN_DeactivateNotification(&SENS_CAN, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
 }
 
 void _can_enable_tick()
 {
     if (sensor_state.enabled != is_system_ready()) {
         is_system_ready() ?
-            HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) :
-            HAL_CAN_DeactivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+            _can_enable_it() :
+            _can_disable_it();
         sensor_state.enabled = is_system_ready();
     }
 }
@@ -628,8 +628,8 @@ void _can_enable_tick()
 #define SCB_DEMCR   (*(volatile unsigned long *)0xE000EDFC)
 void _init_s(void)
 {
-    HAL_CAN_Start(&hcan1);
-    HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+    HAL_CAN_Start(&SENS_CAN);
+    HAL_CAN_ActivateNotification(&SENS_CAN, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
 
     sensor_state.need_mode   = SENSOR_MODE_SURFACE;
     sensor_state.curr_mode   = SENSOR_MODE_SURFACE;
@@ -641,8 +641,6 @@ void _init_s(void)
 
 void _idle_s(void)
 {
-    sensor_state.need_std_id = NO_STD_ID;
-
     _can_enable_tick();
 
     if (!is_system_ready()) {
@@ -659,7 +657,7 @@ void _idle_s(void)
         return;
     }
 
-    if (sensor_state.received) {
+    if (circle_buf_gc_count(&can_circle_buffer)) {
         fsm_gc_push_event(&sens_fsm, &recieved_e);
         return;
     }
@@ -688,7 +686,7 @@ void _no_sensor_s(void)
     	fsm_gc_push_event(&sens_fsm, &sub_check_e);
     }
 
-    if (sensor_state.received) {
+    if (circle_buf_gc_count(&can_circle_buffer)) {
         fsm_gc_push_event(&sens_fsm, &success_e);
     }
 }
@@ -696,35 +694,6 @@ void _no_sensor_s(void)
 void _error_s(void)
 {
     fsm_gc_push_event(&sens_fsm, &success_e);
-}
-
-void _start_s(void)
-{
-    static unsigned counter = 0;
-
-    if (!gtimer_wait(&sensor_state.timer)) {
-        counter = 0;
-        fsm_gc_push_event(&sens_fsm, &error_e);
-        return;
-    }
-
-    if (counter >= __arr_len(start_frames) ||
-        get_sensor_target_mode() == SENSOR_MODE_ANGLE
-    ) {
-        sensor_state.errors    = 0;
-        counter                = 0;
-        fsm_gc_push_event(&sens_fsm, &success_e);
-        return;
-    }
-    _sensor_send_frame(
-        start_frames[counter].std_id,
-        start_frames[counter].dlc,
-        start_frames[counter].data
-    );
-    counter++;
-
-    gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
-    sensor_state.errors = 0;
 }
 
 void _change_s(void)
@@ -752,20 +721,24 @@ void _change_s(void)
 void _bigski1_s(void)
 {
     int16_t value = -settings.bigski_target[sensor_state.bigski_id];
-    can_frame_t request =
-            {LINE_CONTROL_SETTINGS, 0x06, {0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x05, (uint8_t)(value >> 8), (uint8_t)value}};
+    can_frame_t request = {
+		{LINE_CONTROL_SETTINGS, 0, 0, 0, 0x06},
+		{0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x05, (uint8_t)(value >> 8), (uint8_t)value}
+    };
 
     if (sensor_state.bigski_id >= __arr_len(BIGSKI_IDS)) {
         sensor_state.bigski_id = 0;
-        can_frame_t mode_request =
-            {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x12, 0x00,}};
-        _sensor_send_frame(mode_request.std_id, mode_request.dlc, mode_request.data);
+        can_frame_t mode = {
+        	{LINE_CONTROL_SETTINGS, 0, 0, 0, 0x05},
+			{0x01, 0x0F, 0x00, 0x12, 0x00,}
+        };
+        _sensor_send_frame(mode.header.StdId, mode.header.DLC, mode.data);
         gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
         sensor_state.errors = 0;
 
         fsm_gc_push_event(&sens_fsm, &bigski2_e);
     } else {
-        _sensor_send_frame(request.std_id, request.dlc, request.data);
+        _sensor_send_frame(request.header.StdId, request.header.DLC, request.data);
         gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
         sensor_state.errors = 0;
 
@@ -775,27 +748,20 @@ void _bigski1_s(void)
 
 void _bigski2_s(void)
 {
-    bool recieved = false;
-
-    if (sensor_state.setup_received && sensor_state.common_rx_std_id == LINE_SENSOR_SETTINGS) {
-        recieved = true;
-    } else {
-        sensor_state.setup_received = false;
-    }
-
     if (!gtimer_wait(&sensor_state.timer)) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
-    if (!recieved) {
+    can_frame_t frame = get_frame(LINE_SENSOR_SETTINGS);
+    if (frame.header.StdId != LINE_SENSOR_SETTINGS) {
         return;
     }
 
     uint8_t response[] =
         {0x01, 0x0F, BIGSKI_IDS[sensor_state.bigski_id], 0x00, 0x05, 0x00,};
 
-    if (memcmp(response, sensor_state.common_rx_buffer, __arr_len(response))) {
+    if (memcmp(response, frame.data, __arr_len(response))) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
@@ -808,26 +774,19 @@ void _bigski2_s(void)
 
 void _bigski3_s(void)
 {
-    bool recieved = false;
-
-    if (sensor_state.setup_received && sensor_state.common_rx_std_id == LINE_SENSOR_SETTINGS) {
-        recieved = true;
-    } else {
-        sensor_state.setup_received = false;
-    }
-
     if (!gtimer_wait(&sensor_state.timer)) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
-    if (!recieved) {
+    can_frame_t frame = get_frame(LINE_SENSOR_SETTINGS);
+    if (frame.header.StdId != LINE_SENSOR_SETTINGS) {
         return;
     }
 
     uint8_t response[] = {0x01, 0x0F, 0x00, 0x00, 0x12, 0x00,};
 
-    if (memcmp(response, sensor_state.common_rx_buffer, __arr_len(response))) {
+    if (memcmp(response, frame.data, __arr_len(response))) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
@@ -845,7 +804,6 @@ void _bigski3_s(void)
 void _angle_s(void)
 {
     sensor_state.initialized = true;
-    sensor_state.need_std_id = NO_STD_ID;
     sensor_state.curr_mode   = sensor_state.need_mode;
     sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
     sensor_state.errors      = 0;
@@ -857,38 +815,31 @@ void _angle_s(void)
 
 void _end1_s(void)
 {
-    bool recieved = false;
-
-    if (sensor_state.setup_received &&
-		sensor_state.common_rx_std_id == LINE_SENSOR_SETTINGS
-	) {
-        recieved = true;
-    } else {
-        sensor_state.setup_received = false;
-    }
-
     if (!gtimer_wait(&sensor_state.timer)) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
-    if (!recieved) {
+    can_frame_t frame = get_frame(LINE_SENSOR_SETTINGS);
+    if (frame.header.StdId != LINE_SENSOR_SETTINGS) {
         return;
     }
 
     uint8_t response1[] =
         {0x01, 0x0F, 0x00, 0x00, 0x19, 0x00,};
 
-    if (memcmp(response1, sensor_state.common_rx_buffer, __arr_len(response1))) {
+    if (memcmp(response1, frame.data, __arr_len(response1))) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
     int16_t target = -get_sensor_mode_target(sensor_state.need_mode);
-    can_frame_t request2 =
-        {LINE_CONTROL_SETTINGS, 0x06, {0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}};
+    can_frame_t request2 = {
+		{LINE_CONTROL_SETTINGS, 0, 0, 0, 0x06},
+		{0x01, 0x0F, 0x00, 0x05, (uint8_t)(target >> 8), (uint8_t)(target)}
+    };
 
-    _sensor_send_frame(request2.std_id, request2.dlc, request2.data);
+    _sensor_send_frame(request2.header.StdId, request2.header.DLC, request2.data);
     gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
     sensor_state.errors = 0;
 
@@ -897,35 +848,30 @@ void _end1_s(void)
 
 void _end2_s(void)
 {
-    bool recieved = false;
-
-    if (sensor_state.received && sensor_state.common_rx_std_id == LINE_SENSOR_SETTINGS) {
-        recieved = true;
-    } else {
-        sensor_state.received = false;
-    }
-
     if (!gtimer_wait(&sensor_state.timer)) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
-    if (!recieved) {
+    can_frame_t frame = get_frame(LINE_SENSOR_SETTINGS);
+    if (frame.header.StdId != LINE_SENSOR_SETTINGS) {
         return;
     }
 
     uint8_t response2[] =
         {0x01, 0x0F, 0x00, 0x00, 0x05, 0x00};
 
-    if (memcmp(response2, sensor_state.common_rx_buffer, __arr_len(response2))) {
+    if (memcmp(response2, frame.data, __arr_len(response2))) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
-    can_frame_t request3 =
-        {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x03, 0x06}};
+    can_frame_t request3 = {
+		{LINE_CONTROL_SETTINGS, 0, 0, 0, 0x05},
+		{0x01, 0x0F, 0x00, 0x03, 0x06}
+    };
 
-    _sensor_send_frame(request3.std_id, request3.dlc, request3.data);
+    _sensor_send_frame(request3.header.StdId, request3.header.DLC, request3.data);
     gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
     sensor_state.errors = 0;
 
@@ -934,33 +880,25 @@ void _end2_s(void)
 
 void _end3_s(void)
 {
-    bool recieved = false;
-
-    if (sensor_state.received && sensor_state.common_rx_std_id == LINE_SENSOR_SETTINGS) {
-        recieved = true;
-    } else {
-        sensor_state.received = false;
-    }
-
     if (!gtimer_wait(&sensor_state.timer)) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
-    if (!recieved) {
+    can_frame_t frame = get_frame(LINE_SENSOR_SETTINGS);
+    if (frame.header.StdId != LINE_SENSOR_SETTINGS) {
         return;
     }
 
     uint8_t response3[] =
         {0x01, 0x0F, 0x00, 0x00, 0x03, 0x00};
 
-    if (memcmp(response3, sensor_state.common_rx_buffer, __arr_len(response3))) {
+    if (memcmp(response3, frame.data, __arr_len(response3))) {
         fsm_gc_push_event(&sens_fsm, &timeout_e);
         return;
     }
 
     sensor_state.initialized = true;
-    sensor_state.need_std_id = NO_STD_ID;
     sensor_state.curr_mode   = sensor_state.need_mode;
     sensor_state.curr_target = get_sensor_mode_target(sensor_state.need_mode);
     sensor_state.errors      = 0;
@@ -1004,23 +942,21 @@ void _send_s(void)
 
 void surface_a(void)
 {
-    can_frame_t surface_request =
-        {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x02,}};
-
-    sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
-
-    _sensor_send_frame(surface_request.std_id, surface_request.dlc, surface_request.data);
+    can_frame_t surface_request = {
+		{LINE_CONTROL_SETTINGS, 0, 0, 0, 0x05},
+		{0x01, 0x0F, 0x00, 0x19, 0x02,}
+    };
+    _sensor_send_frame(surface_request.header.StdId, surface_request.header.DLC, surface_request.data);
     gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 }
 
 void string_a(void)
 {
-    can_frame_t string_request =
-        {LINE_CONTROL_SETTINGS, 0x05, {0x01, 0x0F, 0x00, 0x19, 0x01,}};
-
-    sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
-
-    _sensor_send_frame(string_request.std_id, string_request.dlc, string_request.data);
+    can_frame_t string_request = {
+		{LINE_CONTROL_SETTINGS, 0, 0, 0, 0x05},
+		{0x01, 0x0F, 0x00, 0x19, 0x01,}
+    };
+    _sensor_send_frame(string_request.header.StdId, string_request.header.DLC, string_request.data);
     gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
 }
 
@@ -1029,7 +965,6 @@ void start_sensor_a(void)
     gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
     gtimer_start(&sensor_state.sens_sub_check, SENSOR_SUB_CHECK_MS);
 
-    sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
     sensor_state.errors      = 0;
 
     fsm_gc_clear(&sens_fsm);
@@ -1037,14 +972,11 @@ void start_sensor_a(void)
 
 void start_change_a(void)
 {
-    sensor_state.need_std_id = LINE_SENSOR_SETTINGS;
     fsm_gc_clear(&sens_fsm);
 }
 
 void start_idle_a(void)
 {
-    sensor_state.need_std_id = NO_STD_ID;
-
     fsm_gc_clear(&sens_fsm);
 }
 
@@ -1086,8 +1018,6 @@ void send_a(void)
         0x0A
     };
 
-    sensor_state.need_std_id = NO_STD_ID;
-
     uint8_t* data = NULL;
     CAN_STD_ID std_id;
     switch (get_sensor_mode()) {
@@ -1117,72 +1047,72 @@ void recieve_a(void)
     gtimer_start(&sensor_state.timer, SENSOR_CAN_DELAY_MS);
     fsm_gc_clear(&sens_fsm);
 
-    sensor_state.need_std_id    = NO_STD_ID;
-    sensor_state.errors         = 0;
-    sensor_state.received       = false;
-    sensor_state.setup_received = false;
+    sensor_state.errors = 0;
 
-    sensor_dist_t* sensor = NULL;
-    switch (sensor_state.last_std_id) {
-    case LINE_SENSOR_1_VALUE:
-    	sensor = &sensor_state.sens_2A8;
-        break;
-    case LINE_SENSOR_C_VALUE:
-    	sensor = &sensor_state.sens_2A7;
-        break;
-    case LINE_SENSOR_3_VALUE:
-    	sensor = &sensor_state.sens_2AB;
-        break;
-    case ANGLE_SENSOR_VALUE:
-        sensor_state.sens_angle.value = (
-            ((int16_t)sensor_state.sens_angle.buffer[1] << 8) |
-            (int16_t)sensor_state.sens_angle.buffer[2]
-        );
-        gtimer_start(&sensor_state.sens_angle.connection_timer, SENSOR_CONNECTION_DELAY_MS);
-        return;
-    default:
-        return;
-    }
+    while (circle_buf_gc_count(&can_circle_buffer)) {
+    	can_frame_t frame = *(can_frame_t*)circle_buf_gc_pop_front(&can_circle_buffer);
+        sensor_dist_t* sensor = NULL;
+        switch (frame.header.StdId) {
+        case LINE_SENSOR_1_VALUE:
+        	sensor = &sensor_state.sens_2A8;
+            break;
+        case LINE_SENSOR_C_VALUE:
+        	sensor = &sensor_state.sens_2A7;
+            break;
+        case LINE_SENSOR_3_VALUE:
+        	sensor = &sensor_state.sens_2AB;
+            break;
+        case ANGLE_SENSOR_VALUE:
+            sensor_state.sens_angle.value = (
+                ((int16_t)frame.data[1] << 8) |
+                (int16_t)frame.data[2]
+            );
+            gtimer_start(&sensor_state.sens_angle.connection_timer, SENSOR_CONNECTION_DELAY_MS);
+            continue;
+        default:
+        	continue;
+        }
 
-    switch (sensor->buffer[0]) {
-    case RELATIVE_VALUE:
-    	sensor->value = (
-            ((int16_t)sensor->buffer[1] << 8) |
-            (int16_t)sensor->buffer[2]
-        );
-    	sensor->direction = sensor->buffer[3];
-        gtimer_start(&sensor->connection_timer, SENSOR_CONNECTION_DELAY_MS);
-    	break;
-    case LINE_ABSOLUTE1_VALUE:
-    	sensor->sub_main = (
-			((int16_t)sensor->buffer[1] << 8) |
-			(int16_t)sensor->buffer[2]
-		);
-    	sensor->sub_values[0] = (
-			((int16_t)sensor->buffer[3] << 8) |
-			(int16_t)sensor->buffer[4]
-		);
-    	sensor->sub_values[1] = (
-			((int16_t)sensor->buffer[5] << 8) |
-			(int16_t)sensor->buffer[6]
-		);
-    	break;
-    case LINE_ABSOLUTE2_VALUE:
-    	sensor->sub_values[2] = (
-			((int16_t)sensor->buffer[1] << 8) |
-			(int16_t)sensor->buffer[2]
-		);
-    	sensor->sub_values[3] = (
-			((int16_t)sensor->buffer[3] << 8) |
-			(int16_t)sensor->buffer[4]
-		);
-    	sensor->sub_values[4] = (
-			((int16_t)sensor->buffer[5] << 8) |
-			(int16_t)sensor->buffer[6]
-		);
-    	break;
-    default:
-    	break;
+        switch (frame.data[0]) {
+        case RELATIVE_VALUE:
+        	sensor->value = (
+                ((int16_t)frame.data[1] << 8) |
+                (int16_t)frame.data[2]
+            );
+        	sensor->direction = frame.data[3];
+            gtimer_start(&sensor->connection_timer, SENSOR_CONNECTION_DELAY_MS);
+        	break;
+        case LINE_ABSOLUTE1_VALUE:
+        	sensor->sub_main = (
+    			((int16_t)frame.data[1] << 8) |
+    			(int16_t)frame.data[2]
+    		);
+        	sensor->sub_values[0] = (
+    			((int16_t)frame.data[3] << 8) |
+    			(int16_t)frame.data[4]
+    		);
+        	sensor->sub_values[1] = (
+    			((int16_t)frame.data[5] << 8) |
+    			(int16_t)frame.data[6]
+    		);
+        	break;
+        case LINE_ABSOLUTE2_VALUE:
+        	sensor->sub_values[2] = (
+    			((int16_t)frame.data[1] << 8) |
+    			(int16_t)frame.data[2]
+    		);
+        	sensor->sub_values[3] = (
+    			((int16_t)frame.data[3] << 8) |
+    			(int16_t)frame.data[4]
+    		);
+        	sensor->sub_values[4] = (
+    			((int16_t)frame.data[5] << 8) |
+    			(int16_t)frame.data[6]
+    		);
+        	break;
+        default:
+        	break;
+        }
     }
 }
 
@@ -1194,9 +1124,10 @@ void sub_check_a(void)
 		&sensor_state.sens_2AB
 	};
 
+	uint8_t regulation = get_sensor_mode_regulation_mm();
 	for (unsigned i = 0; i < __arr_len(sensors); i++) {
-		int16_t min = 0xFFFF;
-		int16_t max = 0;
+		int16_t min = 0x7FFF;
+		int16_t max = 0xFFFF;
 		for (unsigned j = 0; j < __arr_len(sensors[i]->sub_values); j++) {
 			if (sensors[i]->sub_values[j] < min) {
 				min = sensors[i]->sub_values[j];
@@ -1206,14 +1137,17 @@ void sub_check_a(void)
 			}
 		}
 		if (sensors[i]->sub_main == SENSOR_SUB_MAIN_ERROR ||
-			__abs_dif(min, max) > get_sensor_mode_regulation_mm()
+			(regulation && __abs_dif(min, max) > regulation)
 		) {
 			sensors[i]->error_cnt++;
 		} else {
 			sensors[i]->error_cnt = 0;
 		}
-		if (sensors[i]->error_cnt > SENSOR_SUB_ERRORS_MAX) {
+		if (sensors[i]->error_cnt >= SENSOR_SUB_ERRORS_MAX) {
 			sensors[i]->error_cnt = SENSOR_SUB_ERRORS_MAX;
+			set_status(SENSOR_REGULATE_FAULT);
+		} else {
+			reset_status(SENSOR_REGULATE_FAULT);
 		}
 	}
 

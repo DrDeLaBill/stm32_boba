@@ -27,14 +27,6 @@ public:
     /*
      * Virtual Action Handlers
      */
-    virtual void clickLeft()
-    {
-        // Override and implement this function in ValuesScreen
-    }
-    virtual void clickRight()
-    {
-        // Override and implement this function in ValuesScreen
-    }
     virtual void updateSensorData()
     {
         // Override and implement this function in ValuesScreen

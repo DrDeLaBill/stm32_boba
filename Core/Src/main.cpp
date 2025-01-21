@@ -124,7 +124,7 @@ int main(void)
     ST7796_Init();
 
     system_register(MX_TouchGFX_Process, 1,   true);
-    system_register(sensor_tick,         40,  true);
+    system_register(sensor_tick,         10,  true);
     system_register(app_tick,            100, true);
     system_register(settings_update,     50,  true);
 

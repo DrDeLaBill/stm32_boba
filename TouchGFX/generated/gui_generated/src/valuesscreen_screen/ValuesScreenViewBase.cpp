@@ -32,14 +32,12 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
     btnLeft.setBitmaps(touchgfx::Bitmap(BITMAP_LEFT_ID), touchgfx::Bitmap(BITMAP_BACKGROUND_ID));
     btnLeft.setDelay(12);
     btnLeft.setInterval(60);
-    btnLeft.setAction(buttonCallback);
     add(btnLeft);
 
     btnRight.setXY(80, 260);
     btnRight.setBitmaps(touchgfx::Bitmap(BITMAP_RIGHT_ID), touchgfx::Bitmap(BITMAP_BACKGROUND_ID));
     btnRight.setDelay(12);
     btnRight.setInterval(60);
-    btnRight.setAction(buttonCallback);
     add(btnRight);
 
     lineBtn1.setPosition(79, 260, 1, 60);
@@ -67,6 +65,7 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
     angleMode.add(emptyAngleBackground);
 
     angleBox.setPosition(0, 0, 240, 260);
+    angleBox.setVisible(false);
     angleBackground.setPosition(0, 0, 240, 260);
     angleBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     angleBox.add(angleBackground);
@@ -104,6 +103,7 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
     distanceMode.add(emptyDistanceBackground);
 
     distanceBox.setPosition(0, 0, 240, 260);
+    distanceBox.setVisible(false);
     distanceBackground.setPosition(0, 0, 240, 260);
     distanceBackground.setColor(touchgfx::Color::getColorFromRGB(217, 211, 206));
     distanceBox.add(distanceBackground);
@@ -146,7 +146,6 @@ ValuesScreenViewBase::ValuesScreenViewBase() :
 
     emptyValue.setPosition(80, 153, 80, 15);
     emptyValue.setColor(touchgfx::Color::getColorFromRGB(0, 0, 0));
-    emptyValue.setVisible(false);
     add(emptyValue);
 }
 
@@ -168,20 +167,6 @@ void ValuesScreenViewBase::buttonCallbackHandler(const touchgfx::AbstractButton&
         //When btnBack clicked change screen to MainScreen
         //Go to MainScreen with no screen transition
         application().gotoMainScreenScreenNoTransition();
-    }
-    if (&src == &btnLeft)
-    {
-        //clickLeft
-        //When btnLeft clicked call virtual function
-        //Call clickLeft
-        clickLeft();
-    }
-    if (&src == &btnRight)
-    {
-        //clickRight
-        //When btnRight clicked call virtual function
-        //Call clickRight
-        clickRight();
     }
 }
 

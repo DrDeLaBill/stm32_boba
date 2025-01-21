@@ -12,10 +12,7 @@ public:
     virtual void setupScreen();
     virtual void tearDownScreen();
 protected:
-    void changeMode();
-
-    virtual void clickLeft();
-    virtual void clickRight();
+    unsigned listIdx;
 
     virtual void updateSensorData();
 };

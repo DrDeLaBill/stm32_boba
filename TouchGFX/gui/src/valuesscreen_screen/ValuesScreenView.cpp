@@ -1,13 +1,14 @@
 #include <gui/valuesscreen_screen/ValuesScreenView.hpp>
 
 #ifndef SIMULATOR
+#   include "main.h"
 #   include "gutils.h"
 #   include "sensor.h"
 #   include "gsystem.h"
 #endif
 
 
-ValuesScreenView::ValuesScreenView()
+ValuesScreenView::ValuesScreenView(): listIdx(0)
 {
 
 }
@@ -15,34 +16,12 @@ ValuesScreenView::ValuesScreenView()
 void ValuesScreenView::setupScreen()
 {
     ValuesScreenViewBase::setupScreen();
+	listIdx = 0;
 }
 
 void ValuesScreenView::tearDownScreen()
 {
     ValuesScreenViewBase::tearDownScreen();
-}
-
-void ValuesScreenView::changeMode()
-{
-	if (distanceMode.isVisible()) {
-		distanceMode.setVisible(false);
-		angleMode.setVisible(true);
-	} else {
-		angleMode.setVisible(false);
-		distanceMode.setVisible(true);
-	}
-	angleMode.invalidate();
-	distanceMode.invalidate();
-}
-
-void ValuesScreenView::clickLeft()
-{
-	changeMode();
-}
-
-void ValuesScreenView::clickRight()
-{
-	changeMode();
 }
 
 void ValuesScreenView::updateSensorData()
@@ -83,14 +62,27 @@ void ValuesScreenView::updateSensorData()
 	backgroundCleaner->invalidate();
 	text->invalidate();
 #else
+	distanceMode.setVisible(false);
+	distanceBox.setVisible(false);
+	distanceMode.invalidate();
+	distanceBox.invalidate();
+
+	angleMode.setVisible(false);
+	angleBox.setVisible(false);
+	angleBox.invalidate();
+	angleBox.invalidate();
+
 	touchgfx::Unicode::UnicodeChar* textBuffer;
 	touchgfx::TextAreaWithOneWildcard* text;
 	touchgfx::Box* backgroundCleaner;
+	touchgfx::Container* container;
 	touchgfx::Container* valueBox;
 	uint16_t size;
 	int value      = 0;
 	bool available = false;
-	if (distanceMode.isVisible()) {
+	switch (listIdx) {
+	case 0:
+		container         = &distanceMode;
 		valueBox          = &distanceBox;
 		textBuffer        = distanceValueBuffer;
 		text              = &distanceValue;
@@ -98,7 +90,9 @@ void ValuesScreenView::updateSensorData()
 		backgroundCleaner = &backgroundDistanceCleaner;
 		available         = sensor_distance_available();
 		value             = get_sensor_mode_value(SENSOR_MODE_SURFACE);
-	} else {
+		break;
+	case 1:
+		container         = &angleMode;
 		valueBox          = &angleBox;
 		textBuffer        = angleValueBuffer;
 		text              = &angleValue;
@@ -106,16 +100,28 @@ void ValuesScreenView::updateSensorData()
 		backgroundCleaner = &backgroundAngleCleaner;
 		available         = sensor_angle_available();
 		value             = get_sensor_mode_value(SENSOR_MODE_ANGLE);
+		break;
+	default:
+		set_error(UI_ERROR);
+		break;
 	}
 
+	const unsigned LIST_SIZE = 2;
+	if (system_button_clicked(BTN_F1_GPIO_Port, BTN_F1_Pin)) {
+		listIdx = (listIdx > 0) ? listIdx - 1 : 0;
+	}
+	if (system_button_clicked(BTN_F2_GPIO_Port, BTN_F2_Pin)) {
+		listIdx = (listIdx < LIST_SIZE - 1) ? listIdx + 1 : LIST_SIZE - 1;
+	}
+
+	container->setVisible(true);
+	emptyValue.setVisible(!available);
+	valueBox->setVisible(available);
+	emptyValue.invalidate();
+	valueBox->invalidate();
 	if (!available) {
-		emptyValue.setVisible(true);
-		valueBox->setVisible(false);
-		valueBox->invalidate();
 		return;
 	}
-	emptyValue.setVisible(false);
-	valueBox->setVisible(true);
 
 	int width1 = text->getTextWidth();
 	int x1     = text->getX();
